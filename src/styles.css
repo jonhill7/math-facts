@@ -903,3 +903,26 @@ h2 {
   font: inherit;
   font-weight: 400;
 }
+
+.trouble ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 8px;
+}
+
+.trouble li {
+  display: flex;
+  flex-direction: column;
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: var(--surface);
+  border-left: 4px solid var(--box-1);
+}
+
+.trouble li span {
+  color: var(--muted);
+  font-size: 0.85rem;
+}

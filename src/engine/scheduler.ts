@@ -70,3 +70,14 @@ export function recordAnswer(
 export function isDue(state: FactState, now: number): boolean {
   return state.due <= now;
 }
+
+// The facts a kid is most stuck on: missed often, still in a low box, or slow.
+// Parents see these on the fact map.
+export function troubleFacts(progress: Progress, limit = 8): { id: string; state: FactState }[] {
+  const score = (s: FactState) => (s.seen - s.correct) * 2 + (s.box <= 1 ? 3 : s.box === 2 ? 1 : 0) + s.avgMs / 2000;
+  return Object.entries(progress)
+    .filter(([, s]) => s.box < 4 && (s.seen > s.correct || s.box <= 2))
+    .map(([id, state]) => ({ id, state }))
+    .sort((a, b) => score(b.state) - score(a.state))
+    .slice(0, limit);
+}

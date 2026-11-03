@@ -1,5 +1,5 @@
 import { factById, MAX_FACTOR, Op } from '../engine/facts';
-import { MASTERED_BOX, Progress } from '../engine/scheduler';
+import { MASTERED_BOX, Progress, troubleFacts } from '../engine/scheduler';
 
 const LABELS = ['Not tried yet', 'Learning', 'Getting there', 'Good', 'Strong', 'Mastered'];
 const range = Array.from({ length: MAX_FACTOR }, (_, i) => i + 1);
@@ -52,8 +52,41 @@ export function MasteryMap({ progress, onBack }: { progress: Progress; onBack: (
           </span>
         ))}
       </div>
+      <TroubleFacts progress={progress} />
       <Grid op="mul" progress={progress} />
       <Grid op="div" progress={progress} />
+    </div>
+  );
+}
+
+function TroubleFacts({ progress }: { progress: Progress }) {
+  const trouble = troubleFacts(progress);
+  return (
+    <div className="trouble">
+      <h3>Trouble facts</h3>
+      {trouble.length === 0 ? (
+        <p className="muted">No trouble facts right now. Nice!</p>
+      ) : (
+        <>
+          <p className="muted">The facts that need the most help. Practicing these with a strategy hint helps most.</p>
+          <ul>
+            {trouble.map(({ id, state }) => {
+              const fact = factById(id);
+              return (
+                <li key={id}>
+                  <strong>
+                    {fact.text} = {fact.answer}
+                  </strong>
+                  <span>
+                    right {state.correct} of {state.seen}
+                    {state.correct > 0 && ` · ${(state.avgMs / 1000).toFixed(1)} s`}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        </>
+      )}
     </div>
   );
 }

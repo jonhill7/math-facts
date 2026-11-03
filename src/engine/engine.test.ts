@@ -3,7 +3,7 @@ import { dragonState, grewBetween, levelFor, SPECIES, tableFactIds } from './dra
 import { emptyStreak, practiced, streakStatus } from './streak';
 import { ALL_FACTS, factById } from './facts';
 import { hintFor } from './hints';
-import { DAY_MS, recordAnswer, startOfDay, Progress } from './scheduler';
+import { DAY_MS, recordAnswer, startOfDay, Progress, troubleFacts } from './scheduler';
 import { buildSession, newFactCandidates, requeueMiss, RETRY_GAP } from './session';
 
 const NOW = new Date('2026-11-03T18:00:00').getTime();
@@ -198,5 +198,17 @@ describe('focus practice', () => {
     const newIds = new Set(session.filter((f) => !progress[f.id]).map((f) => f.id));
     expect(newIds.size).toBe(6); // the same 6 new facts come round several times
     for (let i = 1; i < session.length; i++) expect(session[i]).not.toBe(session[i - 1]);
+  });
+});
+
+describe('trouble facts', () => {
+  it('lists the most-missed facts first and leaves out well-known ones', () => {
+    const p: Progress = {
+      'mul:7:8': { box: 1, due: NOW, seen: 6, correct: 2, avgMs: 4000, lastSeen: NOW },
+      'mul:6:7': { box: 2, due: NOW, seen: 3, correct: 2, avgMs: 3500, lastSeen: NOW },
+      'mul:2:2': { box: 5, due: NOW, seen: 6, correct: 6, avgMs: 900, lastSeen: NOW },
+      'mul:3:3': { box: 4, due: NOW, seen: 5, correct: 4, avgMs: 1500, lastSeen: NOW },
+    };
+    expect(troubleFacts(p).map((t) => t.id)).toEqual(['mul:7:8', 'mul:6:7']);
   });
 });
