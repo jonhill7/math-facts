@@ -18,6 +18,17 @@ The practice happens inside two games:
   answers light your lantern so you can search; wrong answers let the
   monster creep closer until... tickle attack!
 
+Other things kids and parents can do:
+
+- Keep a **daily streak** going, with one free rest day a week.
+- **Name** their companion dragon.
+- Pick **focus practice** on one table (good for homework), a **game
+  length** (10, 20 or 30 questions) and a **speed goal** (5, 3 or 2
+  seconds) on the home screen.
+- See **trouble facts** on the fact map, the facts a kid is most stuck on.
+- Turn **sound** on or off with the speaker button.
+- Use it **offline** and add it to a phone's home screen like an app.
+
 ## How it helps kids learn
 
 The game sits on top of a small learning engine in `src/engine/`:
