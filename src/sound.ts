@@ -67,5 +67,10 @@ export const sounds = {
   search: () => tone(440, 0, 0.15, 'triangle'),
   found: () => notes([784, 988, 1175, 1568], 0.07, 0.15, 'square'),
   giggle: () => notes([900, 1200, 950, 1250, 1000, 1300], 0.06, 0.07, 'triangle'),
+  power: () => {
+    thump();
+    notes([392, 523, 659, 784, 1047, 1319], 0.05, 0.18, 'sawtooth');
+  },
+  boss: () => notes([196, 185, 175, 165], 0.18, 0.3, 'square'),
   hatch: () => notes([523, 784, 1047, 1319, 1568], 0.1, 0.35),
 };

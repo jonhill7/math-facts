@@ -3,8 +3,12 @@ import { StageProps } from '../components/PracticeSession';
 import type { StatKey } from './PenaltyKicks';
 import { sounds } from '../sound';
 import { Confetti } from '../components/Confetti';
+import { DEFAULT_BEAM_RGB } from '../engine/shop';
 
 const ALL_SPOTS = ['🛏️', '🛋️', '🚪', '🧺', '🪴', '📦', '🧥', '🪑', '🛁', '🧸', '🗄️', '🎹', '🧳', '🖼️', '🪟', '🛒'];
+const ATTIC_SPOTS = ['🕯️', '📚', '🪆', '🧶', '🎻', '🪞', '⏰', '🎲', '🧳', '📦', '🪑', '🖼️', '🧸', '🛏️', '🗄️', '🧥', '🪟', '🎹', '🧺', '🪴', '🚪', '🛋️', '🛁', '🛒', '🎩'];
+const FLOORS = ['Downstairs', 'Upstairs', 'The attic'];
+const MAX_SIZE = 5;
 const TICKLES_TO_ATTACK = 3;
 
 // The house grows as the kid gets better at finding the monster.
@@ -23,15 +27,24 @@ const CLUE: Record<string, string> = {
 // Tickle hider: the Tickle Monster hides somewhere in a dark house.
 // Each right answer charges the lantern for one search. A fast answer makes it
 // bright enough to show a warmer/colder clue about where the monster is.
-// Wrong answers let the monster creep closer. Three, and it's a tickle attack!
+// Wrong answers let the monster creep closer and sneak to a nearby spot, so old
+// clues go stale. Three, and it's a tickle attack! Each time you find it, the
+// chase moves up a floor and the house gets bigger. A power move is a super
+// lantern that searches a spot and everything around it.
 interface Props extends StageProps {
   onStat: (key: StatKey) => void;
   monstersFoundTotal: number;
+  shield: boolean; // the companion's Shield power: the first miss doesn't count
+  shieldName: string;
+  beamRgb?: string;
 }
 
-export function LanternHunt({ last, waiting, resume, onStat, monstersFoundTotal }: Props) {
-  const [size] = useState(() => houseSize(monstersFoundTotal));
-  const spots = ALL_SPOTS.slice(0, size * size);
+export function LanternHunt({ last, waiting, resume, onStat, monstersFoundTotal, shield, shieldName, beamRgb = DEFAULT_BEAM_RGB }: Props) {
+  const [floor, setFloor] = useState(0);
+  const [startSize] = useState(() => houseSize(monstersFoundTotal));
+  const size = Math.min(startSize + floor, MAX_SIZE);
+  const spots = (floor === 0 ? ALL_SPOTS : ATTIC_SPOTS).slice(0, size * size);
+  const shieldUsed = useRef(false);
   const randomSpot = (avoid = -1) => {
     let s = avoid;
     while (s === avoid) s = Math.floor(Math.random() * spots.length);
@@ -60,7 +73,7 @@ export function LanternHunt({ last, waiting, resume, onStat, monstersFoundTotal 
   // It follows the finger or mouse while a search is ready.
   const roomsRef = useRef<HTMLDivElement>(null);
   const [beam, setBeam] = useState({ x: 50, y: 50 });
-  const beamSize = canSearch ? (bright ? 46 : 30) : 14;
+  const beamSize = canSearch ? (last?.power ? 60 : bright ? 46 : 30) : 14;
   const aim = (e: PointerEvent) => {
     const box = roomsRef.current?.getBoundingClientRect();
     if (!box || !canSearch) return;
@@ -72,7 +85,18 @@ export function LanternHunt({ last, waiting, resume, onStat, monstersFoundTotal 
   useEffect(() => {
     if (!last) return;
     if (last.correct) {
-      setMessage(last.fast ? 'Bright lantern! Search a spot for a warmer/colder clue.' : 'Lantern lit. Tap a hiding spot to search.');
+      setMessage(
+        last.power
+          ? 'SUPER LANTERN! Search a spot and everything around it.'
+          : last.fast
+            ? 'Bright lantern! Search a spot for a warmer/colder clue.'
+            : 'Lantern lit. Tap a hiding spot to search.',
+      );
+      return;
+    }
+    if (shield && !shieldUsed.current) {
+      shieldUsed.current = true;
+      setMessage(`🛡️ ${shieldName} scared the monster back! It didn't move.`);
       return;
     }
     const nextCreep = creep + 1;
@@ -86,38 +110,58 @@ export function LanternHunt({ last, waiting, resume, onStat, monstersFoundTotal 
       setMonster((m) => randomSpot(m));
     } else {
       setCreep(nextCreep);
-      setMessage('Creak... the Tickle Monster is creeping closer!');
+      // It sneaks to a spot next door, so the old clues can't be trusted.
+      setMonster((m) => {
+        const near = spots.map((_, i) => i).filter((i) => distance(i, m) === 1);
+        return near[Math.floor(Math.random() * near.length)];
+      });
+      setMarks({});
+      setMessage('Creak... it crept closer and snuck to a spot nearby! Old clues are gone.');
     }
     // React only to new answers.
   }, [last?.id]);
+
+  const clueFor = (spot: number): Mark => {
+    const d = distance(spot, monster);
+    return !bright ? 'empty' : d === 1 ? 'hot' : d === 2 ? 'warm' : 'cold';
+  };
 
   const search = (spot: number) => {
     if (!waiting || !last || marks[spot] || searchedFor.current === last.id) return;
     searchedFor.current = last.id;
     setSearched(last.id);
     aimAtSpot(spot);
-    if (spot === monster) {
+    // A super lantern searches the spot and every spot touching it.
+    const area = last.power
+      ? spots.map((_, i) => i).filter((i) => Math.abs((i % size) - (spot % size)) <= 1 && Math.abs(Math.floor(i / size) - Math.floor(spot / size)) <= 1)
+      : [spot];
+    if (last.power) onStat('powers');
+    if (area.includes(monster)) {
       sounds.found();
-      setMarks({ ...marks, [spot]: 'found' });
+      setMarks({ ...marks, [monster]: 'found' });
       setFound((n) => n + 1);
       onStat('monstersFound');
-      setMessage('FOUND YOU! Now it hides somewhere new...');
+      const nextFloor = Math.min(floor + 1, FLOORS.length - 1);
+      setMessage(nextFloor > floor ? `FOUND YOU! It ran off to ${FLOORS[nextFloor].toLowerCase()}...` : 'FOUND YOU! Now it hides somewhere new...');
       setCelebrate(true);
       setTimeout(() => {
         setCelebrate(false);
         setMarks({});
         setCreep(0);
-        setMonster((m) => randomSpot(m));
+        const nextSize = Math.min(startSize + nextFloor, MAX_SIZE);
+        setFloor(nextFloor);
+        setMonster(Math.floor(Math.random() * nextSize * nextSize));
         resume();
       }, 1400);
       return;
     }
     sounds.search();
-    const d = distance(spot, monster);
-    const mark: Mark = !bright ? 'empty' : d === 1 ? 'hot' : d === 2 ? 'warm' : 'cold';
-    setMarks({ ...marks, [spot]: mark });
-    setMessage(bright ? CLUE[mark] : 'Nothing here... answer faster for a clue!');
-    setTimeout(resume, 700);
+    const found: Record<number, Mark> = {};
+    for (const i of area) if (!marks[i]) found[i] = last.power ? 'empty' : clueFor(i);
+    if (last.power) found[spot] = bright ? clueFor(spot) : 'empty';
+    setMarks({ ...marks, ...found });
+    setMessage(last.power ? `SUPER LANTERN! ${area.length} spots searched. ${bright ? CLUE[clueFor(spot)] : ''}` : bright ? CLUE[clueFor(spot)] : 'Nothing here... answer faster for a clue!');
+    setTimeout(resume, last.power ? 1100 : 700);
   };
 
   return (
@@ -128,7 +172,9 @@ export function LanternHunt({ last, waiting, resume, onStat, monstersFoundTotal 
         </div>
       )}
       <div className="scoreboard">
-        <span>🔦 Found {found}</span>
+        <span>
+          🔦 Found {found} · {FLOORS[floor]}
+        </span>
         <span className="creep" aria-label={`Monster closeness ${creep} of ${TICKLES_TO_ATTACK}`}>
           👣 {'●'.repeat(creep)}
           {'○'.repeat(TICKLES_TO_ATTACK - creep)}
@@ -136,6 +182,7 @@ export function LanternHunt({ last, waiting, resume, onStat, monstersFoundTotal 
       </div>
       <div
         ref={roomsRef}
+        key={`floor${floor}`}
         className={`rooms ${canSearch ? 'rooms-ready' : ''} ${bright && canSearch ? 'rooms-bright' : ''}`}
         style={{ gridTemplateColumns: `repeat(${size}, 1fr)` }}
         onPointerMove={aim}
@@ -144,7 +191,7 @@ export function LanternHunt({ last, waiting, resume, onStat, monstersFoundTotal 
           className="darkness"
           aria-hidden="true"
           style={{
-            background: `radial-gradient(circle at ${beam.x}% ${beam.y}%, rgba(255, 214, 120, 0.22) 0%, rgba(255, 214, 120, 0.08) ${beamSize * 0.6}%, rgba(4, 7, 18, 0.82) ${beamSize}%)`,
+            background: `radial-gradient(circle at ${beam.x}% ${beam.y}%, rgba(${beamRgb}, 0.22) 0%, rgba(${beamRgb}, 0.08) ${beamSize * 0.6}%, rgba(4, 7, 18, 0.82) ${beamSize}%)`,
           }}
         />
         {spots.map((emoji, i) => {

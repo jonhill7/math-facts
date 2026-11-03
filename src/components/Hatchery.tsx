@@ -2,6 +2,7 @@ import { allDragons, DragonState, STAGES } from '../engine/dragons';
 import { Progress } from '../engine/scheduler';
 import { useState } from 'react';
 import { Dragon } from './Dragon';
+import { abilityOf, ABILITY_INFO } from '../engine/abilities';
 
 const STAGE_TEXT: Record<string, string> = {
   none: 'Practice the {n}s to find this egg.',
@@ -36,9 +37,10 @@ interface Props {
   onPick: (table: number) => void;
   onName: (table: number, name: string) => void;
   onBack: () => void;
+  hat?: string;
 }
 
-export function Hatchery({ progress, companion, names, onPick, onName, onBack }: Props) {
+export function Hatchery({ progress, companion, names, onPick, onName, onBack, hat }: Props) {
   const dragons = allDragons(progress);
   const current = companionFor(progress, companion);
   const currentHatched = current && STAGES.indexOf(current.stage) >= 2;
@@ -51,8 +53,8 @@ export function Hatchery({ progress, companion, names, onPick, onName, onBack }:
       </button>
       <h2>Dragon hatchery</h2>
       <p className="muted">
-        Every times table has its own dragon. Learn the facts to hatch and grow it. Tap a hatched dragon to make it your
-        companion.
+        Every times table has its own dragon. Learn the facts to hatch and grow it. A hatched dragon gives you its power in every game.
+        Tap one to make it your companion.
       </p>
       {currentHatched && current && (
         <form
@@ -98,12 +100,15 @@ export function Hatchery({ progress, companion, names, onPick, onName, onBack }:
               }}
             >
               <span className="dragon-table">{d.species.table}s</span>
-              <Dragon dragon={d} size={4.2} />
+              <Dragon dragon={d} size={4.2} hat={isCompanion ? hat : undefined} />
               <strong>{d.stage === 'none' ? '???' : dragonName(d, names)}</strong>
               <span className="dragon-meter" aria-hidden="true">
                 <span style={{ width: `${Math.round((d.known / d.total) * 100)}%` }} />
               </span>
               <small>{isCompanion ? 'Your companion' : stageText(d)}</small>
+              <small className="ability">
+                {ABILITY_INFO[abilityOf(d.species.table)].icon} {ABILITY_INFO[abilityOf(d.species.table)].name}
+              </small>
             </button>
           );
         })}
