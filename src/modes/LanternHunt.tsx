@@ -50,14 +50,20 @@ export function LanternHunt({ last, waiting, resume, onStat, monstersFoundTotal 
 
   const bright = Boolean(last?.correct && last.fast);
 
+  // One search per right answer. A ref (not state) so that a second tap
+  // landing before React re-renders is still blocked.
+  const searchedFor = useRef<number | null>(null);
+  const [searched, setSearched] = useState<number | null>(null);
+  const canSearch = waiting && last !== null && searched !== last.id;
+
   // The lantern's beam: where it points (in % of the house) and how wide it is.
   // It follows the finger or mouse while a search is ready.
   const roomsRef = useRef<HTMLDivElement>(null);
   const [beam, setBeam] = useState({ x: 50, y: 50 });
-  const beamSize = waiting ? (bright ? 46 : 30) : 14;
+  const beamSize = canSearch ? (bright ? 46 : 30) : 14;
   const aim = (e: PointerEvent) => {
     const box = roomsRef.current?.getBoundingClientRect();
-    if (!box || !waiting) return;
+    if (!box || !canSearch) return;
     setBeam({ x: ((e.clientX - box.left) / box.width) * 100, y: ((e.clientY - box.top) / box.height) * 100 });
   };
   const aimAtSpot = (spot: number) =>
@@ -86,7 +92,9 @@ export function LanternHunt({ last, waiting, resume, onStat, monstersFoundTotal 
   }, [last?.id]);
 
   const search = (spot: number) => {
-    if (!waiting || marks[spot]) return;
+    if (!waiting || !last || marks[spot] || searchedFor.current === last.id) return;
+    searchedFor.current = last.id;
+    setSearched(last.id);
     aimAtSpot(spot);
     if (spot === monster) {
       sounds.found();
@@ -128,7 +136,7 @@ export function LanternHunt({ last, waiting, resume, onStat, monstersFoundTotal 
       </div>
       <div
         ref={roomsRef}
-        className={`rooms ${waiting ? 'rooms-ready' : ''} ${bright && waiting ? 'rooms-bright' : ''}`}
+        className={`rooms ${canSearch ? 'rooms-ready' : ''} ${bright && canSearch ? 'rooms-bright' : ''}`}
         style={{ gridTemplateColumns: `repeat(${size}, 1fr)` }}
         onPointerMove={aim}
       >
@@ -147,7 +155,7 @@ export function LanternHunt({ last, waiting, resume, onStat, monstersFoundTotal 
               type="button"
               className={`spot ${mark ? `spot-${mark}` : ''}`}
               onClick={() => search(i)}
-              disabled={!waiting || Boolean(mark)}
+              disabled={!canSearch || Boolean(mark)}
               aria-label={`Hiding spot ${i + 1}`}
             >
               <span className="spot-emoji">{mark === 'found' ? '👾' : emoji}</span>
