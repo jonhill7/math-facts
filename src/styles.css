@@ -1219,3 +1219,43 @@ h1 {
     transform: translate(var(--drift), 260px) rotate(var(--spin));
   }
 }
+
+/* Lantern light: the house is dark except where the lantern shines.
+   Searched spots stay lit above the darkness. */
+.rooms {
+  position: relative;
+}
+
+.darkness {
+  position: absolute;
+  inset: -6px 4px;
+  z-index: 1;
+  border-radius: 12px;
+  pointer-events: none;
+  transition: background 0.25s ease-out;
+}
+
+.spot .spot-emoji,
+.rooms-ready .spot:not(:disabled) .spot-emoji {
+  filter: none;
+}
+
+.spot-empty,
+.spot-hot,
+.spot-warm,
+.spot-cold,
+.spot-found {
+  z-index: 2;
+}
+
+.rooms-ready .spot:not(:disabled) {
+  box-shadow: none;
+}
+
+.rooms-bright .spot:not(:disabled) {
+  box-shadow: none;
+}
+
+.rooms-ready {
+  cursor: crosshair;
+}
