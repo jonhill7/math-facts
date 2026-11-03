@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { dragonState, grewBetween, levelFor, SPECIES, tableFactIds } from './dragons';
+import { allDragons, companionFor, EGG_ORDER, eggsFound, feed, grewBetween, levelFor, nextEggIn, SNACKS_PER_EGG, SPECIES, stageForLevel, tableFactIds } from './dragons';
 import { emptyStreak, practiced, streakStatus } from './streak';
 import { ALL_FACTS, factById } from './facts';
 import { hintFor } from './hints';
@@ -110,10 +110,7 @@ describe('hints', () => {
 });
 
 describe('dragons', () => {
-  const known = (box: number) => ({ box, due: NOW + DAY_MS, seen: 3, correct: 3, avgMs: 1500, lastSeen: NOW });
-  const seven = SPECIES.find((s) => s.table === 7)!;
-
-  it('gives each table its own facts, multiplication both ways plus division', () => {
+  it('gives each table its own facts for focus practice, multiplication both ways plus division', () => {
     const ids = tableFactIds(7);
     expect(ids).toContain('mul:7:8');
     expect(ids).toContain('mul:8:7');
@@ -122,20 +119,31 @@ describe('dragons', () => {
     expect(ids).toHaveLength(23 + 12);
   });
 
-  it('starts with no dragon, then an egg once the table is tried', () => {
-    expect(dragonState({}, seven).stage).toBe('none');
-    expect(dragonState({ 'mul:7:8': known(1) }, seven).stage).toBe('egg');
+  it('starts with one egg and finds more as snacks are earned', () => {
+    expect(eggsFound(0)).toBe(1);
+    expect(eggsFound(SNACKS_PER_EGG - 1)).toBe(1);
+    expect(eggsFound(SNACKS_PER_EGG)).toBe(2);
+    expect(eggsFound(100000)).toBe(SPECIES.length);
+    expect(nextEggIn(SNACKS_PER_EGG + 10)).toBe(SNACKS_PER_EGG - 10);
+    const found = allDragons({}, 0).filter((d) => d.stage !== 'none');
+    expect(found.map((d) => d.species.id)).toEqual([EGG_ORDER[0]]);
   });
 
-  it('hatches at half the table known and grows when all of it is mastered', () => {
-    const ids = tableFactIds(7);
-    const half: Progress = Object.fromEntries(ids.slice(0, Math.ceil(ids.length / 2)).map((id) => [id, known(3)]));
-    expect(dragonState(half, seven).stage).toBe('hatchling');
-    const all: Progress = Object.fromEntries(ids.map((id) => [id, known(3)]));
-    expect(dragonState(all, seven).stage).toBe('young');
-    const mastered: Progress = Object.fromEntries(ids.map((id) => [id, known(5)]));
-    expect(dragonState(mastered, seven).stage).toBe('grown');
-    expect(grewBetween(half, mastered).map((d) => d.species.table)).toEqual([7]);
+  it('grows the companion by its own experience, not by times table', () => {
+    const id = EGG_ORDER[0];
+    expect(companionFor({}, 0).stage).toBe('egg');
+    expect(stageForLevel(levelFor(30).level)).toBe('hatchling'); // level 3
+    expect(stageForLevel(levelFor(150).level)).toBe('young'); // level 6
+    expect(stageForLevel(levelFor(450).level)).toBe('grown'); // level 10
+    const hoard = feed({}, id, 30);
+    expect(companionFor(hoard, 30).stage).toBe('hatchling');
+    expect(grewBetween(allDragons({}, 0), allDragons(hoard, 30)).map((d) => d.species.id)).toEqual([id]);
+  });
+
+  it('lets the kid pick any egg they have found, and only those', () => {
+    const second = EGG_ORDER[1];
+    expect(companionFor({}, SNACKS_PER_EGG, second).species.id).toBe(second);
+    expect(companionFor({}, 0, second).species.id).toBe(EGG_ORDER[0]);
   });
 
   it('needs more snacks for each level', () => {

@@ -4,12 +4,12 @@ import type { StatKey } from './PenaltyKicks';
 import { sounds } from '../sound';
 import { Confetti } from '../components/Confetti';
 import { DEFAULT_BEAM_RGB } from '../engine/shop';
+import type { Ability } from '../engine/abilities';
 
 const ALL_SPOTS = ['🛏️', '🛋️', '🚪', '🧺', '🪴', '📦', '🧥', '🪑', '🛁', '🧸', '🗄️', '🎹', '🧳', '🖼️', '🪟', '🛒'];
 const ATTIC_SPOTS = ['🕯️', '📚', '🪆', '🧶', '🎻', '🪞', '⏰', '🎲', '🧳', '📦', '🪑', '🖼️', '🧸', '🛏️', '🗄️', '🧥', '🪟', '🎹', '🧺', '🪴', '🚪', '🛋️', '🛁', '🛒', '🎩'];
 const FLOORS = ['Downstairs', 'Upstairs', 'The attic'];
 const MAX_SIZE = 5;
-const TICKLES_TO_ATTACK = 3;
 
 // The house grows as the kid gets better at finding the monster.
 export const houseSize = (monstersFoundTotal: number) => (monstersFoundTotal < 3 ? 3 : 4);
@@ -37,9 +37,12 @@ interface Props extends StageProps {
   shield: boolean; // the companion's Shield power: the first miss doesn't count
   shieldName: string;
   beamRgb?: string;
+  ability?: Ability; // the companion's power
 }
 
-export function LanternHunt({ last, waiting, resume, onStat, monstersFoundTotal, shield, shieldName, beamRgb = DEFAULT_BEAM_RGB }: Props) {
+export function LanternHunt({ last, waiting, resume, onStat, monstersFoundTotal, shield, shieldName, beamRgb = DEFAULT_BEAM_RGB, ability }: Props) {
+  const TICKLES_TO_ATTACK = ability === 'frost' ? 4 : 3;
+  const [hunt, setHunt] = useState(0); // goes up each time the monster hides somewhere new
   const [floor, setFloor] = useState(0);
   const [startSize] = useState(() => houseSize(monstersFoundTotal));
   const size = Math.min(startSize + floor, MAX_SIZE);
@@ -61,7 +64,8 @@ export function LanternHunt({ last, waiting, resume, onStat, monstersFoundTotal,
   const [attack, setAttack] = useState(0);
   const [celebrate, setCelebrate] = useState(false);
 
-  const bright = Boolean(last?.correct && last.fast);
+  // Second Look makes every right answer bright enough for a clue.
+  const bright = Boolean(last?.correct && (last.fast || ability === 'secondLook'));
 
   // One search per right answer. A ref (not state) so that a second tap
   // landing before React re-renders is still blocked.
@@ -108,8 +112,13 @@ export function LanternHunt({ last, waiting, resume, onStat, monstersFoundTotal,
       setCreep(0);
       setMarks({});
       setMonster((m) => randomSpot(m));
+      setHunt((h) => h + 1);
     } else {
       setCreep(nextCreep);
+      if (ability === 'gust') {
+        setMessage('Creak... it crept closer, but the Gust kept it from sneaking away!');
+        return;
+      }
       // It sneaks to a spot next door, so the old clues can't be trusted.
       setMonster((m) => {
         const near = spots.map((_, i) => i).filter((i) => distance(i, m) === 1);
@@ -121,6 +130,13 @@ export function LanternHunt({ last, waiting, resume, onStat, monstersFoundTotal,
     // React only to new answers.
   }, [last?.id]);
 
+  // Night Vision: each new hunt starts with one hot clue next to the monster.
+  useEffect(() => {
+    if (ability !== 'nightVision') return;
+    const near = spots.map((_, i) => i).filter((i) => distance(i, monster) === 1);
+    setMarks({ [near[Math.floor(Math.random() * near.length)]]: 'hot' });
+  }, [hunt]);
+
   const clueFor = (spot: number): Mark => {
     const d = distance(spot, monster);
     return !bright ? 'empty' : d === 1 ? 'hot' : d === 2 ? 'warm' : 'cold';
@@ -131,9 +147,10 @@ export function LanternHunt({ last, waiting, resume, onStat, monstersFoundTotal,
     searchedFor.current = last.id;
     setSearched(last.id);
     aimAtSpot(spot);
-    // A super lantern searches the spot and every spot touching it.
+    // A super lantern searches the spot and every spot touching it (two rings out with Blaze).
+    const reach = ability === 'blaze' ? 2 : 1;
     const area = last.power
-      ? spots.map((_, i) => i).filter((i) => Math.abs((i % size) - (spot % size)) <= 1 && Math.abs(Math.floor(i / size) - Math.floor(spot / size)) <= 1)
+      ? spots.map((_, i) => i).filter((i) => Math.abs((i % size) - (spot % size)) <= reach && Math.abs(Math.floor(i / size) - Math.floor(spot / size)) <= reach)
       : [spot];
     if (last.power) onStat('powers');
     if (area.includes(monster)) {
@@ -151,6 +168,7 @@ export function LanternHunt({ last, waiting, resume, onStat, monstersFoundTotal,
         const nextSize = Math.min(startSize + nextFloor, MAX_SIZE);
         setFloor(nextFloor);
         setMonster(Math.floor(Math.random() * nextSize * nextSize));
+        setHunt((h) => h + 1);
         resume();
       }, 1400);
       return;

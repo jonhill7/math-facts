@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { abilityOf, activeAbility, chargeNeeded } from './abilities';
+import { ABILITY_INFO, abilityOf, activeAbility, chargeNeeded, powerSize, startCharge } from './abilities';
 import { bossFor, isBossGame } from './boss';
-import { allDragons } from './dragons';
+import { companionFor, feed, SPECIES } from './dragons';
 import { afterMatch, emptyLeague, LEAGUE, shotClockMs, slowSaveChance } from './league';
 import { bumpQuest, emptyQuests, questsFor, QUESTS_PER_DAY } from './quests';
 import { buy, emptyShop, ITEMS, toggleEquip, balance } from './shop';
@@ -65,27 +65,25 @@ describe('shop', () => {
   });
 });
 
-function knownTable(table: number, box: number): Progress {
-  const p: Progress = {};
-  for (let b = 1; b <= 12; b++) {
-    p[`mul:${table}:${b}`] = { box, due: NOW, seen: 3, correct: 3, avgMs: 1500, lastSeen: NOW };
-    p[`mul:${b}:${table}`] = { box, due: NOW, seen: 3, correct: 3, avgMs: 1500, lastSeen: NOW };
-    p[`div:${table}:${b}`] = { box, due: NOW, seen: 3, correct: 3, avgMs: 1500, lastSeen: NOW };
-  }
-  return p;
-}
-
 describe('dragon powers', () => {
   it('only work once the dragon hatches', () => {
-    const egg = allDragons({ 'mul:7:3': { box: 1, due: NOW, seen: 1, correct: 0, avgMs: 4000, lastSeen: NOW } })[6];
+    const egg = companionFor({}, 0);
     expect(egg.stage).toBe('egg');
     expect(activeAbility(egg)).toBeUndefined();
-    const hatched = allDragons(knownTable(2, 3))[1];
-    expect(activeAbility(hatched)).toBe(abilityOf(2));
+    const hatched = companionFor(feed({}, egg.species.id, 30), 30);
+    expect(activeAbility(hatched)).toBe(abilityOf(egg.species.id));
   });
-  it('Spark charges the meter faster', () => {
-    expect(chargeNeeded('spark')).toBe(2);
+  it('are different for every dragon', () => {
+    const powers = SPECIES.map((s) => abilityOf(s.id));
+    expect(new Set(powers).size).toBe(SPECIES.length);
+    expect(Object.keys(ABILITY_INFO)).toHaveLength(SPECIES.length);
+  });
+  it('change the game numbers', () => {
+    expect(chargeNeeded('tailwind')).toBe(2);
     expect(chargeNeeded(undefined)).toBe(3);
+    expect(startCharge('headStart')).toBe(2);
+    expect(powerSize('blaze')).toBe(3);
+    expect(powerSize(undefined)).toBe(2);
   });
 });
 

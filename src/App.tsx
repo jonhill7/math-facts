@@ -1,15 +1,15 @@
 import { CSSProperties, ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 import { Confetti } from './components/Confetti';
 import { Dragon } from './components/Dragon';
-import { companionFor, dragonName, Hatchery, stageText } from './components/Hatchery';
+import { dragonName, Hatchery, stageText } from './components/Hatchery';
 import { MasteryMap, masteredCount } from './components/MasteryMap';
 import { BOSS_BONUS, PracticeSession, SessionSummary } from './components/PracticeSession';
 import { Shop } from './components/Shop';
 import { WorldTour } from './components/WorldTour';
-import { ABILITY_INFO, activeAbility, chargeNeeded, snackBonus } from './engine/abilities';
+import { ABILITY_INFO, activeAbility, bossForgives, bossMultiplier, chargeNeeded, extraClockMs, powerSize, questMultiplier, snackBonus, startCharge } from './engine/abilities';
 import { bossFor, isBossGame, knownCount } from './engine/boss';
 import { ALL_FACTS, Fact } from './engine/facts';
-import { DragonState, grewBetween, levelFor, SNACKS_FAST, SNACKS_RIGHT } from './engine/dragons';
+import { allDragons, companionFor, DragonState, feed, grewBetween, SNACKS_FAST, SNACKS_RIGHT, STAGE_LEVEL } from './engine/dragons';
 import { afterMatch, League, LEAGUE, rivalFor, shotClockMs, slowSaveChance } from './engine/league';
 import { placeById } from './engine/places';
 import { bumpQuest, Quest, QUEST_REWARD, QuestKey, questsFor, today } from './engine/quests';
@@ -31,24 +31,34 @@ interface Boss {
   name: string;
   icon: string;
   facts: Fact[];
+  forgive: number; // misses allowed (the Boss Breaker power)
+  bonus: number; // snacks for beating it
 }
 
 type Screen =
   | { name: 'who' }
   | { name: 'home' }
   | { name: 'play'; mode: Mode; before: SaveData; boss?: Boss }
-  | { name: 'done'; mode: Mode; summary: SessionSummary; grew: DragonState[]; rival: string; score: MatchScore; league?: { before: League; after: League }; quests: Quest[] }
+  | { name: 'done'; mode: Mode; boss?: Boss; summary: SessionSummary; grew: DragonState[]; rival: string; score: MatchScore; league?: { before: League; after: League }; quests: Quest[] }
   | { name: 'map' }
   | { name: 'hatchery' }
   | { name: 'shop' }
   | { name: 'world' };
 
+const companionOf = (d: SaveData) => companionFor(d.hoard, d.stats.snacks, d.companion);
+
+// Snacks go to the companion as experience, and count toward the total that finds new eggs.
+function eat(d: SaveData, snacks: number): SaveData {
+  if (!snacks) return d;
+  return { ...d, hoard: feed(d.hoard, companionOf(d).species.id, snacks), stats: { ...d.stats, snacks: d.stats.snacks + snacks } };
+}
+
 // Count something toward a stat and today's quests. Finished quests pay out snacks.
 function count(d: SaveData, key: QuestKey, n = 1, stat?: keyof SaveData['stats']): SaveData {
   const { state, finished } = bumpQuest(d.quests, d.name, key, n, Date.now());
-  const stats = { ...d.stats, snacks: d.stats.snacks + finished.length * QUEST_REWARD };
+  const stats = { ...d.stats };
   if (stat) stats[stat] += n;
-  return { ...d, stats, quests: state };
+  return eat({ ...d, stats, quests: state }, finished.length * QUEST_REWARD * questMultiplier(activeAbility(companionOf(d))));
 }
 
 const QUEST_STATS: Partial<Record<StatKey, QuestKey>> = { saves: 'saves', topCorners: 'topCorners', monstersFound: 'monstersFound', powers: 'powers' };
@@ -109,12 +119,11 @@ export default function App() {
     (fact: Fact, correct: boolean, ms: number) =>
       update((d) => {
         const fast = correct && ms <= d.settings.fastMs;
-        const bonus = snackBonus(activeAbility(companionFor(d.progress, d.companion)));
-        let next: SaveData = {
-          ...d,
-          progress: { ...d.progress, [fact.id]: recordAnswer(d.progress[fact.id], correct, ms, Date.now(), d.settings.fastMs) },
-          stats: correct ? { ...d.stats, snacks: d.stats.snacks + (fast ? SNACKS_FAST : SNACKS_RIGHT) + bonus } : d.stats,
-        };
+        const bonus = snackBonus(activeAbility(companionOf(d)));
+        let next: SaveData = eat(
+          { ...d, progress: { ...d.progress, [fact.id]: recordAnswer(d.progress[fact.id], correct, ms, Date.now(), d.settings.fastMs) } },
+          correct ? (fast ? SNACKS_FAST : SNACKS_RIGHT) + bonus : 0,
+        );
         if (correct) next = count(next, 'right');
         if (fast) next = count(next, 'fast');
         return next;
@@ -156,16 +165,18 @@ export default function App() {
   const play = (mode: Mode) => {
     if (!data) return;
     matchScore.current = { us: 0, them: 0 };
-    const boss = isBossGame(data.stats.sessions) ? bossFor(data.progress, mode === 'lantern') : undefined;
+    const found = isBossGame(data.stats.sessions) ? bossFor(data.progress, mode === 'lantern') : undefined;
+    const power = activeAbility(companionOf(data));
+    const boss = found && { ...found, forgive: bossForgives(power), bonus: BOSS_BONUS * bossMultiplier(power) };
     if (boss) sounds.boss();
     setScreen({ name: 'play', mode, before: data, boss });
   };
 
-  const companion = data ? companionFor(data.progress, data.companion) : undefined;
+  const companion = data ? companionOf(data) : undefined;
   const ability = activeAbility(companion);
   const hat = data ? itemById(data.shop.equipped.hat)?.icon : undefined;
   const place = placeById(data?.place);
-  const companionName = companion && data ? (data.dragonNames[String(companion.species.table)] || companion.species.name) : 'Your dragon';
+  const companionName = companion && data ? (data.dragonNames[String(companion.species.id)] || companion.species.name) : 'Your dragon';
 
   return (
     <main className="app">
@@ -192,12 +203,13 @@ export default function App() {
       {screen.name === 'map' && data && <MasteryMap progress={data.progress} onBack={() => setScreen({ name: 'home' })} />}
       {screen.name === 'hatchery' && data && (
         <Hatchery
-          progress={data.progress}
-          companion={data.companion}
+          hoard={data.hoard}
+          snacksEarned={data.stats.snacks}
+          companion={companionOf(data)}
           names={data.dragonNames}
           hat={hat}
-          onPick={(table) => update((d) => ({ ...d, companion: table }), true)}
-          onName={(table, name) => update((d) => ({ ...d, dragonNames: { ...d.dragonNames, [String(table)]: name } }), true)}
+          onPick={(id) => update((d) => ({ ...d, companion: id }), true)}
+          onName={(id, name) => update((d) => ({ ...d, dragonNames: { ...d.dragonNames, [String(id)]: name } }), true)}
           onBack={() => setScreen({ name: 'home' })}
         />
       )}
@@ -225,13 +237,14 @@ export default function App() {
         const { mode, before, boss } = screen;
         const level = before.league.level;
         const rival = rivalFor(before.league);
-        const clock = shotClockMs(before.settings.fastMs, level);
+        const clock = shotClockMs(before.settings.fastMs, level) + extraClockMs(ability);
         const soccer: SoccerProps = {
           onStat,
           onScore,
           rival,
           shield: ability === 'shield',
           shieldName: companionName,
+          powerSize: powerSize(ability),
           gloveStyle: { filter: GLOVE_FILTER[data.shop.equipped.gloves ?? ''] },
           ballStyle: { filter: BALL_GLOW[data.shop.equipped.ball ?? ''] },
         };
@@ -248,6 +261,7 @@ export default function App() {
               timeLimitMs={mode === 'keeper' ? clock : undefined}
               pauseMs={mode === 'keeper' ? 1500 : undefined}
               chargeNeeded={chargeNeeded(ability)}
+              startCharge={startCharge(ability)}
               snackBonus={snackBonus(ability)}
               boss={boss}
               decor={place.emoji}
@@ -269,10 +283,10 @@ export default function App() {
                       sessions: d.stats.sessions + 1,
                       lastPlayed: Date.now(),
                       bossesBeaten: d.stats.bossesBeaten + (summary.boss === 'beaten' ? 1 : 0),
-                      snacks: d.stats.snacks + (summary.boss === 'beaten' ? BOSS_BONUS : 0),
                     },
                     streak: practiced(d.streak, Date.now()),
                   };
+                  next = eat(next, summary.boss === 'beaten' && boss ? boss.bonus : 0);
                   next = count(next, 'games');
                   if (won) next = count(next, 'matchesWon', 1, 'matchesWon');
                   return next;
@@ -283,11 +297,11 @@ export default function App() {
                 update(finish, true);
                 const doneBefore = today(before.quests, Date.now()).done;
                 const quests = questsFor(after.quests.day, after.name).filter((q) => after.quests.done.includes(q.id) && !doneBefore.includes(q.id));
-                setScreen({ name: 'done', mode, summary, rival, score, league, quests, grew: grewBetween(before.progress, after.progress) });
+                setScreen({ name: 'done', mode, boss, summary, rival, score, league, quests, grew: grewBetween(allDragons(before.hoard, before.stats.snacks), allDragons(after.hoard, after.stats.snacks)) });
               }}
               stage={(props) =>
                 mode === 'soccer' ? (
-                  <PenaltyKicks {...props} {...soccer} slowSaveChance={slowSaveChance(level)} />
+                  <PenaltyKicks {...props} {...soccer} slowSaveChance={ability === 'spiky' ? 0 : slowSaveChance(level)} />
                 ) : mode === 'keeper' ? (
                   <PenaltySaves {...props} {...soccer} timeLimitMs={clock} />
                 ) : (
@@ -297,6 +311,7 @@ export default function App() {
                     monstersFoundTotal={before.stats.monstersFound}
                     shield={ability === 'shield'}
                     shieldName={companionName}
+                    ability={ability}
                     beamRgb={BEAM_RGB[data.shop.equipped.lantern ?? '']}
                   />
                 )
@@ -381,10 +396,8 @@ interface HomeProps {
 
 function Home({ data, onPlay, onMap, onHatchery, onShop, onWorld, onSwitch, muteButton, hat, onSettings }: HomeProps) {
   const mastered = masteredCount(data.progress);
-  const companion = companionFor(data.progress, data.companion);
-  const hatched = companion && !['none', 'egg'].includes(companion.stage);
+  const companion = companionOf(data);
   const ability = activeAbility(companion);
-  const level = levelFor(data.stats.snacks);
   const streak = streakStatus(data.streak, Date.now());
   const quests = today(data.quests, Date.now());
   const todays = questsFor(quests.day, data.name);
@@ -422,27 +435,24 @@ function Home({ data, onPlay, onMap, onHatchery, onShop, onWorld, onSwitch, mute
         </div>
       )}
       <button type="button" className="companion" onClick={onHatchery}>
-        {companion && companion.stage !== 'none' ? <Dragon dragon={companion} size={4.2} hat={hat} /> : <span className="dragon" style={{ fontSize: '2.6rem' }}>🥚</span>}
+        <Dragon dragon={companion} size={4.2} hat={hat} />
         <span className="companion-text">
-          {hatched && companion ? (
-            <>
-              <strong>
-                {dragonName(companion, data.dragonNames)} · level {level.level}
-              </strong>
-              <span className="dragon-meter" aria-label={`${level.into} of ${level.needed} snacks to the next level`}>
-                <span style={{ width: `${(level.into / level.needed) * 100}%` }} />
-              </span>
-              {ability && (
-                <small className="ability">
-                  {ABILITY_INFO[ability].icon} <b>{ABILITY_INFO[ability].name}:</b> {ABILITY_INFO[ability].text}
-                </small>
-              )}
-            </>
+          <strong>
+            {dragonName(companion, data.dragonNames)} · level {companion.level}
+          </strong>
+          <span className="dragon-meter" aria-label={`${companion.into} of ${companion.needed} snacks to the next level`}>
+            <span style={{ width: `${(companion.into / companion.needed) * 100}%` }} />
+          </span>
+          {ability ? (
+            <small className="ability">
+              {ABILITY_INFO[ability].icon} <b>{ABILITY_INFO[ability].name}:</b> {ABILITY_INFO[ability].text}
+            </small>
           ) : (
-            <>
-              <strong>{companion && companion.stage === 'egg' ? 'You found a dragon egg!' : 'Find your first dragon egg'}</strong>
-              <small>{companion && companion.stage === 'egg' ? `${stageText(companion)} Hatched dragons give you a power.` : 'Play a game to start.'}</small>
-            </>
+            <small>
+              {data.stats.sessions === 0
+                ? `Your egg eats a snack for every right answer. It hatches at level ${STAGE_LEVEL.hatchling}.`
+                : `${stageText(companion)} Hatched dragons give you a power.`}
+            </small>
           )}
         </span>
       </button>
@@ -621,7 +631,7 @@ function Done({ screen, names, onAgain, onHome }: DoneProps) {
       {summary.boss !== 'none' && (
         <p className={`boss-result ${summary.boss === 'beaten' ? 'boss-beaten' : ''}`}>
           {summary.boss === 'beaten'
-            ? `👑 You beat the boss! +${BOSS_BONUS} bonus snacks.`
+            ? `👑 You beat the boss! +${screen.boss?.bonus ?? BOSS_BONUS} bonus snacks.`
             : 'The boss got away this time. Those facts will come back so you can beat it next time.'}
         </p>
       )}
@@ -635,7 +645,7 @@ function Done({ screen, names, onAgain, onHome }: DoneProps) {
         </p>
       ))}
       {grew.map((d) => (
-        <div key={d.species.table} className="grew">
+        <div key={d.species.id} className="grew">
           <Dragon dragon={d} size={4} />
           <span>
             <strong>
