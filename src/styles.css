@@ -1045,3 +1045,122 @@ h1 {
 .key {
   font-weight: 600;
 }
+
+/* Home layout */
+.home > .muted {
+  margin: 4px 0 0;
+}
+
+.home .companion {
+  margin-top: 14px;
+}
+
+.home .modes {
+  margin: 18px 0 12px;
+}
+
+.game-options {
+  display: block;
+  margin: 0 0 14px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  box-shadow: 0 3px 0 var(--press);
+}
+
+.game-options summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.game-options summary::-webkit-details-marker {
+  display: none;
+}
+
+.options-summary {
+  flex: 1;
+  min-width: 0;
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+.options-change {
+  color: var(--primary);
+  font-weight: 700;
+}
+
+.game-options[open] .options-change {
+  visibility: hidden;
+}
+
+.options-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 0 14px 14px;
+}
+
+.options-body label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  font-weight: 700;
+}
+
+.options-body select {
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-weight: 400;
+}
+
+.home .streak {
+  margin-top: 14px;
+}
+
+.stat-tiles {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.stat-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 10px 6px;
+  border-radius: 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  text-align: center;
+}
+
+.stat-tile strong {
+  font-family: 'Fredoka', system-ui, sans-serif;
+  font-size: 1.4rem;
+  line-height: 1.1;
+}
+
+.stat-tile small {
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+
+.stat-icon {
+  font-size: 1.2rem;
+}
+
+.home-buttons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 8px;
+}

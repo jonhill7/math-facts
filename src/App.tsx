@@ -286,10 +286,10 @@ function Home({ data, onPlay, onMap, onHatchery, onSwitch, muteButton, onSetting
             <strong>{streak.count > 0 ? `${streak.count}-day streak` : 'Start a new streak today!'}</strong>
             <small>
               {streak.doneToday
-                ? "Today's practice is done. See you tomorrow!"
+                ? "Today's practice is done ✓"
                 : streak.atRisk
-                  ? 'You used your rest day. Play today to keep your streak!'
-                  : 'Play one game today to keep it going. You get one rest day a week.'}
+                  ? 'Rest day used. Play today to keep it!'
+                  : 'Play one game today. One rest day a week is free.'}
             </small>
           </span>
         </div>
@@ -315,7 +315,28 @@ function Home({ data, onPlay, onMap, onHatchery, onSwitch, muteButton, onSetting
           )}
         </span>
       </button>
-      <div className="game-options">
+      <div className="modes">
+        <button type="button" className="mode-card soccer" onClick={() => onPlay('soccer')}>
+          <span className="mode-emoji">⚽</span>
+          <strong>Penalty Kicks</strong>
+          <span>Fast answers fly into the top corner.</span>
+        </button>
+        <button type="button" className="mode-card lantern" onClick={() => onPlay('lantern')}>
+          <span className="mode-emoji">🔦</span>
+          <strong>Lantern Hunt</strong>
+          <span>Find the Tickle Monster before it finds you.</span>
+        </button>
+      </div>
+      <details className="game-options">
+        <summary>
+          <span aria-hidden="true">⚙️</span>
+          <span className="options-summary">
+            {data.settings.focusTable ? `Just the ${data.settings.focusTable}s` : 'All facts'} · {data.settings.length} questions ·{' '}
+            {data.settings.fastMs / 1000}s speed
+          </span>
+          <span className="options-change">Change</span>
+        </summary>
+        <div className="options-body">
         <label>
           Practice
           <select
@@ -355,33 +376,36 @@ function Home({ data, onPlay, onMap, onHatchery, onSwitch, muteButton, onSetting
             <option value={2000}>Speedy (2 sec)</option>
           </select>
         </label>
+        </div>
+      </details>
+      <div className="stat-tiles">
+        <Stat icon="⚽" value={data.stats.goals} label="goals" />
+        <Stat icon="🏆" value={data.stats.matchesWon} label="wins" />
+        <Stat icon="👾" value={data.stats.monstersFound} label="monsters found" />
+        <Stat icon="⭐" value={data.stats.topCorners} label="top corners" />
+        <Stat icon="🤗" value={data.stats.tickles} label="tickle attacks" />
+        <Stat icon="🍖" value={data.stats.snacks} label="dragon snacks" />
       </div>
-      <div className="modes">
-        <button type="button" className="mode-card soccer" onClick={() => onPlay('soccer')}>
-          <span className="mode-emoji">⚽</span>
-          <strong>Penalty Kicks</strong>
-          <span>Fast answers fly into the top corner.</span>
+      <div className="home-buttons">
+        <button type="button" className="big-button" onClick={onHatchery}>
+          🐉 Hatchery
         </button>
-        <button type="button" className="mode-card lantern" onClick={() => onPlay('lantern')}>
-          <span className="mode-emoji">🔦</span>
-          <strong>Lantern Hunt</strong>
-          <span>Find the Tickle Monster before it finds you.</span>
+        <button type="button" className="big-button secondary" onClick={onMap}>
+          🗺️ Fact map
         </button>
       </div>
-      <div className="stats">
-        <span>⚽ {data.stats.goals} goals</span>
-        <span>⭐ {data.stats.topCorners} top corners</span>
-        <span>🏆 {data.stats.matchesWon} matches won</span>
-        <span>👾 {data.stats.monstersFound} monsters found</span>
-        <span>🤗 {data.stats.tickles} tickle attacks</span>
-        <span>🍖 {data.stats.snacks} dragon snacks</span>
-      </div>
-      <button type="button" className="big-button" onClick={onHatchery}>
-        Dragon hatchery 🐉
-      </button>
-      <button type="button" className="big-button secondary" onClick={onMap}>
-        See my fact map
-      </button>
+    </div>
+  );
+}
+
+function Stat({ icon, value, label }: { icon: string; value: number; label: string }) {
+  return (
+    <div className="stat-tile">
+      <span className="stat-icon" aria-hidden="true">
+        {icon}
+      </span>
+      <strong>{value}</strong>
+      <small>{label}</small>
     </div>
   );
 }
