@@ -3,7 +3,8 @@ import { Fact } from '../engine/facts';
 import { hintFor } from '../engine/hints';
 import { SNACKS_FAST, SNACKS_RIGHT } from '../engine/dragons';
 import { DEFAULT_FAST_MS, Progress } from '../engine/scheduler';
-import { buildSession, requeueMiss } from '../engine/session';
+import { buildSession, requeueMiss, SessionOptions } from '../engine/session';
+import { sounds } from '../sound';
 import { Keypad } from './Keypad';
 
 export interface AnswerEvent {
@@ -34,12 +35,15 @@ interface Props {
   onQuit: () => void;
   stage: (props: StageProps) => ReactNode;
   holdAfterCorrect?: boolean; // wait for the game to call resume() after a right answer
+  topRight?: ReactNode;
+  options?: SessionOptions;
+  fastMs?: number;
 }
 
 type Phase = 'ask' | 'fix' | 'pause' | 'hold';
 
-export function PracticeSession({ progress, onAnswer, onFinish, onQuit, stage, holdAfterCorrect }: Props) {
-  const [queue, setQueue] = useState<Fact[]>(() => buildSession(progress, Date.now()));
+export function PracticeSession({ progress, onAnswer, onFinish, onQuit, stage, holdAfterCorrect, topRight, options, fastMs = DEFAULT_FAST_MS }: Props) {
+  const [queue, setQueue] = useState<Fact[]>(() => buildSession(progress, Date.now(), options));
   const [index, setIndex] = useState(0);
   const [phase, setPhase] = useState<Phase>('ask');
   const [input, setInput] = useState('');
@@ -72,7 +76,7 @@ export function PracticeSession({ progress, onAnswer, onFinish, onQuit, stage, h
     if (phase !== 'ask') return;
     const ms = Date.now() - shownAt.current;
     const correct = value === fact.answer;
-    const fast = correct && ms <= DEFAULT_FAST_MS;
+    const fast = correct && ms <= fastMs;
     summary.current.answered++;
     if (correct) summary.current.correct++;
     if (fast) summary.current.fast++;
@@ -80,14 +84,17 @@ export function PracticeSession({ progress, onAnswer, onFinish, onQuit, stage, h
     onAnswer(fact, correct, ms);
     setLast({ id: (last?.id ?? 0) + 1, fact, correct, fast, ms });
     if (correct) {
+      if (!holdAfterCorrect) sounds.kick();
+      else sounds.right();
       setPhase(holdAfterCorrect ? 'hold' : 'pause');
       if (!holdAfterCorrect) setTimeout(next, 900);
     } else {
+      sounds.wrong();
       setQueue(requeueMiss(queue, index));
       setPhase('fix');
       setInput('');
     }
-  }, [fact, input, phase, next, onAnswer, last, holdAfterCorrect, queue, index]);
+  }, [fact, input, phase, next, onAnswer, last, holdAfterCorrect, queue, index, fastMs]);
 
   if (!fact) return null;
   const progressPct = Math.round((index / queue.length) * 100);
@@ -109,6 +116,7 @@ export function PracticeSession({ progress, onAnswer, onFinish, onQuit, stage, h
             </span>
           )}
         </span>
+        {topRight}
       </div>
 
       <div className="stage">{stage({ last, waiting: phase === 'hold', resume: next })}</div>

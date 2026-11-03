@@ -1,23 +1,25 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 import { Dragon } from './components/Dragon';
-import { companionFor, Hatchery, stageText } from './components/Hatchery';
+import { companionFor, dragonName, Hatchery, stageText } from './components/Hatchery';
 import { MasteryMap, masteredCount } from './components/MasteryMap';
 import { PracticeSession, SessionSummary } from './components/PracticeSession';
 import { ALL_FACTS, Fact } from './engine/facts';
 import { DragonState, grewBetween, levelFor, SNACKS_FAST, SNACKS_RIGHT } from './engine/dragons';
-import { DEFAULT_FAST_MS, Progress, recordAnswer } from './engine/scheduler';
+import { Progress, recordAnswer } from './engine/scheduler';
+import { practiced, streakStatus } from './engine/streak';
 import { LanternHunt } from './modes/LanternHunt';
-import { PenaltyKicks, StatKey } from './modes/PenaltyKicks';
+import { PenaltyKicks, pickRival, StatKey } from './modes/PenaltyKicks';
 import { cloudEnabled, cloudStore, signInWithGoogle, signOutUser, User, watchUser } from './storage/firebase';
 import { listGuests, localStore } from './storage/localStore';
-import { ProgressStore, SaveData } from './storage/types';
+import { ProgressStore, SaveData, Settings } from './storage/types';
+import { setMuted, sounds } from './sound';
 
 type Mode = 'soccer' | 'lantern';
 type Screen =
   | { name: 'who' }
   | { name: 'home' }
-  | { name: 'play'; mode: Mode; before: Progress }
-  | { name: 'done'; mode: Mode; summary: SessionSummary; grew: DragonState[] }
+  | { name: 'play'; mode: Mode; before: Progress; rival: string }
+  | { name: 'done'; mode: Mode; summary: SessionSummary; grew: DragonState[]; rival: string }
   | { name: 'map' }
   | { name: 'hatchery' };
 
@@ -29,6 +31,7 @@ export default function App() {
   const [error, setError] = useState('');
   const latest = useRef<SaveData | null>(null);
   latest.current = data;
+  setMuted(data?.settings.muted ?? false);
 
   // Signed in with Google: load that kid's progress from the cloud.
   useEffect(
@@ -75,9 +78,12 @@ export default function App() {
     (fact: Fact, correct: boolean, ms: number) =>
       update((d) => ({
         ...d,
-        progress: { ...d.progress, [fact.id]: recordAnswer(d.progress[fact.id], correct, ms, Date.now()) },
+        progress: {
+          ...d.progress,
+          [fact.id]: recordAnswer(d.progress[fact.id], correct, ms, Date.now(), d.settings.fastMs),
+        },
         stats: correct
-          ? { ...d.stats, snacks: d.stats.snacks + (ms <= DEFAULT_FAST_MS ? SNACKS_FAST : SNACKS_RIGHT) }
+          ? { ...d.stats, snacks: d.stats.snacks + (ms <= d.settings.fastMs ? SNACKS_FAST : SNACKS_RIGHT) }
           : d.stats,
       })),
     [update],
@@ -86,6 +92,17 @@ export default function App() {
   const onStat = useCallback(
     (key: StatKey) => update((d) => ({ ...d, stats: { ...d.stats, [key]: d.stats[key] + 1 } })),
     [update],
+  );
+
+  const muteButton = data && (
+    <button
+      type="button"
+      className="mute-button"
+      onClick={() => update((d) => ({ ...d, settings: { ...d.settings, muted: !d.settings.muted } }), true)}
+      aria-label={data.settings.muted ? 'Turn sound on' : 'Turn sound off'}
+    >
+      {data.settings.muted ? '🔇' : '🔊'}
+    </button>
   );
 
   const switchPlayer = async () => {
@@ -106,10 +123,12 @@ export default function App() {
       {screen.name === 'home' && data && (
         <Home
           data={data}
-          onPlay={(mode) => setScreen({ name: 'play', mode, before: data.progress })}
+          onPlay={(mode) => setScreen({ name: 'play', mode, before: data.progress, rival: pickRival() })}
           onMap={() => setScreen({ name: 'map' })}
           onHatchery={() => setScreen({ name: 'hatchery' })}
           onSwitch={switchPlayer}
+          muteButton={muteButton}
+          onSettings={(change) => update((d) => ({ ...d, settings: { ...d.settings, ...change } }), true)}
         />
       )}
       {screen.name === 'map' && data && <MasteryMap progress={data.progress} onBack={() => setScreen({ name: 'home' })} />}
@@ -117,7 +136,11 @@ export default function App() {
         <Hatchery
           progress={data.progress}
           companion={data.companion}
+          names={data.dragonNames}
           onPick={(table) => update((d) => ({ ...d, companion: table }), true)}
+          onName={(table, name) =>
+            update((d) => ({ ...d, dragonNames: { ...d.dragonNames, [String(table)]: name } }), true)
+          }
           onBack={() => setScreen({ name: 'home' })}
         />
       )}
@@ -126,24 +149,48 @@ export default function App() {
           progress={data.progress}
           onAnswer={onAnswer}
           holdAfterCorrect={screen.mode === 'lantern'}
+          topRight={muteButton}
+          fastMs={data.settings.fastMs}
+          options={{ focusTable: data.settings.focusTable || undefined, length: data.settings.length }}
           onQuit={() => {
             update((d) => ({ ...d }), true); // save right away
             setScreen({ name: 'home' });
           }}
           onFinish={(summary) => {
-            update((d) => ({ ...d, stats: { ...d.stats, sessions: d.stats.sessions + 1, lastPlayed: Date.now() } }), true);
-            setScreen({ name: 'done', mode: screen.mode, summary, grew: grewBetween(screen.before, latest.current?.progress ?? {}) });
+            const won = screen.mode === 'soccer' && summary.correct > summary.answered - summary.correct;
+            update(
+              (d) => ({
+                ...d,
+                stats: {
+                  ...d.stats,
+                  sessions: d.stats.sessions + 1,
+                  lastPlayed: Date.now(),
+                  matchesWon: d.stats.matchesWon + (won ? 1 : 0),
+                },
+                streak: practiced(d.streak, Date.now()),
+              }),
+              true,
+            );
+            setScreen({
+              name: 'done',
+              mode: screen.mode,
+              summary,
+              rival: screen.rival,
+              grew: grewBetween(screen.before, latest.current?.progress ?? {}),
+            });
           }}
           stage={(props) =>
-            screen.mode === 'soccer' ? <PenaltyKicks {...props} onStat={onStat} /> : <LanternHunt {...props} onStat={onStat} />
+            screen.mode === 'soccer' ? <PenaltyKicks {...props} onStat={onStat} rival={screen.rival} /> : <LanternHunt {...props} onStat={onStat} monstersFoundTotal={data.stats.monstersFound} />
           }
         />
       )}
       {screen.name === 'done' && (
         <Done
           summary={screen.summary}
+          match={screen.mode === 'soccer' ? screen.rival : undefined}
           grew={screen.grew}
-          onAgain={() => data && setScreen({ name: 'play', mode: screen.mode, before: data.progress })}
+          names={data?.dragonNames ?? {}}
+          onAgain={() => data && setScreen({ name: 'play', mode: screen.mode, before: data.progress, rival: pickRival() })}
           onHome={() => setScreen({ name: 'home' })}
         />
       )}
@@ -206,33 +253,54 @@ interface HomeProps {
   onMap: () => void;
   onHatchery: () => void;
   onSwitch: () => void;
+  muteButton: ReactNode;
+  onSettings: (change: Partial<Settings>) => void;
 }
 
-function Home({ data, onPlay, onMap, onHatchery, onSwitch }: HomeProps) {
+function Home({ data, onPlay, onMap, onHatchery, onSwitch, muteButton, onSettings }: HomeProps) {
   const mastered = masteredCount(data.progress);
   const companion = companionFor(data.progress, data.companion);
   const hatched = companion && !['none', 'egg'].includes(companion.stage);
   const level = levelFor(data.stats.snacks);
+  const streak = streakStatus(data.streak, Date.now());
   return (
     <div className="home">
       <div className="home-top">
         <h1>Hi, {data.name}!</h1>
-        <button type="button" className="link-button" onClick={onSwitch}>
-          Switch player
-        </button>
+        <span className="home-actions">
+          {muteButton}
+          <button type="button" className="link-button" onClick={onSwitch}>
+            Switch player
+          </button>
+        </span>
       </div>
       <p className="muted">
         {data.stats.sessions === 0
           ? "Your first game is a warm-up to find the facts you already know."
           : `${mastered} of ${ALL_FACTS.length} facts mastered. Pick a game for today's practice.`}
       </p>
+      {data.stats.sessions > 0 && (
+        <div className={`streak ${streak.doneToday ? 'streak-done' : ''}`}>
+          <span className="streak-flame">{streak.count > 0 ? '🔥' : '🌱'}</span>
+          <span>
+            <strong>{streak.count > 0 ? `${streak.count}-day streak` : 'Start a new streak today!'}</strong>
+            <small>
+              {streak.doneToday
+                ? "Today's practice is done. See you tomorrow!"
+                : streak.atRisk
+                  ? 'You used your rest day. Play today to keep your streak!'
+                  : 'Play one game today to keep it going. You get one rest day a week.'}
+            </small>
+          </span>
+        </div>
+      )}
       <button type="button" className="companion" onClick={onHatchery}>
         {companion && companion.stage !== 'none' ? <Dragon dragon={companion} size={3} /> : <span className="dragon">🥚</span>}
         <span className="companion-text">
           {hatched && companion ? (
             <>
               <strong>
-                {companion.species.name} · level {level.level}
+                {dragonName(companion, data.dragonNames)} · level {level.level}
               </strong>
               <span className="dragon-meter" aria-label={`${level.into} of ${level.needed} snacks to the next level`}>
                 <span style={{ width: `${(level.into / level.needed) * 100}%` }} />
@@ -247,6 +315,47 @@ function Home({ data, onPlay, onMap, onHatchery, onSwitch }: HomeProps) {
           )}
         </span>
       </button>
+      <div className="game-options">
+        <label>
+          Practice
+          <select
+            value={data.settings.focusTable}
+            onChange={(e) => onSettings({ focusTable: Number(e.target.value) })}
+            aria-label="Which facts to practice"
+          >
+            <option value={0}>All facts (recommended)</option>
+            {Array.from({ length: 12 }, (_, i) => (
+              <option key={i + 1} value={i + 1}>
+                Just the {i + 1}s
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Game
+          <select
+            value={data.settings.length}
+            onChange={(e) => onSettings({ length: Number(e.target.value) })}
+            aria-label="Game length"
+          >
+            <option value={10}>Quick (10)</option>
+            <option value={20}>Normal (20)</option>
+            <option value={30}>Long (30)</option>
+          </select>
+        </label>
+        <label>
+          Speed goal
+          <select
+            value={data.settings.fastMs}
+            onChange={(e) => onSettings({ fastMs: Number(e.target.value) })}
+            aria-label="Speed goal: how fast counts as knowing a fact"
+          >
+            <option value={5000}>Relaxed (5 sec)</option>
+            <option value={3000}>Standard (3 sec)</option>
+            <option value={2000}>Speedy (2 sec)</option>
+          </select>
+        </label>
+      </div>
       <div className="modes">
         <button type="button" className="mode-card soccer" onClick={() => onPlay('soccer')}>
           <span className="mode-emoji">⚽</span>
@@ -262,6 +371,7 @@ function Home({ data, onPlay, onMap, onHatchery, onSwitch }: HomeProps) {
       <div className="stats">
         <span>⚽ {data.stats.goals} goals</span>
         <span>⭐ {data.stats.topCorners} top corners</span>
+        <span>🏆 {data.stats.matchesWon} matches won</span>
         <span>👾 {data.stats.monstersFound} monsters found</span>
         <span>🤗 {data.stats.tickles} tickle attacks</span>
         <span>🍖 {data.stats.snacks} dragon snacks</span>
@@ -278,16 +388,22 @@ function Home({ data, onPlay, onMap, onHatchery, onSwitch }: HomeProps) {
 
 interface DoneProps {
   summary: SessionSummary;
+  match?: string; // rival team name after a soccer match
   grew: DragonState[];
+  names: Record<string, string>;
   onAgain: () => void;
   onHome: () => void;
 }
 
-function Done({ summary, grew, onAgain, onHome }: DoneProps) {
+function Done({ summary, match, grew, names, onAgain, onHome }: DoneProps) {
+  useEffect(() => {
+    if (grew.length) sounds.hatch();
+  }, [grew]);
   const pct = summary.answered ? Math.round((summary.correct / summary.answered) * 100) : 0;
   return (
     <div className="done">
       <h1>Nice work!</h1>
+      {match && <MatchResult us={summary.correct} them={summary.answered - summary.correct} rival={match} />}
       <p className="big-stat">{pct}% right</p>
       <p className="snack-total">🍖 Your dragon ate {summary.snacks} snacks!</p>
       {grew.map((d) => (
@@ -299,7 +415,7 @@ function Done({ summary, grew, onAgain, onHome }: DoneProps) {
                 ? `New egg: ${d.species.name}!`
                 : d.stage === 'hatchling'
                   ? `${d.species.name} hatched!`
-                  : `${d.species.name} grew!`}
+                  : `${dragonName(d, names)} grew!`}
             </strong>
             <small>{d.species.power}</small>
           </span>
@@ -316,5 +432,14 @@ function Done({ summary, grew, onAgain, onHome }: DoneProps) {
         Done for today
       </button>
     </div>
+  );
+}
+
+function MatchResult({ us, them, rival }: { us: number; them: number; rival: string }) {
+  const text = us > them ? `🏆 You beat the ${rival}` : us === them ? `🤝 A draw with the ${rival}` : `The ${rival} won this time`;
+  return (
+    <p className="match-result">
+      {text}, {us}–{them}!
+    </p>
   );
 }

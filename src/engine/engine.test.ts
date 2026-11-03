@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { dragonState, grewBetween, levelFor, SPECIES, tableFactIds } from './dragons';
+import { emptyStreak, practiced, streakStatus } from './streak';
 import { ALL_FACTS, factById } from './facts';
 import { hintFor } from './hints';
-import { DAY_MS, recordAnswer, startOfDay, Progress } from './scheduler';
+import { DAY_MS, recordAnswer, startOfDay, Progress, troubleFacts } from './scheduler';
 import { buildSession, newFactCandidates, requeueMiss, RETRY_GAP } from './session';
 
 const NOW = new Date('2026-11-03T18:00:00').getTime();
@@ -141,5 +142,73 @@ describe('dragons', () => {
     expect(levelFor(0)).toEqual({ level: 1, into: 0, needed: 10 });
     expect(levelFor(10)).toEqual({ level: 2, into: 0, needed: 20 });
     expect(levelFor(35)).toEqual({ level: 3, into: 5, needed: 30 });
+  });
+});
+
+describe('streak', () => {
+  const at = (day: string) => new Date(`${day}T17:00:00`).getTime();
+
+  it('counts days in a row', () => {
+    let s = practiced(emptyStreak(), at('2026-11-02'));
+    s = practiced(s, at('2026-11-02'));
+    s = practiced(s, at('2026-11-03'));
+    expect(s.count).toBe(2);
+  });
+
+  it('forgives one missed day per week', () => {
+    let s = practiced(emptyStreak(), at('2026-11-02')); // Monday
+    s = practiced(s, at('2026-11-04')); // missed Tuesday
+    expect(s.count).toBe(2);
+    expect(streakStatus(s, at('2026-11-04')).doneToday).toBe(true);
+    s = practiced(s, at('2026-11-06')); // missed Thursday too: no second rest this week
+    expect(s.count).toBe(1);
+  });
+
+  it('gives a new rest day the next week', () => {
+    let s = practiced(emptyStreak(), at('2026-11-02'));
+    s = practiced(s, at('2026-11-04'));
+    s = practiced(s, at('2026-11-05'));
+    s = practiced(s, at('2026-11-06'));
+    s = practiced(s, at('2026-11-07'));
+    s = practiced(s, at('2026-11-08'));
+    s = practiced(s, at('2026-11-10')); // missed Monday of the next week
+    expect(s.count).toBe(7);
+  });
+
+  it('shows a streak at risk after one missed day', () => {
+    const s = practiced(emptyStreak(), at('2026-11-02'));
+    expect(streakStatus(s, at('2026-11-04'))).toEqual({ count: 1, doneToday: false, atRisk: true });
+    expect(streakStatus(s, at('2026-11-05')).count).toBe(0);
+  });
+});
+
+describe('focus practice', () => {
+  it('only asks facts from the chosen table', () => {
+    const session = buildSession({}, NOW, { focusTable: 7, random: seeded() });
+    expect(session.length).toBeGreaterThan(0);
+    expect(session.every((f) => (f.op === 'mul' ? f.a === 7 || f.b === 7 : f.a === 7))).toBe(true);
+  });
+
+  it('adds up to 6 new facts when the kid already knows some of the table', () => {
+    const progress: Progress = {
+      'mul:7:1': { box: 4, due: NOW + 5 * DAY_MS, seen: 3, correct: 3, avgMs: 1500, lastSeen: NOW - DAY_MS },
+    };
+    const session = buildSession(progress, NOW, { focusTable: 7, random: seeded() });
+    expect(session).toHaveLength(20);
+    const newIds = new Set(session.filter((f) => !progress[f.id]).map((f) => f.id));
+    expect(newIds.size).toBe(6); // the same 6 new facts come round several times
+    for (let i = 1; i < session.length; i++) expect(session[i]).not.toBe(session[i - 1]);
+  });
+});
+
+describe('trouble facts', () => {
+  it('lists the most-missed facts first and leaves out well-known ones', () => {
+    const p: Progress = {
+      'mul:7:8': { box: 1, due: NOW, seen: 6, correct: 2, avgMs: 4000, lastSeen: NOW },
+      'mul:6:7': { box: 2, due: NOW, seen: 3, correct: 2, avgMs: 3500, lastSeen: NOW },
+      'mul:2:2': { box: 5, due: NOW, seen: 6, correct: 6, avgMs: 900, lastSeen: NOW },
+      'mul:3:3': { box: 4, due: NOW, seen: 5, correct: 4, avgMs: 1500, lastSeen: NOW },
+    };
+    expect(troubleFacts(p).map((t) => t.id)).toEqual(['mul:7:8', 'mul:6:7']);
   });
 });
