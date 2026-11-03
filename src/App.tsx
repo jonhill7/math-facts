@@ -1,4 +1,5 @@
 import { ReactNode, useCallback, useEffect, useRef, useState } from 'react';
+import { Confetti } from './components/Confetti';
 import { Dragon } from './components/Dragon';
 import { companionFor, dragonName, Hatchery, stageText } from './components/Hatchery';
 import { MasteryMap, masteredCount } from './components/MasteryMap';
@@ -424,8 +425,11 @@ function Done({ summary, match, grew, names, onAgain, onHome }: DoneProps) {
     if (grew.length) sounds.hatch();
   }, [grew]);
   const pct = summary.answered ? Math.round((summary.correct / summary.answered) * 100) : 0;
+  const won = match !== undefined && summary.correct > summary.answered - summary.correct;
+  const party = won || grew.length > 0 || pct === 100;
   return (
     <div className="done">
+      {party && <Confetti count={70} fixed />}
       <h1>Nice work!</h1>
       {match && <MatchResult us={summary.correct} them={summary.answered - summary.correct} rival={match} />}
       <p className="big-stat">{pct}% right</p>

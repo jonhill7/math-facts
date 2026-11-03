@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { StageProps } from '../components/PracticeSession';
 import { sounds } from '../sound';
+import { Confetti } from '../components/Confetti';
 
 export type StatKey = 'goals' | 'topCorners' | 'monstersFound' | 'tickles';
 
@@ -93,6 +94,7 @@ export function PenaltyKicks({ last, onStat, rival }: Props) {
       >
         ⚽
       </div>
+      {shot?.kind === 'top' && <Confetti key={`c${shot.id}`} count={30} />}
       {shot && (
         <div key={`m${shot.id}`} className={`shot-message shot-${shot.kind}`} role="status">
           {shot.message}

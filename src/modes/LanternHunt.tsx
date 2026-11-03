@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { StageProps } from '../components/PracticeSession';
 import type { StatKey } from './PenaltyKicks';
 import { sounds } from '../sound';
+import { Confetti } from '../components/Confetti';
 
 const ALL_SPOTS = ['🛏️', '🛋️', '🚪', '🧺', '🪴', '📦', '🧥', '🪑', '🛁', '🧸', '🗄️', '🎹', '🧳', '🖼️', '🪟', '🛒'];
 const TICKLES_TO_ATTACK = 3;
@@ -132,6 +133,7 @@ export function LanternHunt({ last, waiting, resume, onStat, monstersFoundTotal 
           );
         })}
       </div>
+      {celebrate && <Confetti key={`found${found}`} count={36} />}
       <p className={`lantern-message ${celebrate ? 'celebrate' : ''}`} role="status">
         {message}
       </p>
