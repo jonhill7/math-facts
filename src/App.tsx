@@ -1,6 +1,6 @@
 import { ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 import { Dragon } from './components/Dragon';
-import { companionFor, Hatchery, stageText } from './components/Hatchery';
+import { companionFor, dragonName, Hatchery, stageText } from './components/Hatchery';
 import { MasteryMap, masteredCount } from './components/MasteryMap';
 import { PracticeSession, SessionSummary } from './components/PracticeSession';
 import { ALL_FACTS, Fact } from './engine/facts';
@@ -132,7 +132,11 @@ export default function App() {
         <Hatchery
           progress={data.progress}
           companion={data.companion}
+          names={data.dragonNames}
           onPick={(table) => update((d) => ({ ...d, companion: table }), true)}
+          onName={(table, name) =>
+            update((d) => ({ ...d, dragonNames: { ...d.dragonNames, [String(table)]: name } }), true)
+          }
           onBack={() => setScreen({ name: 'home' })}
         />
       )}
@@ -179,6 +183,7 @@ export default function App() {
           summary={screen.summary}
           match={screen.mode === 'soccer' ? screen.rival : undefined}
           grew={screen.grew}
+          names={data?.dragonNames ?? {}}
           onAgain={() => data && setScreen({ name: 'play', mode: screen.mode, before: data.progress, rival: pickRival() })}
           onHome={() => setScreen({ name: 'home' })}
         />
@@ -288,7 +293,7 @@ function Home({ data, onPlay, onMap, onHatchery, onSwitch, muteButton }: HomePro
           {hatched && companion ? (
             <>
               <strong>
-                {companion.species.name} · level {level.level}
+                {dragonName(companion, data.dragonNames)} · level {level.level}
               </strong>
               <span className="dragon-meter" aria-label={`${level.into} of ${level.needed} snacks to the next level`}>
                 <span style={{ width: `${(level.into / level.needed) * 100}%` }} />
@@ -337,11 +342,12 @@ interface DoneProps {
   summary: SessionSummary;
   match?: string; // rival team name after a soccer match
   grew: DragonState[];
+  names: Record<string, string>;
   onAgain: () => void;
   onHome: () => void;
 }
 
-function Done({ summary, match, grew, onAgain, onHome }: DoneProps) {
+function Done({ summary, match, grew, names, onAgain, onHome }: DoneProps) {
   useEffect(() => {
     if (grew.length) sounds.hatch();
   }, [grew]);
@@ -361,7 +367,7 @@ function Done({ summary, match, grew, onAgain, onHome }: DoneProps) {
                 ? `New egg: ${d.species.name}!`
                 : d.stage === 'hatchling'
                   ? `${d.species.name} hatched!`
-                  : `${d.species.name} grew!`}
+                  : `${dragonName(d, names)} grew!`}
             </strong>
             <small>{d.species.power}</small>
           </span>

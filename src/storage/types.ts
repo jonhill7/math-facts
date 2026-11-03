@@ -19,6 +19,7 @@ export interface SaveData {
   companion?: number; // the times table of the kid's chosen dragon
   settings: Settings;
   streak: Streak;
+  dragonNames: Record<string, string>; // names kids give their dragons, keyed by times table
 }
 
 export interface Settings {
@@ -38,7 +39,7 @@ export const emptyStats = (): Stats => ({
   lastPlayed: 0,
 });
 
-export const emptySave = (name: string): SaveData => ({ name, progress: {}, stats: emptyStats(), settings: defaultSettings(), streak: emptyStreak() });
+export const emptySave = (name: string): SaveData => ({ name, progress: {}, stats: emptyStats(), settings: defaultSettings(), streak: emptyStreak(), dragonNames: {} });
 
 // Fill in anything an older save is missing, so new features never crash on old data.
 export function normalizeSave(name: string, raw: Partial<SaveData> | undefined): SaveData {
@@ -52,6 +53,7 @@ export function normalizeSave(name: string, raw: Partial<SaveData> | undefined):
     stats: { ...base.stats, ...raw.stats },
     settings: { ...base.settings, ...raw.settings },
     streak: { ...base.streak, ...raw.streak },
+    dragonNames: raw.dragonNames ?? {},
   };
 }
 

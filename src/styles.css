@@ -849,3 +849,33 @@ h2 {
   font-size: 1.3rem;
   font-weight: 800;
 }
+
+.name-form {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 2px solid var(--accent);
+  background: var(--surface);
+}
+
+.name-form label {
+  font-weight: 700;
+}
+
+.name-form span {
+  display: flex;
+  gap: 8px;
+}
+
+.name-form input {
+  flex: 1;
+  min-width: 0;
+  padding: 10px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 1rem;
+}
