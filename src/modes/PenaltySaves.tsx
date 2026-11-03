@@ -70,13 +70,13 @@ export function PenaltySaves({ last, turn, onStat, rival, timeLimitMs }: Props) 
 
   const kicked = shot !== null;
   const saved = shot?.result === 'save' || shot?.result === 'dive';
-  // Where the ball ends, in % of the pitch. Saved balls stop in the keeper's gloves.
-  const ball = !shot
-    ? undefined
-    : saved
-      ? { left: `${50 + shot.side * (shot.result === 'dive' ? 30 : 16)}%`, top: '34%' }
-      : { left: `${50 + shot.side * 32}%`, top: '30%' };
-  const keeperX = !shot ? 0 : saved ? shot.side * (shot.result === 'dive' ? 30 : 16) : -shot.side * 20;
+  // Where the save happens, in % of the pitch: a dive reaches high and wide.
+  const catchAt = !shot || !saved ? null : shot.result === 'dive' ? { x: 50 + shot.side * 30, y: 38 } : { x: 50 + shot.side * 15, y: 50 };
+  // Saved balls end in the keeper's gloves. Goals hit the net in the far corner.
+  const ball = !shot ? undefined : catchAt ? { left: `${catchAt.x}%`, top: `${catchAt.y}%` } : { left: `${50 + shot.side * 32}%`, top: '32%' };
+  // On a goal the keeper guesses wrong and dives the other way.
+  const keeper = catchAt ?? (shot ? { x: 50 - shot.side * 20, y: 50 } : { x: 50, y: 50 });
+  const lean = (keeper.x - 50) * 2;
 
   return (
     <div className="pitch pitch-keeper">
@@ -104,8 +104,8 @@ export function PenaltySaves({ last, turn, onStat, rival, timeLimitMs }: Props) 
         />
       </div>
       <div
-        className={`my-keeper ${shot?.result === 'dive' ? 'my-keeper-dive' : ''}`}
-        style={{ left: `${50 + keeperX}%`, transform: `translateX(-50%) rotate(${keeperX * 1.5}deg)` }}
+        className={`my-keeper ${!shot ? 'my-keeper-ready' : ''} ${shot?.result === 'dive' ? 'my-keeper-dive' : ''}`}
+        style={{ left: `${keeper.x}%`, top: `${keeper.y}%`, transform: `translate(-50%, -50%) rotate(${lean}deg)` }}
         aria-hidden="true"
       >
         🧤
@@ -118,9 +118,17 @@ export function PenaltySaves({ last, turn, onStat, rival, timeLimitMs }: Props) 
       >
         🏃
       </div>
-      <div key={`b${turn}`} className={`ball keeper-ball ${kicked ? 'ball-kicked' : ''}`} style={ball} aria-hidden="true">
+      <div
+        key={`b${turn}`}
+        className={`ball keeper-ball ${kicked ? 'ball-kicked' : ''} ${catchAt ? 'ball-caught' : ''}`}
+        style={ball}
+        aria-hidden="true"
+      >
         ⚽
       </div>
+      {catchAt && (
+        <div key={`r${turn}`} className="catch-ring" style={{ left: `${catchAt.x}%`, top: `${catchAt.y}%` }} aria-hidden="true" />
+      )}
       {shot?.result === 'dive' && <Confetti key={`c${shot.id}`} count={30} />}
       {shot && (
         <div key={`m${shot.id}${shot.result}`} className={`shot-message shot-${saved ? 'saved' : shot.result === 'late' ? 'late' : 'save'}`} role="status">

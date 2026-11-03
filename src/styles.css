@@ -1465,3 +1465,69 @@ h1 {
     animation-duration: var(--clock) !important;
   }
 }
+
+/* Saves: the keeper gets there first, and the ball lands in the gloves. */
+.pitch-keeper .my-keeper {
+  z-index: 2;
+  transition: left 0.28s ease-out, top 0.28s ease-out, transform 0.28s ease-out;
+}
+
+/* Bouncing on the toes, ready to dive, while the shooter runs up. */
+.my-keeper-ready {
+  animation: keeper-ready 0.9s ease-in-out infinite;
+}
+
+@keyframes keeper-ready {
+  0%,
+  100% {
+    margin-left: -10px;
+  }
+  50% {
+    margin-left: 10px;
+  }
+}
+
+.keeper-ball {
+  z-index: 3;
+}
+
+/* The ball flies in, then sits snug in the gloves, a little smaller and pressed in. */
+.ball-caught {
+  animation: kick 0.45s ease-out, caught 0.35s ease-out 0.45s forwards;
+}
+
+@keyframes caught {
+  0% {
+    transform: translate(-50%, -50%) scale(1);
+  }
+  40% {
+    transform: translate(-50%, -50%) scale(0.7, 0.85);
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(0.8);
+  }
+}
+
+.catch-ring {
+  position: absolute;
+  z-index: 1;
+  width: 64px;
+  height: 64px;
+  margin: -32px 0 0 -32px;
+  border-radius: 50%;
+  border: 4px solid rgba(255, 255, 255, 0.9);
+  opacity: 0;
+  animation: catch-ring 0.5s ease-out 0.42s;
+  pointer-events: none;
+}
+
+@keyframes catch-ring {
+  from {
+    opacity: 1;
+    transform: scale(0.4);
+  }
+  to {
+    opacity: 0;
+    transform: scale(1.6);
+  }
+}

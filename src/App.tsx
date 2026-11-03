@@ -161,6 +161,7 @@ export default function App() {
           })()}
           fastMs={data.settings.fastMs}
           timeLimitMs={screen.mode === 'keeper' ? shotClock(data.settings.fastMs) : undefined}
+          pauseMs={screen.mode === 'keeper' ? 1500 : undefined}
           options={{ focusTable: data.settings.focusTable || undefined, length: data.settings.length }}
           onQuit={() => {
             update((d) => ({ ...d }), true); // save right away

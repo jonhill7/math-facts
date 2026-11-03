@@ -42,6 +42,7 @@ interface Props {
   fastMs?: number;
   buddy?: ReactNode; // the kid's companion dragon, along for the game
   timeLimitMs?: number; // games with a shot clock count right answers given in time
+  pauseMs?: number; // how long to show a right answer before the next question
 }
 
 // What the companion says after each answer.
@@ -54,7 +55,7 @@ function buddyLine(last: AnswerEvent, timeLimitMs?: number): string {
 
 type Phase = 'ask' | 'fix' | 'pause' | 'hold';
 
-export function PracticeSession({ progress, onAnswer, onFinish, onQuit, stage, holdAfterCorrect, topRight, options, fastMs = DEFAULT_FAST_MS, buddy, timeLimitMs }: Props) {
+export function PracticeSession({ progress, onAnswer, onFinish, onQuit, stage, holdAfterCorrect, topRight, options, fastMs = DEFAULT_FAST_MS, buddy, timeLimitMs, pauseMs = 900 }: Props) {
   const [queue, setQueue] = useState<Fact[]>(() => buildSession(progress, Date.now(), options));
   const [index, setIndex] = useState(0);
   const [phase, setPhase] = useState<Phase>('ask');
@@ -100,14 +101,14 @@ export function PracticeSession({ progress, onAnswer, onFinish, onQuit, stage, h
       if (!holdAfterCorrect && timeLimitMs === undefined) sounds.kick();
       else sounds.right();
       setPhase(holdAfterCorrect ? 'hold' : 'pause');
-      if (!holdAfterCorrect) setTimeout(next, 900);
+      if (!holdAfterCorrect) setTimeout(next, pauseMs);
     } else {
       sounds.wrong();
       setQueue(requeueMiss(queue, index));
       setPhase('fix');
       setInput('');
     }
-  }, [fact, input, phase, next, onAnswer, last, holdAfterCorrect, queue, index, fastMs, timeLimitMs]);
+  }, [fact, input, phase, next, onAnswer, last, holdAfterCorrect, queue, index, fastMs, timeLimitMs, pauseMs]);
 
   if (!fact) return null;
   const progressPct = Math.round((index / queue.length) * 100);
