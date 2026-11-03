@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { StageProps } from '../components/PracticeSession';
+import { sounds } from '../sound';
 
 export type StatKey = 'goals' | 'topCorners' | 'monstersFound' | 'tickles';
 
@@ -35,6 +36,7 @@ export function PenaltyKicks({ last, onStat }: StageProps & { onStat: (key: Stat
       setScore((s) => ({ ...s, saves: s.saves + 1 }));
     }
     setShot(next);
+    window.setTimeout(next.kind === 'save' ? sounds.save : sounds.goal, 250);
     // onStat is stable for the session; only react to new answers.
   }, [last?.id]);
 

@@ -1,4 +1,4 @@
-import { emptySave, emptyStats, ProgressStore, SaveData } from './types';
+import { emptySave, normalizeSave, ProgressStore, SaveData } from './types';
 
 // Guest players: progress is kept in this browser only.
 const KEY_PREFIX = 'math-facts:guest:';
@@ -23,8 +23,7 @@ export function localStore(name: string): ProgressStore {
       try {
         const raw = localStorage.getItem(key);
         if (raw) {
-          const data = JSON.parse(raw) as SaveData;
-          return { ...emptySave(name), ...data, stats: { ...emptyStats(), ...data.stats } };
+          return normalizeSave(name, JSON.parse(raw) as Partial<SaveData>);
         }
       } catch {
         // Fall through to a fresh save.

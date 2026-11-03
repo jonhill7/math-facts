@@ -4,6 +4,7 @@ import { hintFor } from '../engine/hints';
 import { SNACKS_FAST, SNACKS_RIGHT } from '../engine/dragons';
 import { DEFAULT_FAST_MS, Progress } from '../engine/scheduler';
 import { buildSession, requeueMiss } from '../engine/session';
+import { sounds } from '../sound';
 import { Keypad } from './Keypad';
 
 export interface AnswerEvent {
@@ -34,11 +35,12 @@ interface Props {
   onQuit: () => void;
   stage: (props: StageProps) => ReactNode;
   holdAfterCorrect?: boolean; // wait for the game to call resume() after a right answer
+  topRight?: ReactNode;
 }
 
 type Phase = 'ask' | 'fix' | 'pause' | 'hold';
 
-export function PracticeSession({ progress, onAnswer, onFinish, onQuit, stage, holdAfterCorrect }: Props) {
+export function PracticeSession({ progress, onAnswer, onFinish, onQuit, stage, holdAfterCorrect, topRight }: Props) {
   const [queue, setQueue] = useState<Fact[]>(() => buildSession(progress, Date.now()));
   const [index, setIndex] = useState(0);
   const [phase, setPhase] = useState<Phase>('ask');
@@ -80,9 +82,12 @@ export function PracticeSession({ progress, onAnswer, onFinish, onQuit, stage, h
     onAnswer(fact, correct, ms);
     setLast({ id: (last?.id ?? 0) + 1, fact, correct, fast, ms });
     if (correct) {
+      if (!holdAfterCorrect) sounds.kick();
+      else sounds.right();
       setPhase(holdAfterCorrect ? 'hold' : 'pause');
       if (!holdAfterCorrect) setTimeout(next, 900);
     } else {
+      sounds.wrong();
       setQueue(requeueMiss(queue, index));
       setPhase('fix');
       setInput('');
@@ -109,6 +114,7 @@ export function PracticeSession({ progress, onAnswer, onFinish, onQuit, stage, h
             </span>
           )}
         </span>
+        {topRight}
       </div>
 
       <div className="stage">{stage({ last, waiting: phase === 'hold', resume: next })}</div>

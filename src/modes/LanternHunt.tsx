@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { StageProps } from '../components/PracticeSession';
 import type { StatKey } from './PenaltyKicks';
+import { sounds } from '../sound';
 
 const SPOTS = ['🛏️', '🛋️', '🚪', '🧺', '🪴', '📦', '🧥', '🪑', '🛁'];
 const SIZE = 3; // 3 x 3 house
@@ -41,6 +42,7 @@ export function LanternHunt({ last, waiting, resume, onStat }: StageProps & { on
     const nextCreep = creep + 1;
     if (nextCreep >= TICKLES_TO_ATTACK) {
       setAttack((n) => n + 1);
+      sounds.giggle();
       onStat('tickles');
       setMessage('TICKLE ATTACK! The monster ran off to hide again...');
       setCreep(0);
@@ -56,6 +58,7 @@ export function LanternHunt({ last, waiting, resume, onStat }: StageProps & { on
   const search = (spot: number) => {
     if (!waiting || marks[spot]) return;
     if (spot === monster) {
+      sounds.found();
       setMarks({ ...marks, [spot]: 'found' });
       setFound((n) => n + 1);
       onStat('monstersFound');
@@ -70,6 +73,7 @@ export function LanternHunt({ last, waiting, resume, onStat }: StageProps & { on
       }, 1400);
       return;
     }
+    sounds.search();
     const clue = bright && nextTo(spot, monster);
     setMarks({ ...marks, [spot]: clue ? 'footprints' : 'empty' });
     setMessage(clue ? 'Footprints! The monster is right next to this spot.' : 'Nothing here...');

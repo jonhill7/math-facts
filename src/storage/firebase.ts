@@ -1,7 +1,7 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, onAuthStateChanged, signInWithPopup, signOut, User } from 'firebase/auth';
 import { doc, getDoc, getFirestore, setDoc } from 'firebase/firestore';
-import { emptySave, emptyStats, ProgressStore, SaveData } from './types';
+import { normalizeSave, ProgressStore, SaveData } from './types';
 
 // Firebase settings come from environment variables at build time (see .env.example).
 const config = {
@@ -46,9 +46,7 @@ export function cloudStore(user: User): ProgressStore {
   return {
     async load() {
       const snap = await getDoc(ref);
-      if (!snap.exists()) return emptySave(name);
-      const data = snap.data() as SaveData;
-      return { ...emptySave(name), ...data, name, stats: { ...emptyStats(), ...data.stats } };
+      return normalizeSave(name, snap.exists() ? (snap.data() as Partial<SaveData>) : undefined);
     },
     async save(data) {
       await setDoc(ref, data);

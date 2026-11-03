@@ -15,7 +15,14 @@ export interface SaveData {
   progress: Progress;
   stats: Stats;
   companion?: number; // the times table of the kid's chosen dragon
+  settings: Settings;
 }
+
+export interface Settings {
+  muted: boolean;
+}
+
+export const defaultSettings = (): Settings => ({ muted: false });
 
 export const emptyStats = (): Stats => ({
   sessions: 0,
@@ -27,7 +34,21 @@ export const emptyStats = (): Stats => ({
   lastPlayed: 0,
 });
 
-export const emptySave = (name: string): SaveData => ({ name, progress: {}, stats: emptyStats() });
+export const emptySave = (name: string): SaveData => ({ name, progress: {}, stats: emptyStats(), settings: defaultSettings() });
+
+// Fill in anything an older save is missing, so new features never crash on old data.
+export function normalizeSave(name: string, raw: Partial<SaveData> | undefined): SaveData {
+  const base = emptySave(name);
+  if (!raw) return base;
+  return {
+    ...base,
+    ...raw,
+    name,
+    progress: raw.progress ?? {},
+    stats: { ...base.stats, ...raw.stats },
+    settings: { ...base.settings, ...raw.settings },
+  };
+}
 
 // Where a player's progress lives: this browser (guests) or the cloud (Google sign-in).
 export interface ProgressStore {

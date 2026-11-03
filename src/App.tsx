@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 import { Dragon } from './components/Dragon';
 import { companionFor, Hatchery, stageText } from './components/Hatchery';
 import { MasteryMap, masteredCount } from './components/MasteryMap';
@@ -11,6 +11,7 @@ import { PenaltyKicks, StatKey } from './modes/PenaltyKicks';
 import { cloudEnabled, cloudStore, signInWithGoogle, signOutUser, User, watchUser } from './storage/firebase';
 import { listGuests, localStore } from './storage/localStore';
 import { ProgressStore, SaveData } from './storage/types';
+import { setMuted, sounds } from './sound';
 
 type Mode = 'soccer' | 'lantern';
 type Screen =
@@ -29,6 +30,7 @@ export default function App() {
   const [error, setError] = useState('');
   const latest = useRef<SaveData | null>(null);
   latest.current = data;
+  setMuted(data?.settings.muted ?? false);
 
   // Signed in with Google: load that kid's progress from the cloud.
   useEffect(
@@ -88,6 +90,17 @@ export default function App() {
     [update],
   );
 
+  const muteButton = data && (
+    <button
+      type="button"
+      className="mute-button"
+      onClick={() => update((d) => ({ ...d, settings: { ...d.settings, muted: !d.settings.muted } }), true)}
+      aria-label={data.settings.muted ? 'Turn sound on' : 'Turn sound off'}
+    >
+      {data.settings.muted ? '🔇' : '🔊'}
+    </button>
+  );
+
   const switchPlayer = async () => {
     if (user) await signOutUser();
     setStore(null);
@@ -110,6 +123,7 @@ export default function App() {
           onMap={() => setScreen({ name: 'map' })}
           onHatchery={() => setScreen({ name: 'hatchery' })}
           onSwitch={switchPlayer}
+          muteButton={muteButton}
         />
       )}
       {screen.name === 'map' && data && <MasteryMap progress={data.progress} onBack={() => setScreen({ name: 'home' })} />}
@@ -126,6 +140,7 @@ export default function App() {
           progress={data.progress}
           onAnswer={onAnswer}
           holdAfterCorrect={screen.mode === 'lantern'}
+          topRight={muteButton}
           onQuit={() => {
             update((d) => ({ ...d }), true); // save right away
             setScreen({ name: 'home' });
@@ -206,9 +221,10 @@ interface HomeProps {
   onMap: () => void;
   onHatchery: () => void;
   onSwitch: () => void;
+  muteButton: ReactNode;
 }
 
-function Home({ data, onPlay, onMap, onHatchery, onSwitch }: HomeProps) {
+function Home({ data, onPlay, onMap, onHatchery, onSwitch, muteButton }: HomeProps) {
   const mastered = masteredCount(data.progress);
   const companion = companionFor(data.progress, data.companion);
   const hatched = companion && !['none', 'egg'].includes(companion.stage);
@@ -217,9 +233,12 @@ function Home({ data, onPlay, onMap, onHatchery, onSwitch }: HomeProps) {
     <div className="home">
       <div className="home-top">
         <h1>Hi, {data.name}!</h1>
-        <button type="button" className="link-button" onClick={onSwitch}>
-          Switch player
-        </button>
+        <span className="home-actions">
+          {muteButton}
+          <button type="button" className="link-button" onClick={onSwitch}>
+            Switch player
+          </button>
+        </span>
       </div>
       <p className="muted">
         {data.stats.sessions === 0
@@ -284,6 +303,9 @@ interface DoneProps {
 }
 
 function Done({ summary, grew, onAgain, onHome }: DoneProps) {
+  useEffect(() => {
+    if (grew.length) sounds.hatch();
+  }, [grew]);
   const pct = summary.answered ? Math.round((summary.correct / summary.answered) * 100) : 0;
   return (
     <div className="done">
