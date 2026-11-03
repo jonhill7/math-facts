@@ -1,4 +1,5 @@
 import { Progress } from '../engine/scheduler';
+import { emptyStreak, Streak } from '../engine/streak';
 
 export interface Stats {
   sessions: number;
@@ -16,6 +17,7 @@ export interface SaveData {
   stats: Stats;
   companion?: number; // the times table of the kid's chosen dragon
   settings: Settings;
+  streak: Streak;
 }
 
 export interface Settings {
@@ -34,7 +36,7 @@ export const emptyStats = (): Stats => ({
   lastPlayed: 0,
 });
 
-export const emptySave = (name: string): SaveData => ({ name, progress: {}, stats: emptyStats(), settings: defaultSettings() });
+export const emptySave = (name: string): SaveData => ({ name, progress: {}, stats: emptyStats(), settings: defaultSettings(), streak: emptyStreak() });
 
 // Fill in anything an older save is missing, so new features never crash on old data.
 export function normalizeSave(name: string, raw: Partial<SaveData> | undefined): SaveData {
@@ -47,6 +49,7 @@ export function normalizeSave(name: string, raw: Partial<SaveData> | undefined):
     progress: raw.progress ?? {},
     stats: { ...base.stats, ...raw.stats },
     settings: { ...base.settings, ...raw.settings },
+    streak: { ...base.streak, ...raw.streak },
   };
 }
 

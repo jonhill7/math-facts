@@ -6,6 +6,7 @@ import { PracticeSession, SessionSummary } from './components/PracticeSession';
 import { ALL_FACTS, Fact } from './engine/facts';
 import { DragonState, grewBetween, levelFor, SNACKS_FAST, SNACKS_RIGHT } from './engine/dragons';
 import { DEFAULT_FAST_MS, Progress, recordAnswer } from './engine/scheduler';
+import { practiced, streakStatus } from './engine/streak';
 import { LanternHunt } from './modes/LanternHunt';
 import { PenaltyKicks, StatKey } from './modes/PenaltyKicks';
 import { cloudEnabled, cloudStore, signInWithGoogle, signOutUser, User, watchUser } from './storage/firebase';
@@ -146,7 +147,14 @@ export default function App() {
             setScreen({ name: 'home' });
           }}
           onFinish={(summary) => {
-            update((d) => ({ ...d, stats: { ...d.stats, sessions: d.stats.sessions + 1, lastPlayed: Date.now() } }), true);
+            update(
+              (d) => ({
+                ...d,
+                stats: { ...d.stats, sessions: d.stats.sessions + 1, lastPlayed: Date.now() },
+                streak: practiced(d.streak, Date.now()),
+              }),
+              true,
+            );
             setScreen({ name: 'done', mode: screen.mode, summary, grew: grewBetween(screen.before, latest.current?.progress ?? {}) });
           }}
           stage={(props) =>
@@ -229,6 +237,7 @@ function Home({ data, onPlay, onMap, onHatchery, onSwitch, muteButton }: HomePro
   const companion = companionFor(data.progress, data.companion);
   const hatched = companion && !['none', 'egg'].includes(companion.stage);
   const level = levelFor(data.stats.snacks);
+  const streak = streakStatus(data.streak, Date.now());
   return (
     <div className="home">
       <div className="home-top">
@@ -245,6 +254,21 @@ function Home({ data, onPlay, onMap, onHatchery, onSwitch, muteButton }: HomePro
           ? "Your first game is a warm-up to find the facts you already know."
           : `${mastered} of ${ALL_FACTS.length} facts mastered. Pick a game for today's practice.`}
       </p>
+      {data.stats.sessions > 0 && (
+        <div className={`streak ${streak.doneToday ? 'streak-done' : ''}`}>
+          <span className="streak-flame">{streak.count > 0 ? '🔥' : '🌱'}</span>
+          <span>
+            <strong>{streak.count > 0 ? `${streak.count}-day streak` : 'Start a new streak today!'}</strong>
+            <small>
+              {streak.doneToday
+                ? "Today's practice is done. See you tomorrow!"
+                : streak.atRisk
+                  ? 'You used your rest day. Play today to keep your streak!'
+                  : 'Play one game today to keep it going. You get one rest day a week.'}
+            </small>
+          </span>
+        </div>
+      )}
       <button type="button" className="companion" onClick={onHatchery}>
         {companion && companion.stage !== 'none' ? <Dragon dragon={companion} size={3} /> : <span className="dragon">🥚</span>}
         <span className="companion-text">
