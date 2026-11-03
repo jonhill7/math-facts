@@ -371,7 +371,9 @@ h2 {
   font-weight: 900;
   color: #fff;
   text-shadow: 0 2px 0 rgba(0, 0, 0, 0.35);
-  white-space: nowrap;
+  width: 90%;
+  text-align: center;
+  line-height: 1.15;
   animation: pop 0.9s ease-out forwards;
   pointer-events: none;
 }

@@ -4,7 +4,7 @@
 // from the cache. Only this site's own files are cached: sign-in and cloud
 // saving always go to the network.
 
-const CACHE = 'math-facts-v1';
+const CACHE = 'math-facts-v1'; // main.tsx uses the same name
 const SHELL = ['./', './index.html', './manifest.webmanifest', './icon.svg', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', (event) => {
