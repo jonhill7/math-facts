@@ -19,6 +19,10 @@
   --box-3: #facc15;
   --box-4: #86efac;
   --box-5: #16a34a;
+  --shadow: rgba(20, 33, 61, 0.18);
+  --press: #c9c2b2;
+  --primary-dark: #1e3a8a;
+  --good-dark: #15803d;
   color-scheme: light;
 }
 
@@ -31,6 +35,9 @@
     --border: #334155;
     --primary: #3b82f6;
     --box-0: #334155;
+    --shadow: rgba(0, 0, 0, 0.4);
+    --press: #0b1222;
+    --primary-dark: #1e3a8a;
     color-scheme: dark;
   }
 }
@@ -648,23 +655,10 @@ h2 {
   line-height: 1;
 }
 
-.dragon-none {
-  opacity: 0.35;
-}
-
-.dragon-hatchling {
-  transform: scale(0.9);
-}
-
-.dragon-grown {
-  transform: scale(1.15);
-}
-
-.dragon-crown {
-  position: absolute;
-  top: -0.3em;
-  right: -0.3em;
-  font-size: 0.4em;
+.dragon {
+  flex: none;
+  overflow: visible;
+  color: var(--muted);
 }
 
 .dragon-meter {
@@ -695,9 +689,7 @@ h2 {
   text-align: left;
 }
 
-.companion .dragon {
-  font-size: 2.6rem;
-}
+
 
 .companion-text {
   display: flex;
@@ -742,9 +734,7 @@ h2 {
   box-shadow: 0 0 0 3px rgba(252, 163, 17, 0.25);
 }
 
-.dragon-card .dragon {
-  height: 1.2em;
-}
+
 
 .dragon-table {
   position: absolute;
@@ -927,4 +917,345 @@ h2 {
 .trouble li span {
   color: var(--muted);
   font-size: 0.85rem;
+}
+
+/* Chunky game look: buttons and cards sit on a solid bottom edge and press
+   down when tapped, like real game buttons. */
+.big-button,
+.key,
+.chip,
+.mode-card,
+.companion,
+.dragon-card:not(:disabled),
+.mute-button {
+  box-shadow: 0 4px 0 var(--press);
+  transition: transform 0.08s, box-shadow 0.08s;
+}
+
+.big-button {
+  box-shadow: 0 5px 0 var(--primary-dark);
+}
+
+.big-button.secondary,
+.big-button.google {
+  box-shadow: 0 5px 0 var(--press);
+}
+
+.key-go {
+  box-shadow: 0 4px 0 var(--good-dark);
+}
+
+.mode-card.soccer {
+  box-shadow: 0 6px 0 #17521f;
+}
+
+.mode-card.lantern {
+  box-shadow: 0 6px 0 #05070f;
+}
+
+.companion {
+  box-shadow: 0 5px 0 #c27c0e;
+}
+
+.big-button:active,
+.key:active:not(:disabled),
+.chip:active,
+.mode-card:active,
+.companion:active,
+.dragon-card:active:not(:disabled),
+.mute-button:active {
+  transform: translateY(4px);
+  box-shadow: 0 0 0 transparent;
+}
+
+.mode-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.mode-card::after {
+  content: '';
+  position: absolute;
+  right: -30px;
+  top: -30px;
+  width: 110px;
+  height: 110px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.mode-card .mode-emoji {
+  filter: drop-shadow(0 3px 2px rgba(0, 0, 0, 0.3));
+}
+
+.streak,
+.note,
+.hint,
+.trouble li,
+.name-form,
+.answer-box {
+  box-shadow: 0 3px 0 var(--press);
+}
+
+.key {
+  border-width: 2px;
+}
+
+.answer-box {
+  border-width: 3px;
+}
+
+body {
+  background:
+    radial-gradient(circle at 15% -10%, rgba(252, 163, 17, 0.14), transparent 45%),
+    radial-gradient(circle at 110% 20%, rgba(29, 78, 216, 0.1), transparent 40%),
+    var(--bg);
+  background-attachment: fixed;
+}
+
+/* Friendly rounded font (Fredoka, bundled so it works offline) for
+   headings, numbers and buttons. Body text stays in the system font. */
+h1,
+h2,
+h3,
+.big-button,
+.mode-card strong,
+.question,
+.key,
+.scoreboard,
+.shot-message,
+.big-stat,
+.match-result,
+.snack-total,
+.streak strong,
+.companion strong,
+.dragon-card strong,
+.lantern-message,
+.tickle-overlay,
+.chip {
+  font-family: 'Fredoka', system-ui, sans-serif;
+  letter-spacing: 0.01em;
+}
+
+h1 {
+  font-weight: 700;
+}
+
+.question,
+.key {
+  font-weight: 600;
+}
+
+/* Home layout */
+.home > .muted {
+  margin: 4px 0 0;
+}
+
+.home .companion {
+  margin-top: 14px;
+}
+
+.home .modes {
+  margin: 18px 0 12px;
+}
+
+.game-options {
+  display: block;
+  margin: 0 0 14px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  box-shadow: 0 3px 0 var(--press);
+}
+
+.game-options summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.game-options summary::-webkit-details-marker {
+  display: none;
+}
+
+.options-summary {
+  flex: 1;
+  min-width: 0;
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+.options-change {
+  color: var(--primary);
+  font-weight: 700;
+}
+
+.game-options[open] .options-change {
+  visibility: hidden;
+}
+
+.options-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 0 14px 14px;
+}
+
+.options-body label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  font-weight: 700;
+}
+
+.options-body select {
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-weight: 400;
+}
+
+.home .streak {
+  margin-top: 14px;
+}
+
+.stat-tiles {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.stat-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 10px 6px;
+  border-radius: 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  text-align: center;
+}
+
+.stat-tile strong {
+  font-family: 'Fredoka', system-ui, sans-serif;
+  font-size: 1.4rem;
+  line-height: 1.1;
+}
+
+.stat-tile small {
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+
+.stat-icon {
+  font-size: 1.2rem;
+}
+
+.home-buttons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+/* Confetti */
+.confetti {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 3;
+}
+
+.confetti-fixed {
+  position: fixed;
+  z-index: 10;
+}
+
+.confetti span {
+  position: absolute;
+  top: -12px;
+  width: 9px;
+  height: 13px;
+  opacity: 0;
+  animation-name: confetti-fall;
+  animation-timing-function: cubic-bezier(0.25, 0.6, 0.4, 1);
+  animation-fill-mode: forwards;
+}
+
+@keyframes confetti-fall {
+  0% {
+    opacity: 1;
+    transform: translate(0, 0) rotate(0);
+  }
+  85% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--drift), 105vh) rotate(var(--spin));
+  }
+}
+
+.pitch .confetti span,
+.house .confetti span {
+  animation-name: confetti-fall-short;
+}
+
+@keyframes confetti-fall-short {
+  0% {
+    opacity: 1;
+    transform: translate(0, 0) rotate(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--drift), 260px) rotate(var(--spin));
+  }
+}
+
+/* Lantern light: the house is dark except where the lantern shines.
+   Searched spots stay lit above the darkness. */
+.rooms {
+  position: relative;
+}
+
+.darkness {
+  position: absolute;
+  inset: -6px 4px;
+  z-index: 1;
+  border-radius: 12px;
+  pointer-events: none;
+  transition: background 0.25s ease-out;
+}
+
+.spot .spot-emoji,
+.rooms-ready .spot:not(:disabled) .spot-emoji {
+  filter: none;
+}
+
+.spot-empty,
+.spot-hot,
+.spot-warm,
+.spot-cold,
+.spot-found {
+  z-index: 2;
+}
+
+.rooms-ready .spot:not(:disabled) {
+  box-shadow: none;
+}
+
+.rooms-bright .spot:not(:disabled) {
+  box-shadow: none;
+}
+
+.rooms-ready {
+  cursor: crosshair;
 }

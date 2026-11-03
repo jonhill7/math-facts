@@ -14,22 +14,22 @@ export const STAGES: Stage[] = ['none', 'egg', 'hatchling', 'young', 'grown'];
 export interface Species {
   table: number;
   name: string;
-  hue: number; // color tint for the dragon picture, in degrees
+  hue: number; // the dragon's main color, as a hue in degrees
   power: string;
 }
 
 export const SPECIES: Species[] = [
-  { table: 1, name: 'Pebble Wyrm', hue: 30, power: 'Never changes, never forgets.' },
+  { table: 1, name: 'Pebble Wyrm', hue: 25, power: 'Never changes, never forgets.' },
   { table: 2, name: 'Twin-Tail', hue: 160, power: 'Doubles everything it sees.' },
-  { table: 3, name: 'Thornback', hue: 90, power: 'Grows spikes in threes.' },
-  { table: 4, name: 'Quadwing', hue: 200, power: 'Flies on four wings, double-double fast.' },
-  { table: 5, name: 'Starfin', hue: 250, power: 'Counts by fives on its fingers and fins.' },
+  { table: 3, name: 'Thornback', hue: 95, power: 'Grows spikes in threes.' },
+  { table: 4, name: 'Quadwing', hue: 205, power: 'Flies on four wings, double-double fast.' },
+  { table: 5, name: 'Starfin', hue: 265, power: 'Counts by fives on its fingers and fins.' },
   { table: 6, name: 'Hexscale', hue: 300, power: 'Its scales are perfect hexagons.' },
-  { table: 7, name: 'Ember Drake', hue: 330, power: 'Breathes the hottest fire of all.' },
-  { table: 8, name: 'Octofrost', hue: 180, power: 'Freezes rivers with eight icy breaths.' },
-  { table: 9, name: 'Ninefold Gale', hue: 120, power: 'Knows the times-ten-minus-one trick.' },
-  { table: 10, name: 'Tenpeak Titan', hue: 0, power: 'Sleeps on the tenth mountain.' },
-  { table: 11, name: 'Mirror Drake', hue: 270, power: 'Sees its own digits twice.' },
+  { table: 7, name: 'Ember Drake', hue: 5, power: 'Breathes the hottest fire of all.' },
+  { table: 8, name: 'Octofrost', hue: 185, power: 'Freezes rivers with eight icy breaths.' },
+  { table: 9, name: 'Ninefold Gale', hue: 130, power: 'Knows the times-ten-minus-one trick.' },
+  { table: 10, name: 'Tenpeak Titan', hue: 220, power: 'Sleeps on the tenth mountain.' },
+  { table: 11, name: 'Mirror Drake', hue: 285, power: 'Sees its own digits twice.' },
   { table: 12, name: 'Dozen Crown', hue: 45, power: 'Wears a crown with twelve jewels.' },
 ];
 

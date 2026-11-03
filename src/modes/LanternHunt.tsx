@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
+import { PointerEvent, useEffect, useRef, useState } from 'react';
 import { StageProps } from '../components/PracticeSession';
 import type { StatKey } from './PenaltyKicks';
 import { sounds } from '../sound';
+import { Confetti } from '../components/Confetti';
 
 const ALL_SPOTS = ['🛏️', '🛋️', '🚪', '🧺', '🪴', '📦', '🧥', '🪑', '🛁', '🧸', '🗄️', '🎹', '🧳', '🖼️', '🪟', '🛒'];
 const TICKLES_TO_ATTACK = 3;
@@ -49,6 +50,19 @@ export function LanternHunt({ last, waiting, resume, onStat, monstersFoundTotal 
 
   const bright = Boolean(last?.correct && last.fast);
 
+  // The lantern's beam: where it points (in % of the house) and how wide it is.
+  // It follows the finger or mouse while a search is ready.
+  const roomsRef = useRef<HTMLDivElement>(null);
+  const [beam, setBeam] = useState({ x: 50, y: 50 });
+  const beamSize = waiting ? (bright ? 46 : 30) : 14;
+  const aim = (e: PointerEvent) => {
+    const box = roomsRef.current?.getBoundingClientRect();
+    if (!box || !waiting) return;
+    setBeam({ x: ((e.clientX - box.left) / box.width) * 100, y: ((e.clientY - box.top) / box.height) * 100 });
+  };
+  const aimAtSpot = (spot: number) =>
+    setBeam({ x: ((spot % size) + 0.5) * (100 / size), y: (Math.floor(spot / size) + 0.5) * (100 / size) });
+
   useEffect(() => {
     if (!last) return;
     if (last.correct) {
@@ -73,6 +87,7 @@ export function LanternHunt({ last, waiting, resume, onStat, monstersFoundTotal 
 
   const search = (spot: number) => {
     if (!waiting || marks[spot]) return;
+    aimAtSpot(spot);
     if (spot === monster) {
       sounds.found();
       setMarks({ ...marks, [spot]: 'found' });
@@ -112,9 +127,18 @@ export function LanternHunt({ last, waiting, resume, onStat, monstersFoundTotal 
         </span>
       </div>
       <div
+        ref={roomsRef}
         className={`rooms ${waiting ? 'rooms-ready' : ''} ${bright && waiting ? 'rooms-bright' : ''}`}
         style={{ gridTemplateColumns: `repeat(${size}, 1fr)` }}
+        onPointerMove={aim}
       >
+        <div
+          className="darkness"
+          aria-hidden="true"
+          style={{
+            background: `radial-gradient(circle at ${beam.x}% ${beam.y}%, rgba(255, 214, 120, 0.22) 0%, rgba(255, 214, 120, 0.08) ${beamSize * 0.6}%, rgba(4, 7, 18, 0.82) ${beamSize}%)`,
+          }}
+        />
         {spots.map((emoji, i) => {
           const mark = marks[i];
           return (
@@ -132,6 +156,7 @@ export function LanternHunt({ last, waiting, resume, onStat, monstersFoundTotal 
           );
         })}
       </div>
+      {celebrate && <Confetti key={`found${found}`} count={36} />}
       <p className={`lantern-message ${celebrate ? 'celebrate' : ''}`} role="status">
         {message}
       </p>
