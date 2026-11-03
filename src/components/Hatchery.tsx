@@ -98,7 +98,7 @@ export function Hatchery({ progress, companion, names, onPick, onName, onBack }:
               }}
             >
               <span className="dragon-table">{d.species.table}s</span>
-              <Dragon dragon={d} size={2.4} />
+              <Dragon dragon={d} size={4.2} />
               <strong>{d.stage === 'none' ? '???' : dragonName(d, names)}</strong>
               <span className="dragon-meter" aria-hidden="true">
                 <span style={{ width: `${Math.round((d.known / d.total) * 100)}%` }} />

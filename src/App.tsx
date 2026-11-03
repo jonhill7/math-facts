@@ -295,7 +295,7 @@ function Home({ data, onPlay, onMap, onHatchery, onSwitch, muteButton, onSetting
         </div>
       )}
       <button type="button" className="companion" onClick={onHatchery}>
-        {companion && companion.stage !== 'none' ? <Dragon dragon={companion} size={3} /> : <span className="dragon">🥚</span>}
+        {companion && companion.stage !== 'none' ? <Dragon dragon={companion} size={4.2} /> : <span className="dragon" style={{ fontSize: '2.6rem' }}>🥚</span>}
         <span className="companion-text">
           {hatched && companion ? (
             <>
@@ -408,7 +408,7 @@ function Done({ summary, match, grew, names, onAgain, onHome }: DoneProps) {
       <p className="snack-total">🍖 Your dragon ate {summary.snacks} snacks!</p>
       {grew.map((d) => (
         <div key={d.species.table} className="grew">
-          <Dragon dragon={d} size={2.6} />
+          <Dragon dragon={d} size={4} />
           <span>
             <strong>
               {d.stage === 'egg'

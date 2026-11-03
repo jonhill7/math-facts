@@ -655,23 +655,10 @@ h2 {
   line-height: 1;
 }
 
-.dragon-none {
-  opacity: 0.35;
-}
-
-.dragon-hatchling {
-  transform: scale(0.9);
-}
-
-.dragon-grown {
-  transform: scale(1.15);
-}
-
-.dragon-crown {
-  position: absolute;
-  top: -0.3em;
-  right: -0.3em;
-  font-size: 0.4em;
+.dragon {
+  flex: none;
+  overflow: visible;
+  color: var(--muted);
 }
 
 .dragon-meter {
@@ -702,9 +689,7 @@ h2 {
   text-align: left;
 }
 
-.companion .dragon {
-  font-size: 2.6rem;
-}
+
 
 .companion-text {
   display: flex;
@@ -749,9 +734,7 @@ h2 {
   box-shadow: 0 0 0 3px rgba(252, 163, 17, 0.25);
 }
 
-.dragon-card .dragon {
-  height: 1.2em;
-}
+
 
 .dragon-table {
   position: absolute;
