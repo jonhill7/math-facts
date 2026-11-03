@@ -37,11 +37,12 @@ interface Props {
   holdAfterCorrect?: boolean; // wait for the game to call resume() after a right answer
   topRight?: ReactNode;
   options?: SessionOptions;
+  fastMs?: number;
 }
 
 type Phase = 'ask' | 'fix' | 'pause' | 'hold';
 
-export function PracticeSession({ progress, onAnswer, onFinish, onQuit, stage, holdAfterCorrect, topRight, options }: Props) {
+export function PracticeSession({ progress, onAnswer, onFinish, onQuit, stage, holdAfterCorrect, topRight, options, fastMs = DEFAULT_FAST_MS }: Props) {
   const [queue, setQueue] = useState<Fact[]>(() => buildSession(progress, Date.now(), options));
   const [index, setIndex] = useState(0);
   const [phase, setPhase] = useState<Phase>('ask');
@@ -75,7 +76,7 @@ export function PracticeSession({ progress, onAnswer, onFinish, onQuit, stage, h
     if (phase !== 'ask') return;
     const ms = Date.now() - shownAt.current;
     const correct = value === fact.answer;
-    const fast = correct && ms <= DEFAULT_FAST_MS;
+    const fast = correct && ms <= fastMs;
     summary.current.answered++;
     if (correct) summary.current.correct++;
     if (fast) summary.current.fast++;
@@ -93,7 +94,7 @@ export function PracticeSession({ progress, onAnswer, onFinish, onQuit, stage, h
       setPhase('fix');
       setInput('');
     }
-  }, [fact, input, phase, next, onAnswer, last, holdAfterCorrect, queue, index]);
+  }, [fact, input, phase, next, onAnswer, last, holdAfterCorrect, queue, index, fastMs]);
 
   if (!fact) return null;
   const progressPct = Math.round((index / queue.length) * 100);

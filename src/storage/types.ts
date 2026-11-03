@@ -26,9 +26,10 @@ export interface Settings {
   muted: boolean;
   focusTable: number; // 0 = all tables
   length: number; // questions per game
+  fastMs: number; // answers faster than this count as fluent
 }
 
-export const defaultSettings = (): Settings => ({ muted: false, focusTable: 0, length: 20 });
+export const defaultSettings = (): Settings => ({ muted: false, focusTable: 0, length: 20, fastMs: 3000 });
 
 export const emptyStats = (): Stats => ({
   sessions: 0,

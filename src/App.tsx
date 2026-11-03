@@ -5,7 +5,7 @@ import { MasteryMap, masteredCount } from './components/MasteryMap';
 import { PracticeSession, SessionSummary } from './components/PracticeSession';
 import { ALL_FACTS, Fact } from './engine/facts';
 import { DragonState, grewBetween, levelFor, SNACKS_FAST, SNACKS_RIGHT } from './engine/dragons';
-import { DEFAULT_FAST_MS, Progress, recordAnswer } from './engine/scheduler';
+import { Progress, recordAnswer } from './engine/scheduler';
 import { practiced, streakStatus } from './engine/streak';
 import { LanternHunt } from './modes/LanternHunt';
 import { PenaltyKicks, pickRival, StatKey } from './modes/PenaltyKicks';
@@ -78,9 +78,12 @@ export default function App() {
     (fact: Fact, correct: boolean, ms: number) =>
       update((d) => ({
         ...d,
-        progress: { ...d.progress, [fact.id]: recordAnswer(d.progress[fact.id], correct, ms, Date.now()) },
+        progress: {
+          ...d.progress,
+          [fact.id]: recordAnswer(d.progress[fact.id], correct, ms, Date.now(), d.settings.fastMs),
+        },
         stats: correct
-          ? { ...d.stats, snacks: d.stats.snacks + (ms <= DEFAULT_FAST_MS ? SNACKS_FAST : SNACKS_RIGHT) }
+          ? { ...d.stats, snacks: d.stats.snacks + (ms <= d.settings.fastMs ? SNACKS_FAST : SNACKS_RIGHT) }
           : d.stats,
       })),
     [update],
@@ -147,6 +150,7 @@ export default function App() {
           onAnswer={onAnswer}
           holdAfterCorrect={screen.mode === 'lantern'}
           topRight={muteButton}
+          fastMs={data.settings.fastMs}
           options={{ focusTable: data.settings.focusTable || undefined, length: data.settings.length }}
           onQuit={() => {
             update((d) => ({ ...d }), true); // save right away
@@ -337,6 +341,18 @@ function Home({ data, onPlay, onMap, onHatchery, onSwitch, muteButton, onSetting
             <option value={10}>Quick (10)</option>
             <option value={20}>Normal (20)</option>
             <option value={30}>Long (30)</option>
+          </select>
+        </label>
+        <label>
+          Speed goal
+          <select
+            value={data.settings.fastMs}
+            onChange={(e) => onSettings({ fastMs: Number(e.target.value) })}
+            aria-label="Speed goal: how fast counts as knowing a fact"
+          >
+            <option value={5000}>Relaxed (5 sec)</option>
+            <option value={3000}>Standard (3 sec)</option>
+            <option value={2000}>Speedy (2 sec)</option>
           </select>
         </label>
       </div>
