@@ -11,7 +11,7 @@ import { LanternHunt } from './modes/LanternHunt';
 import { PenaltyKicks, pickRival, StatKey } from './modes/PenaltyKicks';
 import { cloudEnabled, cloudStore, signInWithGoogle, signOutUser, User, watchUser } from './storage/firebase';
 import { listGuests, localStore } from './storage/localStore';
-import { ProgressStore, SaveData } from './storage/types';
+import { ProgressStore, SaveData, Settings } from './storage/types';
 import { setMuted, sounds } from './sound';
 
 type Mode = 'soccer' | 'lantern';
@@ -125,6 +125,7 @@ export default function App() {
           onHatchery={() => setScreen({ name: 'hatchery' })}
           onSwitch={switchPlayer}
           muteButton={muteButton}
+          onSettings={(change) => update((d) => ({ ...d, settings: { ...d.settings, ...change } }), true)}
         />
       )}
       {screen.name === 'map' && data && <MasteryMap progress={data.progress} onBack={() => setScreen({ name: 'home' })} />}
@@ -146,6 +147,7 @@ export default function App() {
           onAnswer={onAnswer}
           holdAfterCorrect={screen.mode === 'lantern'}
           topRight={muteButton}
+          options={{ focusTable: data.settings.focusTable || undefined }}
           onQuit={() => {
             update((d) => ({ ...d }), true); // save right away
             setScreen({ name: 'home' });
@@ -248,9 +250,10 @@ interface HomeProps {
   onHatchery: () => void;
   onSwitch: () => void;
   muteButton: ReactNode;
+  onSettings: (change: Partial<Settings>) => void;
 }
 
-function Home({ data, onPlay, onMap, onHatchery, onSwitch, muteButton }: HomeProps) {
+function Home({ data, onPlay, onMap, onHatchery, onSwitch, muteButton, onSettings }: HomeProps) {
   const mastered = masteredCount(data.progress);
   const companion = companionFor(data.progress, data.companion);
   const hatched = companion && !['none', 'egg'].includes(companion.stage);
@@ -308,6 +311,23 @@ function Home({ data, onPlay, onMap, onHatchery, onSwitch, muteButton }: HomePro
           )}
         </span>
       </button>
+      <div className="game-options">
+        <label>
+          Practice
+          <select
+            value={data.settings.focusTable}
+            onChange={(e) => onSettings({ focusTable: Number(e.target.value) })}
+            aria-label="Which facts to practice"
+          >
+            <option value={0}>All facts (recommended)</option>
+            {Array.from({ length: 12 }, (_, i) => (
+              <option key={i + 1} value={i + 1}>
+                Just the {i + 1}s
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
       <div className="modes">
         <button type="button" className="mode-card soccer" onClick={() => onPlay('soccer')}>
           <span className="mode-emoji">⚽</span>

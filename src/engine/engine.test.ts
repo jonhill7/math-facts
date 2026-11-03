@@ -181,3 +181,22 @@ describe('streak', () => {
     expect(streakStatus(s, at('2026-11-05')).count).toBe(0);
   });
 });
+
+describe('focus practice', () => {
+  it('only asks facts from the chosen table', () => {
+    const session = buildSession({}, NOW, { focusTable: 7, random: seeded() });
+    expect(session.length).toBeGreaterThan(0);
+    expect(session.every((f) => (f.op === 'mul' ? f.a === 7 || f.b === 7 : f.a === 7))).toBe(true);
+  });
+
+  it('adds up to 6 new facts when the kid already knows some of the table', () => {
+    const progress: Progress = {
+      'mul:7:1': { box: 4, due: NOW + 5 * DAY_MS, seen: 3, correct: 3, avgMs: 1500, lastSeen: NOW - DAY_MS },
+    };
+    const session = buildSession(progress, NOW, { focusTable: 7, random: seeded() });
+    expect(session).toHaveLength(20);
+    const newIds = new Set(session.filter((f) => !progress[f.id]).map((f) => f.id));
+    expect(newIds.size).toBe(6); // the same 6 new facts come round several times
+    for (let i = 1; i < session.length; i++) expect(session[i]).not.toBe(session[i - 1]);
+  });
+});

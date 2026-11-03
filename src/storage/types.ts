@@ -24,9 +24,10 @@ export interface SaveData {
 
 export interface Settings {
   muted: boolean;
+  focusTable: number; // 0 = all tables
 }
 
-export const defaultSettings = (): Settings => ({ muted: false });
+export const defaultSettings = (): Settings => ({ muted: false, focusTable: 0 });
 
 export const emptyStats = (): Stats => ({
   sessions: 0,

@@ -3,7 +3,7 @@ import { Fact } from '../engine/facts';
 import { hintFor } from '../engine/hints';
 import { SNACKS_FAST, SNACKS_RIGHT } from '../engine/dragons';
 import { DEFAULT_FAST_MS, Progress } from '../engine/scheduler';
-import { buildSession, requeueMiss } from '../engine/session';
+import { buildSession, requeueMiss, SessionOptions } from '../engine/session';
 import { sounds } from '../sound';
 import { Keypad } from './Keypad';
 
@@ -36,12 +36,13 @@ interface Props {
   stage: (props: StageProps) => ReactNode;
   holdAfterCorrect?: boolean; // wait for the game to call resume() after a right answer
   topRight?: ReactNode;
+  options?: SessionOptions;
 }
 
 type Phase = 'ask' | 'fix' | 'pause' | 'hold';
 
-export function PracticeSession({ progress, onAnswer, onFinish, onQuit, stage, holdAfterCorrect, topRight }: Props) {
-  const [queue, setQueue] = useState<Fact[]>(() => buildSession(progress, Date.now()));
+export function PracticeSession({ progress, onAnswer, onFinish, onQuit, stage, holdAfterCorrect, topRight, options }: Props) {
+  const [queue, setQueue] = useState<Fact[]>(() => buildSession(progress, Date.now(), options));
   const [index, setIndex] = useState(0);
   const [phase, setPhase] = useState<Phase>('ask');
   const [input, setInput] = useState('');
