@@ -1,0 +1,10 @@
+{
+  "name": "Math Facts",
+  "short_name": "Math Facts",
+  "start_url": "/math-facts/",
+  "scope": "/math-facts/",
+  "display": "standalone",
+  "background_color": "#14213d",
+  "theme_color": "#14213d",
+  "icons": [{ "src": "icon.svg", "sizes": "any", "type": "image/svg+xml" }]
+}
