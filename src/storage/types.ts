@@ -25,9 +25,10 @@ export interface SaveData {
 export interface Settings {
   muted: boolean;
   focusTable: number; // 0 = all tables
+  length: number; // questions per game
 }
 
-export const defaultSettings = (): Settings => ({ muted: false, focusTable: 0 });
+export const defaultSettings = (): Settings => ({ muted: false, focusTable: 0, length: 20 });
 
 export const emptyStats = (): Stats => ({
   sessions: 0,

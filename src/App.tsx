@@ -147,7 +147,7 @@ export default function App() {
           onAnswer={onAnswer}
           holdAfterCorrect={screen.mode === 'lantern'}
           topRight={muteButton}
-          options={{ focusTable: data.settings.focusTable || undefined }}
+          options={{ focusTable: data.settings.focusTable || undefined, length: data.settings.length }}
           onQuit={() => {
             update((d) => ({ ...d }), true); // save right away
             setScreen({ name: 'home' });
@@ -325,6 +325,18 @@ function Home({ data, onPlay, onMap, onHatchery, onSwitch, muteButton, onSetting
                 Just the {i + 1}s
               </option>
             ))}
+          </select>
+        </label>
+        <label>
+          Game
+          <select
+            value={data.settings.length}
+            onChange={(e) => onSettings({ length: Number(e.target.value) })}
+            aria-label="Game length"
+          >
+            <option value={10}>Quick (10)</option>
+            <option value={20}>Normal (20)</option>
+            <option value={30}>Long (30)</option>
           </select>
         </label>
       </div>
