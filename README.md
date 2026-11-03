@@ -1,8 +1,16 @@
 # Math Facts
 
 A math facts practice game for phones and computers. Kids practice
-multiplication and division up to 12 × 12 for about 5 minutes a day, inside
-two games:
+multiplication and division up to 12 × 12 for about 5 minutes a day, and
+grow a hatchery of dragons as they learn:
+
+- **Dragon hatchery** 🐉: every times table has its own dragon, like the
+  Ember Drake for the 7s. Its egg appears when the kid starts that table,
+  hatches when half the table's facts are known well, and is fully grown
+  when every fact is mastered. Right answers in any game are snacks for the
+  kid's companion dragon (fast answers are triple snacks), which levels up.
+
+The practice happens inside two games:
 
 - **Penalty Kicks** ⚽: every answer is a shot on goal. Fast right answers go
   in the top corner; wrong answers get saved.
@@ -83,7 +91,7 @@ use "Add to Home Screen" for an app-like icon.
 
 | Folder | What's in it |
 | --- | --- |
-| `src/engine/` | The learning engine: facts, spaced repetition, sessions, hints. No UI. Has tests. |
+| `src/engine/` | The learning engine: facts, spaced repetition, sessions, hints, dragon growth. No UI. Has tests. |
 | `src/modes/` | One file per game mode. |
 | `src/components/` | The number pad, the practice loop and the fact map. |
 | `src/storage/` | Saving progress: in the browser for guests, Firebase for Google sign-in. |

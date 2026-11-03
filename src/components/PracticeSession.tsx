@@ -1,6 +1,7 @@
 import { ReactNode, useCallback, useRef, useState } from 'react';
 import { Fact } from '../engine/facts';
 import { hintFor } from '../engine/hints';
+import { SNACKS_FAST, SNACKS_RIGHT } from '../engine/dragons';
 import { DEFAULT_FAST_MS, Progress } from '../engine/scheduler';
 import { buildSession, requeueMiss } from '../engine/session';
 import { Keypad } from './Keypad';
@@ -23,6 +24,7 @@ export interface SessionSummary {
   answered: number;
   correct: number;
   fast: number;
+  snacks: number;
 }
 
 interface Props {
@@ -43,7 +45,7 @@ export function PracticeSession({ progress, onAnswer, onFinish, onQuit, stage, h
   const [input, setInput] = useState('');
   const [last, setLast] = useState<AnswerEvent | null>(null);
   const shownAt = useRef(Date.now());
-  const summary = useRef<SessionSummary>({ answered: 0, correct: 0, fast: 0 });
+  const summary = useRef<SessionSummary>({ answered: 0, correct: 0, fast: 0, snacks: 0 });
 
   const fact = queue[index];
 
@@ -74,6 +76,7 @@ export function PracticeSession({ progress, onAnswer, onFinish, onQuit, stage, h
     summary.current.answered++;
     if (correct) summary.current.correct++;
     if (fast) summary.current.fast++;
+    if (correct) summary.current.snacks += fast ? SNACKS_FAST : SNACKS_RIGHT;
     onAnswer(fact, correct, ms);
     setLast({ id: (last?.id ?? 0) + 1, fact, correct, fast, ms });
     if (correct) {
@@ -98,6 +101,14 @@ export function PracticeSession({ progress, onAnswer, onFinish, onQuit, stage, h
         <div className="progress-bar" aria-label={`Question ${index + 1} of ${queue.length}`}>
           <div className="progress-fill" style={{ width: `${progressPct}%` }} />
         </div>
+        <span className="snack-count" aria-label={`${summary.current.snacks} dragon snacks earned`}>
+          🍖 {summary.current.snacks}
+          {last?.correct && (
+            <span key={last.id} className="snack-pop">
+              +{last.fast ? SNACKS_FAST : SNACKS_RIGHT}
+            </span>
+          )}
+        </span>
       </div>
 
       <div className="stage">{stage({ last, waiting: phase === 'hold', resume: next })}</div>

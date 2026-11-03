@@ -626,3 +626,166 @@ h2 {
     grid-template-columns: 1fr;
   }
 }
+
+/* Dragons */
+.dragon {
+  position: relative;
+  display: inline-block;
+  line-height: 1;
+}
+
+.dragon-none {
+  opacity: 0.35;
+}
+
+.dragon-hatchling {
+  transform: scale(0.9);
+}
+
+.dragon-grown {
+  transform: scale(1.15);
+}
+
+.dragon-crown {
+  position: absolute;
+  top: -0.3em;
+  right: -0.3em;
+  font-size: 0.4em;
+}
+
+.dragon-meter {
+  display: block;
+  width: 100%;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--border);
+  overflow: hidden;
+}
+
+.dragon-meter > span {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+}
+
+.companion {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  margin-top: 12px;
+  padding: 12px 14px;
+  border-radius: 18px;
+  border: 2px solid var(--accent);
+  background: var(--surface);
+  text-align: left;
+}
+
+.companion .dragon {
+  font-size: 2.6rem;
+}
+
+.companion-text {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+
+.companion-text small,
+.dragon-card small,
+.grew small {
+  color: var(--muted);
+}
+
+.dragon-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.dragon-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 14px 10px 12px;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  text-align: center;
+}
+
+.dragon-card:disabled {
+  opacity: 1;
+}
+
+.dragon-card-companion {
+  border: 2px solid var(--accent);
+  box-shadow: 0 0 0 3px rgba(252, 163, 17, 0.25);
+}
+
+.dragon-card .dragon {
+  height: 1.2em;
+}
+
+.dragon-table {
+  position: absolute;
+  top: 8px;
+  left: 10px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.snack-count {
+  position: relative;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.snack-pop {
+  position: absolute;
+  right: -4px;
+  top: -14px;
+  color: var(--good);
+  font-size: 0.85rem;
+  animation: snack 0.9s ease-out forwards;
+}
+
+@keyframes snack {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-12px);
+  }
+}
+
+.snack-total {
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+.grew {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 10px 0;
+  padding: 12px;
+  border-radius: 16px;
+  background: var(--surface);
+  border: 2px solid var(--accent);
+  text-align: left;
+  animation: wiggle 0.5s ease-in-out 2;
+}
+
+.grew span {
+  display: flex;
+  flex-direction: column;
+}
