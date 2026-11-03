@@ -17,6 +17,7 @@ export interface SoccerProps {
   rival: string;
   shield: boolean; // the companion's Shield power: the first miss doesn't count
   shieldName: string; // who blocks it
+  powerSize: number; // goals or saves a power move is worth
   gloveStyle?: CSSProperties;
   ballStyle?: CSSProperties;
 }
@@ -32,12 +33,12 @@ interface Shot {
 // A penalty shootout match against a rival team. Every answer is a kick.
 // Right and fast: top corner. Right but slow: a low shot that sneaks in, unless
 // a strong league keeper gets to it. Wrong: the keeper saves it and the rivals
-// score on the counter-attack. A power move is a curling super shot worth 2 goals.
+// score on the counter-attack. A power move is a curling super shot worth 2 goals (3 with Blaze).
 interface Props extends StageProps, SoccerProps {
   slowSaveChance: number;
 }
 
-export function PenaltyKicks({ last, onStat, onScore, rival, shield, shieldName, slowSaveChance, ballStyle }: Props) {
+export function PenaltyKicks({ last, onStat, onScore, rival, shield, shieldName, slowSaveChance, ballStyle, powerSize }: Props) {
   const [shot, setShot] = useState<Shot | null>(null);
   const [score, setScore] = useState({ goals: 0, rival: 0, top: 0 });
   const shieldUsed = useRef(false);
@@ -49,12 +50,11 @@ export function PenaltyKicks({ last, onStat, onScore, rival, shield, shieldName,
     const side = Math.random() < 0.5 ? -1 : 1;
     let next: Shot;
     if (last.power) {
-      next = { id: last.id, ball: { x: 50 + side * 38, y: 12 }, keeper: -side * 26, message: 'POWER SHOT! 2 goals!', kind: 'power' };
-      onStat('goals');
-      onStat('goals');
+      next = { id: last.id, ball: { x: 50 + side * 38, y: 12 }, keeper: -side * 26, message: `POWER SHOT! ${powerSize} goals!`, kind: 'power' };
+      for (let i = 0; i < powerSize; i++) onStat('goals');
       onStat('topCorners');
       onStat('powers');
-      setScore((s) => ({ ...s, goals: s.goals + 2, top: s.top + 1 }));
+      setScore((s) => ({ ...s, goals: s.goals + powerSize, top: s.top + 1 }));
     } else if (last.correct && last.fast) {
       next = { id: last.id, ball: { x: 50 + side * 36, y: 14 }, keeper: -side * 22, message: 'TOP CORNER!', kind: 'top' };
       onStat('goals');

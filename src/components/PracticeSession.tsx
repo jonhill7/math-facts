@@ -51,7 +51,8 @@ interface Props {
   pauseMs?: number; // how long to show a right answer before the next question
   chargeNeeded?: number; // fast answers in a row that fill the power meter
   snackBonus?: number; // extra snacks per right answer (the Feast power)
-  boss?: { name: string; icon: string; facts: Fact[] }; // a boss round at the end, from trouble facts
+  startCharge?: number; // the Head Start power: the meter begins part full
+  boss?: { name: string; icon: string; facts: Fact[]; forgive: number; bonus: number }; // a boss round at the end, from trouble facts
   decor?: string; // a picture of the place on the world tour
 }
 
@@ -83,6 +84,7 @@ export function PracticeSession({
   snackBonus = 0,
   boss,
   decor,
+  startCharge = 0,
 }: Props) {
   // The boss round's facts go at the end of the game.
   const [queue, setQueue] = useState<Fact[]>(() => {
@@ -94,10 +96,10 @@ export function PracticeSession({
   const [phase, setPhase] = useState<Phase>('ask');
   const [input, setInput] = useState('');
   const [last, setLast] = useState<AnswerEvent | null>(null);
-  const [charge, setCharge] = useState(0); // fast answers in a row toward the next power move
+  const [charge, setCharge] = useState(startCharge); // fast answers in a row toward the next power move
   // Refs, not state: next() can run from a timer set before the last answer re-rendered.
   const bossHits = useRef(0);
-  const bossMissed = useRef(false);
+  const bossMisses = useRef(0);
   const shownAt = useRef(Date.now());
   const summary = useRef<SessionSummary>({ answered: 0, correct: 0, fast: 0, snacks: 0, inTime: 0, powers: 0, boss: 'none' });
 
@@ -107,8 +109,8 @@ export function PracticeSession({
   const next = useCallback(() => {
     setInput('');
     if (index + 1 >= queue.length) {
-      if (boss) summary.current.boss = !bossMissed.current && bossHits.current >= boss.facts.length ? 'beaten' : 'lost';
-      if (summary.current.boss === 'beaten') summary.current.snacks += BOSS_BONUS;
+      if (boss) summary.current.boss = bossMisses.current <= boss.forgive ? 'beaten' : 'lost';
+      if (summary.current.boss === 'beaten' && boss) summary.current.snacks += boss.bonus;
       onFinish(summary.current);
       return;
     }
@@ -142,7 +144,7 @@ export function PracticeSession({
     if (correct) summary.current.snacks += (fast ? SNACKS_FAST : SNACKS_RIGHT) + snackBonus;
     if (inBoss) {
       if (correct) bossHits.current++;
-      else bossMissed.current = true;
+      else bossMisses.current++;
     }
     onAnswer(fact, correct, ms);
     setLast({ id: (last?.id ?? 0) + 1, fact, correct, fast, ms, power, boss: inBoss });
@@ -206,7 +208,8 @@ export function PracticeSession({
               </span>
             ))}
           </span>
-          {bossMissed.current && <small>It got away this time. Keep going!</small>}
+          {bossMisses.current > boss.forgive && <small>It got away this time. Keep going!</small>}
+          {bossMisses.current > 0 && bossMisses.current <= boss.forgive && <small>🏔️ Boss Breaker saved you from that miss!</small>}
         </div>
       )}
 

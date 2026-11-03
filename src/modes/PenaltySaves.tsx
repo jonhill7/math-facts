@@ -21,7 +21,7 @@ interface Props extends StageProps, SoccerProps {
   timeLimitMs: number;
 }
 
-export function PenaltySaves({ last, turn, onStat, onScore, rival, timeLimitMs, shield, shieldName, gloveStyle, ballStyle }: Props) {
+export function PenaltySaves({ last, turn, onStat, onScore, rival, timeLimitMs, shield, shieldName, gloveStyle, ballStyle, powerSize }: Props) {
   const [shot, setShot] = useState<Shot | null>(null);
   const [score, setScore] = useState({ saves: 0, rival: 0 });
   const timer = useRef<number | undefined>(undefined);
@@ -68,9 +68,9 @@ export function PenaltySaves({ last, turn, onStat, onScore, rival, timeLimitMs, 
     decided.current = turn;
     if (last.correct && last.ms <= timeLimitMs) {
       const dive = last.fast;
-      const message = last.power ? 'SUPER SAVE! Counts as 2!' : dive ? 'DIVING SAVE!' : 'Saved!';
+      const message = last.power ? `SUPER SAVE! Counts as ${powerSize}!` : dive ? 'DIVING SAVE!' : 'Saved!';
       setShot({ id: turn, result: dive ? 'dive' : 'save', side, message });
-      const n = last.power ? 2 : 1;
+      const n = last.power ? powerSize : 1;
       setScore((s) => ({ ...s, saves: s.saves + n }));
       for (let i = 0; i < n; i++) onStat('saves');
       if (last.power) onStat('powers');

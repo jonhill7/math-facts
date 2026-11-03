@@ -3,6 +3,7 @@ import { emptyStreak, Streak } from '../engine/streak';
 import { emptyLeague, League } from '../engine/league';
 import { emptyQuests, QuestState } from '../engine/quests';
 import { emptyShop, ShopState } from '../engine/shop';
+import { EGG_ORDER, Hoard } from '../engine/dragons';
 
 export interface Stats {
   sessions: number;
@@ -22,10 +23,11 @@ export interface SaveData {
   name: string;
   progress: Progress;
   stats: Stats;
-  companion?: number; // the times table of the kid's chosen dragon
+  companion?: number; // species id of the kid's chosen egg or dragon
+  hoard: Hoard; // snacks (experience) each dragon has eaten, by species id
   settings: Settings;
   streak: Streak;
-  dragonNames: Record<string, string>; // names kids give their dragons, keyed by times table
+  dragonNames: Record<string, string>; // names kids give their dragons, keyed by species id
   league: League;
   quests: QuestState;
   shop: ShopState;
@@ -55,7 +57,7 @@ export const emptyStats = (): Stats => ({
   lastPlayed: 0,
 });
 
-export const emptySave = (name: string): SaveData => ({ name, progress: {}, stats: emptyStats(), settings: defaultSettings(), streak: emptyStreak(), dragonNames: {}, league: emptyLeague(), quests: emptyQuests(), shop: emptyShop(), place: 'meadow' });
+export const emptySave = (name: string): SaveData => ({ name, progress: {}, stats: emptyStats(), settings: defaultSettings(), streak: emptyStreak(), dragonNames: {}, hoard: {}, league: emptyLeague(), quests: emptyQuests(), shop: emptyShop(), place: 'meadow' });
 
 // Fill in anything an older save is missing, so new features never crash on old data.
 export function normalizeSave(name: string, raw: Partial<SaveData> | undefined): SaveData {
@@ -70,6 +72,9 @@ export function normalizeSave(name: string, raw: Partial<SaveData> | undefined):
     settings: { ...base.settings, ...raw.settings },
     streak: { ...base.streak, ...raw.streak },
     dragonNames: raw.dragonNames ?? {},
+    // Saves from before dragons had their own experience: the chosen dragon
+    // keeps every snack eaten so far, so nobody's dragon shrinks.
+    hoard: raw.hoard ?? (raw.stats?.snacks ? { [String(raw.companion ?? EGG_ORDER[0])]: raw.stats.snacks } : {}),
     league: { ...base.league, ...raw.league },
     quests: { ...base.quests, ...raw.quests },
     shop: { ...base.shop, ...raw.shop },
