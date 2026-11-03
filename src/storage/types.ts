@@ -6,6 +6,7 @@ export interface Stats {
   topCorners: number;
   monstersFound: number;
   tickles: number;
+  snacks: number; // food the companion dragon has eaten
   lastPlayed: number;
 }
 
@@ -13,6 +14,7 @@ export interface SaveData {
   name: string;
   progress: Progress;
   stats: Stats;
+  companion?: number; // the times table of the kid's chosen dragon
 }
 
 export const emptyStats = (): Stats => ({
@@ -21,6 +23,7 @@ export const emptyStats = (): Stats => ({
   topCorners: 0,
   monstersFound: 0,
   tickles: 0,
+  snacks: 0,
   lastPlayed: 0,
 });
 

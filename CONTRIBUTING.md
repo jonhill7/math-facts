@@ -25,7 +25,9 @@ not big class hierarchies.
    in box 5 waits 21 days". Run `npm run test:watch` while you work.
 3. **Change the game rules.** In `src/engine/scheduler.ts`, try a different
    `WAIT_DAYS` or `DEFAULT_FAST_MS` and see what the tests say.
-4. **Make a new game mode.** Copy `src/modes/PenaltyKicks.tsx`. Your mode
+4. **Design dragons.** Rename the dragons or change their colors and powers
+   in `src/engine/dragons.ts`. Brothers and sisters can help name them!
+5. **Make a new game mode.** Copy `src/modes/PenaltyKicks.tsx`. Your mode
    gets `last` (the latest answer: right or wrong, fast or slow) and draws
    whatever it wants. Then add a card for it in `src/App.tsx`.
 

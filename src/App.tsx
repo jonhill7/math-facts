@@ -1,8 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { Dragon } from './components/Dragon';
+import { companionFor, Hatchery, stageText } from './components/Hatchery';
 import { MasteryMap, masteredCount } from './components/MasteryMap';
 import { PracticeSession, SessionSummary } from './components/PracticeSession';
 import { ALL_FACTS, Fact } from './engine/facts';
-import { recordAnswer } from './engine/scheduler';
+import { DragonState, grewBetween, levelFor, SNACKS_FAST, SNACKS_RIGHT } from './engine/dragons';
+import { DEFAULT_FAST_MS, Progress, recordAnswer } from './engine/scheduler';
 import { LanternHunt } from './modes/LanternHunt';
 import { PenaltyKicks, StatKey } from './modes/PenaltyKicks';
 import { cloudEnabled, cloudStore, signInWithGoogle, signOutUser, User, watchUser } from './storage/firebase';
@@ -10,7 +13,13 @@ import { listGuests, localStore } from './storage/localStore';
 import { ProgressStore, SaveData } from './storage/types';
 
 type Mode = 'soccer' | 'lantern';
-type Screen = { name: 'who' } | { name: 'home' } | { name: 'play'; mode: Mode } | { name: 'done'; mode: Mode; summary: SessionSummary } | { name: 'map' };
+type Screen =
+  | { name: 'who' }
+  | { name: 'home' }
+  | { name: 'play'; mode: Mode; before: Progress }
+  | { name: 'done'; mode: Mode; summary: SessionSummary; grew: DragonState[] }
+  | { name: 'map' }
+  | { name: 'hatchery' };
 
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
@@ -18,6 +27,8 @@ export default function App() {
   const [data, setData] = useState<SaveData | null>(null);
   const [screen, setScreen] = useState<Screen>({ name: 'who' });
   const [error, setError] = useState('');
+  const latest = useRef<SaveData | null>(null);
+  latest.current = data;
 
   // Signed in with Google: load that kid's progress from the cloud.
   useEffect(
@@ -65,6 +76,9 @@ export default function App() {
       update((d) => ({
         ...d,
         progress: { ...d.progress, [fact.id]: recordAnswer(d.progress[fact.id], correct, ms, Date.now()) },
+        stats: correct
+          ? { ...d.stats, snacks: d.stats.snacks + (ms <= DEFAULT_FAST_MS ? SNACKS_FAST : SNACKS_RIGHT) }
+          : d.stats,
       })),
     [update],
   );
@@ -90,9 +104,23 @@ export default function App() {
       )}
       {screen.name === 'who' && <WhoIsPlaying onGuest={(name) => openStore(localStore(name))} onError={setError} />}
       {screen.name === 'home' && data && (
-        <Home data={data} onPlay={(mode) => setScreen({ name: 'play', mode })} onMap={() => setScreen({ name: 'map' })} onSwitch={switchPlayer} />
+        <Home
+          data={data}
+          onPlay={(mode) => setScreen({ name: 'play', mode, before: data.progress })}
+          onMap={() => setScreen({ name: 'map' })}
+          onHatchery={() => setScreen({ name: 'hatchery' })}
+          onSwitch={switchPlayer}
+        />
       )}
       {screen.name === 'map' && data && <MasteryMap progress={data.progress} onBack={() => setScreen({ name: 'home' })} />}
+      {screen.name === 'hatchery' && data && (
+        <Hatchery
+          progress={data.progress}
+          companion={data.companion}
+          onPick={(table) => update((d) => ({ ...d, companion: table }), true)}
+          onBack={() => setScreen({ name: 'home' })}
+        />
+      )}
       {screen.name === 'play' && data && (
         <PracticeSession
           progress={data.progress}
@@ -104,7 +132,7 @@ export default function App() {
           }}
           onFinish={(summary) => {
             update((d) => ({ ...d, stats: { ...d.stats, sessions: d.stats.sessions + 1, lastPlayed: Date.now() } }), true);
-            setScreen({ name: 'done', mode: screen.mode, summary });
+            setScreen({ name: 'done', mode: screen.mode, summary, grew: grewBetween(screen.before, latest.current?.progress ?? {}) });
           }}
           stage={(props) =>
             screen.mode === 'soccer' ? <PenaltyKicks {...props} onStat={onStat} /> : <LanternHunt {...props} onStat={onStat} />
@@ -112,7 +140,12 @@ export default function App() {
         />
       )}
       {screen.name === 'done' && (
-        <Done summary={screen.summary} onAgain={() => setScreen({ name: 'play', mode: screen.mode })} onHome={() => setScreen({ name: 'home' })} />
+        <Done
+          summary={screen.summary}
+          grew={screen.grew}
+          onAgain={() => data && setScreen({ name: 'play', mode: screen.mode, before: data.progress })}
+          onHome={() => setScreen({ name: 'home' })}
+        />
       )}
     </main>
   );
@@ -167,8 +200,19 @@ function WhoIsPlaying({ onGuest, onError }: { onGuest: (name: string) => void; o
   );
 }
 
-function Home({ data, onPlay, onMap, onSwitch }: { data: SaveData; onPlay: (m: Mode) => void; onMap: () => void; onSwitch: () => void }) {
+interface HomeProps {
+  data: SaveData;
+  onPlay: (m: Mode) => void;
+  onMap: () => void;
+  onHatchery: () => void;
+  onSwitch: () => void;
+}
+
+function Home({ data, onPlay, onMap, onHatchery, onSwitch }: HomeProps) {
   const mastered = masteredCount(data.progress);
+  const companion = companionFor(data.progress, data.companion);
+  const hatched = companion && !['none', 'egg'].includes(companion.stage);
+  const level = levelFor(data.stats.snacks);
   return (
     <div className="home">
       <div className="home-top">
@@ -182,6 +226,27 @@ function Home({ data, onPlay, onMap, onSwitch }: { data: SaveData; onPlay: (m: M
           ? "Your first game is a warm-up to find the facts you already know."
           : `${mastered} of ${ALL_FACTS.length} facts mastered. Pick a game for today's practice.`}
       </p>
+      <button type="button" className="companion" onClick={onHatchery}>
+        {companion && companion.stage !== 'none' ? <Dragon dragon={companion} size={3} /> : <span className="dragon">🥚</span>}
+        <span className="companion-text">
+          {hatched && companion ? (
+            <>
+              <strong>
+                {companion.species.name} · level {level.level}
+              </strong>
+              <span className="dragon-meter" aria-label={`${level.into} of ${level.needed} snacks to the next level`}>
+                <span style={{ width: `${(level.into / level.needed) * 100}%` }} />
+              </span>
+              <small>Right answers are snacks. Fast ones are triple snacks!</small>
+            </>
+          ) : (
+            <>
+              <strong>{companion && companion.stage === 'egg' ? 'You found a dragon egg!' : 'Find your first dragon egg'}</strong>
+              <small>{companion && companion.stage === 'egg' ? stageText(companion) : 'Play a game to start.'}</small>
+            </>
+          )}
+        </span>
+      </button>
       <div className="modes">
         <button type="button" className="mode-card soccer" onClick={() => onPlay('soccer')}>
           <span className="mode-emoji">⚽</span>
@@ -199,7 +264,11 @@ function Home({ data, onPlay, onMap, onSwitch }: { data: SaveData; onPlay: (m: M
         <span>⭐ {data.stats.topCorners} top corners</span>
         <span>👾 {data.stats.monstersFound} monsters found</span>
         <span>🤗 {data.stats.tickles} tickle attacks</span>
+        <span>🍖 {data.stats.snacks} dragon snacks</span>
       </div>
+      <button type="button" className="big-button" onClick={onHatchery}>
+        Dragon hatchery 🐉
+      </button>
       <button type="button" className="big-button secondary" onClick={onMap}>
         See my fact map
       </button>
@@ -207,12 +276,35 @@ function Home({ data, onPlay, onMap, onSwitch }: { data: SaveData; onPlay: (m: M
   );
 }
 
-function Done({ summary, onAgain, onHome }: { summary: SessionSummary; onAgain: () => void; onHome: () => void }) {
+interface DoneProps {
+  summary: SessionSummary;
+  grew: DragonState[];
+  onAgain: () => void;
+  onHome: () => void;
+}
+
+function Done({ summary, grew, onAgain, onHome }: DoneProps) {
   const pct = summary.answered ? Math.round((summary.correct / summary.answered) * 100) : 0;
   return (
     <div className="done">
       <h1>Nice work!</h1>
       <p className="big-stat">{pct}% right</p>
+      <p className="snack-total">🍖 Your dragon ate {summary.snacks} snacks!</p>
+      {grew.map((d) => (
+        <div key={d.species.table} className="grew">
+          <Dragon dragon={d} size={2.6} />
+          <span>
+            <strong>
+              {d.stage === 'egg'
+                ? `New egg: ${d.species.name}!`
+                : d.stage === 'hatchling'
+                  ? `${d.species.name} hatched!`
+                  : `${d.species.name} grew!`}
+            </strong>
+            <small>{d.species.power}</small>
+          </span>
+        </div>
+      ))}
       <p className="muted">
         {summary.correct} of {summary.answered} right, {summary.fast} super fast. Facts you missed will come back soon, and the ones you
         know will wait longer.

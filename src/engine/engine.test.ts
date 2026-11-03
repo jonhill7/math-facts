@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { dragonState, grewBetween, levelFor, SPECIES, tableFactIds } from './dragons';
 import { ALL_FACTS, factById } from './facts';
 import { hintFor } from './hints';
 import { DAY_MS, recordAnswer, startOfDay, Progress } from './scheduler';
@@ -104,5 +105,41 @@ describe('hints', () => {
 
   it('turns division into a multiplication question', () => {
     expect(hintFor(factById('div:6:7'))).toContain('6 × ? = 42');
+  });
+});
+
+describe('dragons', () => {
+  const known = (box: number) => ({ box, due: NOW + DAY_MS, seen: 3, correct: 3, avgMs: 1500, lastSeen: NOW });
+  const seven = SPECIES.find((s) => s.table === 7)!;
+
+  it('gives each table its own facts, multiplication both ways plus division', () => {
+    const ids = tableFactIds(7);
+    expect(ids).toContain('mul:7:8');
+    expect(ids).toContain('mul:8:7');
+    expect(ids).toContain('div:7:8');
+    expect(ids).not.toContain('div:8:7');
+    expect(ids).toHaveLength(23 + 12);
+  });
+
+  it('starts with no dragon, then an egg once the table is tried', () => {
+    expect(dragonState({}, seven).stage).toBe('none');
+    expect(dragonState({ 'mul:7:8': known(1) }, seven).stage).toBe('egg');
+  });
+
+  it('hatches at half the table known and grows when all of it is mastered', () => {
+    const ids = tableFactIds(7);
+    const half: Progress = Object.fromEntries(ids.slice(0, Math.ceil(ids.length / 2)).map((id) => [id, known(3)]));
+    expect(dragonState(half, seven).stage).toBe('hatchling');
+    const all: Progress = Object.fromEntries(ids.map((id) => [id, known(3)]));
+    expect(dragonState(all, seven).stage).toBe('young');
+    const mastered: Progress = Object.fromEntries(ids.map((id) => [id, known(5)]));
+    expect(dragonState(mastered, seven).stage).toBe('grown');
+    expect(grewBetween(half, mastered).map((d) => d.species.table)).toEqual([7]);
+  });
+
+  it('needs more snacks for each level', () => {
+    expect(levelFor(0)).toEqual({ level: 1, into: 0, needed: 10 });
+    expect(levelFor(10)).toEqual({ level: 2, into: 0, needed: 20 });
+    expect(levelFor(35)).toEqual({ level: 3, into: 5, needed: 30 });
   });
 });
