@@ -1,0 +1,628 @@
+:root {
+  --bg: #f4f1ea;
+  --surface: #ffffff;
+  --text: #14213d;
+  --muted: #5c6378;
+  --accent: #fca311;
+  --accent-text: #14213d;
+  --primary: #1d4ed8;
+  --primary-text: #ffffff;
+  --border: #d9d4c7;
+  --good: #16a34a;
+  --bad: #dc2626;
+  --pitch: #2f8f3a;
+  --pitch-dark: #267a30;
+  --night: #0b1020;
+  --box-0: #e2e0da;
+  --box-1: #f87171;
+  --box-2: #fb923c;
+  --box-3: #facc15;
+  --box-4: #86efac;
+  --box-5: #16a34a;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0f172a;
+    --surface: #1e293b;
+    --text: #f1f5f9;
+    --muted: #a3acc2;
+    --border: #334155;
+    --primary: #3b82f6;
+    --box-0: #334155;
+    color-scheme: dark;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  -webkit-tap-highlight-color: transparent;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: default;
+}
+
+h1 {
+  font-size: 1.8rem;
+  margin: 0.4rem 0;
+}
+
+h2 {
+  font-size: 1.2rem;
+  margin: 1.4rem 0 0.6rem;
+}
+
+.app {
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 16px 16px calc(16px + env(safe-area-inset-bottom));
+  min-height: 100dvh;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.note {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px;
+}
+
+.error {
+  background: var(--bad);
+  color: #fff;
+  border-radius: 12px;
+  padding: 10px 12px;
+  margin-bottom: 12px;
+}
+
+.error .muted {
+  color: #ffe4e4;
+}
+
+.link-button {
+  background: none;
+  border: none;
+  color: var(--primary);
+  padding: 8px 0;
+  font-weight: 600;
+}
+
+.big-button {
+  display: block;
+  width: 100%;
+  padding: 16px;
+  margin: 10px 0;
+  border: none;
+  border-radius: 14px;
+  background: var(--primary);
+  color: var(--primary-text);
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.big-button.secondary {
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
+.big-button.google {
+  background: var(--surface);
+  color: var(--text);
+  border: 2px solid var(--primary);
+}
+
+.chip {
+  padding: 10px 16px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  font-weight: 600;
+}
+
+.guest-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.guest-form {
+  display: flex;
+  gap: 8px;
+}
+
+.guest-form input {
+  flex: 1;
+  min-width: 0;
+  padding: 10px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 1rem;
+}
+
+/* Home */
+.home-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.modes {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin: 16px 0;
+}
+
+.mode-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  text-align: left;
+  padding: 16px;
+  border-radius: 18px;
+  border: none;
+  color: #fff;
+  min-height: 170px;
+}
+
+.mode-card strong {
+  font-size: 1.15rem;
+}
+
+.mode-card.soccer {
+  background: linear-gradient(160deg, var(--pitch), #1f6b29);
+}
+
+.mode-card.lantern {
+  background: linear-gradient(160deg, #312e81, var(--night));
+}
+
+.mode-emoji {
+  font-size: 2.4rem;
+}
+
+.stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+
+/* Practice session */
+.session {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.session-top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.progress-bar {
+  flex: 1;
+  height: 10px;
+  border-radius: 999px;
+  background: var(--border);
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: var(--accent);
+  transition: width 0.3s;
+}
+
+.question {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  font-size: clamp(1.8rem, 5dvh, 2.4rem);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.answer-box {
+  min-width: 2.6em;
+  padding: 2px 10px;
+  border-radius: 12px;
+  background: var(--surface);
+  border: 2px solid var(--border);
+  text-align: center;
+}
+
+.question-fix .answer-box {
+  border-color: var(--bad);
+}
+
+.hint {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 0.95rem;
+  background: var(--surface);
+  border-left: 5px solid var(--accent);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+.hint-ask {
+  color: var(--muted);
+}
+
+.keypad {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.key {
+  padding: clamp(6px, 1.6dvh, 14px) 0;
+  font-size: 1.6rem;
+  font-weight: 700;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  touch-action: manipulation;
+}
+
+.key:active:not(:disabled) {
+  transform: scale(0.96);
+}
+
+.key-go {
+  background: var(--good);
+  color: #fff;
+  border-color: var(--good);
+}
+
+.key:disabled {
+  opacity: 0.5;
+}
+
+.scoreboard {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: #fff;
+  padding: 8px 10px;
+}
+
+/* Penalty Kicks */
+.pitch {
+  position: relative;
+  height: clamp(150px, 26dvh, 210px);
+  border-radius: 18px;
+  overflow: hidden;
+  background: repeating-linear-gradient(180deg, var(--pitch) 0 28px, var(--pitch-dark) 28px 56px);
+}
+
+.goal {
+  position: absolute;
+  left: 6%;
+  top: 34px;
+  width: 88%;
+  height: calc(100% - 70px);
+}
+
+.keeper {
+  position: absolute;
+  top: 45%;
+  font-size: 2.4rem;
+  transition: left 0.35s ease-out, transform 0.35s ease-out;
+}
+
+.ball {
+  position: absolute;
+  left: 50%;
+  top: 82%;
+  font-size: 1.8rem;
+  transform: translate(-50%, -50%);
+}
+
+.ball-kicked {
+  animation: kick 0.45s ease-out;
+}
+
+/* The ball starts on the penalty spot and flies to its end position. */
+@keyframes kick {
+  from {
+    left: 50%;
+    top: 82%;
+    font-size: 2.2rem;
+  }
+}
+
+.shot-message {
+  position: absolute;
+  left: 50%;
+  top: 22%;
+  transform: translateX(-50%);
+  font-size: 1.6rem;
+  font-weight: 900;
+  color: #fff;
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.35);
+  white-space: nowrap;
+  animation: pop 0.9s ease-out forwards;
+  pointer-events: none;
+}
+
+.shot-top {
+  color: var(--accent);
+}
+
+.shot-save {
+  color: #fecaca;
+}
+
+@keyframes pop {
+  0% {
+    opacity: 0;
+    transform: translateX(-50%) scale(0.6);
+  }
+  25% {
+    opacity: 1;
+    transform: translateX(-50%) scale(1.15);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(-50%) scale(1);
+  }
+}
+
+/* Lantern Hunt */
+.house {
+  position: relative;
+  border-radius: 18px;
+  background: var(--night);
+  padding-bottom: 8px;
+  overflow: hidden;
+}
+
+.rooms {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  padding: 0 10px;
+}
+
+.spot {
+  position: relative;
+  height: clamp(40px, 7dvh, 56px);
+  border-radius: 12px;
+  border: 1px solid #1f2742;
+  background: #121a33;
+  font-size: 1.7rem;
+  transition: background 0.3s, box-shadow 0.3s;
+}
+
+.spot-emoji {
+  filter: brightness(0.35);
+  transition: filter 0.3s;
+}
+
+.rooms-ready .spot:not(:disabled) {
+  box-shadow: 0 0 0 2px rgba(252, 163, 17, 0.5);
+}
+
+.rooms-ready .spot:not(:disabled) .spot-emoji {
+  filter: brightness(0.75);
+}
+
+.rooms-bright .spot:not(:disabled) {
+  box-shadow: 0 0 14px 2px rgba(252, 163, 17, 0.7);
+}
+
+.spot-empty,
+.spot-footprints,
+.spot-found {
+  background: radial-gradient(circle, #fde68a 0%, #a16207 120%);
+}
+
+.spot-empty .spot-emoji,
+.spot-footprints .spot-emoji,
+.spot-found .spot-emoji {
+  filter: none;
+}
+
+.spot-mark {
+  position: absolute;
+  right: 6px;
+  bottom: 2px;
+  font-size: 1rem;
+  color: #7c2d12;
+}
+
+.spot-found {
+  animation: wiggle 0.4s ease-in-out 3;
+}
+
+.lantern-message {
+  margin: 6px 12px 0;
+  min-height: 2.5em;
+  font-size: 0.95rem;
+  color: #e2e8f0;
+  text-align: center;
+  font-weight: 600;
+}
+
+.lantern-message.celebrate {
+  color: var(--accent);
+  font-size: 1.2rem;
+}
+
+.creep {
+  color: #fca5a5;
+  letter-spacing: 2px;
+}
+
+.tickle-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(236, 72, 153, 0.85);
+  color: #fff;
+  font-size: 2rem;
+  font-weight: 900;
+  animation: tickle 1.6s ease-in-out forwards;
+  pointer-events: none;
+}
+
+@keyframes tickle {
+  0%,
+  80% {
+    opacity: 1;
+  }
+  10%,
+  30%,
+  50%,
+  70% {
+    transform: rotate(-4deg) scale(1.05);
+  }
+  20%,
+  40%,
+  60% {
+    transform: rotate(4deg) scale(1.05);
+  }
+  100% {
+    opacity: 0;
+    transform: none;
+  }
+}
+
+@keyframes wiggle {
+  0%,
+  100% {
+    transform: rotate(0);
+  }
+  25% {
+    transform: rotate(-8deg);
+  }
+  75% {
+    transform: rotate(8deg);
+  }
+}
+
+/* Results */
+.done {
+  text-align: center;
+  padding-top: 24px;
+}
+
+.big-stat {
+  font-size: 3rem;
+  font-weight: 900;
+  margin: 8px 0;
+  color: var(--good);
+}
+
+/* Mastery map */
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  font-size: 0.85rem;
+}
+
+.swatch {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  vertical-align: -1px;
+}
+
+.grid-wrap h3 {
+  font-size: 1rem;
+  margin: 18px 0 8px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(13, 1fr);
+  gap: 2px;
+}
+
+.grid-row {
+  display: contents;
+}
+
+.cell {
+  aspect-ratio: 1;
+  border-radius: 4px;
+}
+
+.cell.head {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.box-0 {
+  background: var(--box-0);
+}
+.box-1 {
+  background: var(--box-1);
+}
+.box-2 {
+  background: var(--box-2);
+}
+.box-3 {
+  background: var(--box-3);
+}
+.box-4 {
+  background: var(--box-4);
+}
+.box-5 {
+  background: var(--box-5);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@media (max-width: 360px) {
+  .modes {
+    grid-template-columns: 1fr;
+  }
+}
