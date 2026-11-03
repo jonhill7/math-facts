@@ -4,6 +4,19 @@ import { sounds } from '../sound';
 
 export type StatKey = 'goals' | 'topCorners' | 'monstersFound' | 'tickles';
 
+export const RIVALS = [
+  'Thunder Toads',
+  'Rocket Raccoons',
+  'Volcano Vultures',
+  'Midnight Moose',
+  'Galaxy Goats',
+  'Turbo Turtles',
+  'Blizzard Badgers',
+  'Pickle Pirates',
+];
+
+export const pickRival = () => RIVALS[Math.floor(Math.random() * RIVALS.length)];
+
 interface Shot {
   id: number;
   ball: { x: number; y: number }; // where the ball ends, in % of the pitch
@@ -12,11 +25,17 @@ interface Shot {
   kind: 'top' | 'goal' | 'save';
 }
 
-// Every answer is a penalty kick. Right and fast: top corner. Right but slow:
-// a low shot that just sneaks past the keeper. Wrong: the keeper saves it.
-export function PenaltyKicks({ last, onStat }: StageProps & { onStat: (key: StatKey) => void }) {
+// A penalty shootout match against a rival team. Every answer is a kick.
+// Right and fast: top corner. Right but slow: a low shot that just sneaks in.
+// Wrong: the keeper saves it and the rivals score on the counter-attack.
+interface Props extends StageProps {
+  onStat: (key: StatKey) => void;
+  rival: string;
+}
+
+export function PenaltyKicks({ last, onStat, rival }: Props) {
   const [shot, setShot] = useState<Shot | null>(null);
-  const [score, setScore] = useState({ goals: 0, saves: 0, top: 0 });
+  const [score, setScore] = useState({ goals: 0, rival: 0, top: 0 });
 
   useEffect(() => {
     if (!last) return;
@@ -32,8 +51,8 @@ export function PenaltyKicks({ last, onStat }: StageProps & { onStat: (key: Stat
       onStat('goals');
       setScore((s) => ({ ...s, goals: s.goals + 1 }));
     } else {
-      next = { id: last.id, ball: { x: 50 + side * 6, y: 36 }, keeper: side * 6, message: 'Saved!', kind: 'save' };
-      setScore((s) => ({ ...s, saves: s.saves + 1 }));
+      next = { id: last.id, ball: { x: 50 + side * 6, y: 36 }, keeper: side * 6, message: `Saved! ${rival} score!`, kind: 'save' };
+      setScore((s) => ({ ...s, rival: s.rival + 1 }));
     }
     setShot(next);
     window.setTimeout(next.kind === 'save' ? sounds.save : sounds.goal, 250);
@@ -43,9 +62,11 @@ export function PenaltyKicks({ last, onStat }: StageProps & { onStat: (key: Stat
   return (
     <div className="pitch">
       <div className="scoreboard">
-        <span>⚽ Goals {score.goals}</span>
-        <span>⭐ Top corners {score.top}</span>
-        <span>🧤 Saves {score.saves}</span>
+        <span>You {score.goals}</span>
+        <span>⭐ {score.top}</span>
+        <span>
+          {rival} {score.rival}
+        </span>
       </div>
       <svg className="goal" viewBox="0 0 300 120" preserveAspectRatio="none" aria-hidden="true">
         <defs>

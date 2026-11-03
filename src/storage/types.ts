@@ -8,6 +8,7 @@ export interface Stats {
   monstersFound: number;
   tickles: number;
   snacks: number; // food the companion dragon has eaten
+  matchesWon: number;
   lastPlayed: number;
 }
 
@@ -33,6 +34,7 @@ export const emptyStats = (): Stats => ({
   monstersFound: 0,
   tickles: 0,
   snacks: 0,
+  matchesWon: 0,
   lastPlayed: 0,
 });
 

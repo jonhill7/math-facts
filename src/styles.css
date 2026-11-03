@@ -832,3 +832,8 @@ h2 {
 .streak-done {
   border-color: var(--good);
 }
+
+.match-result {
+  font-size: 1.3rem;
+  font-weight: 800;
+}

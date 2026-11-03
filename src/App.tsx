@@ -8,7 +8,7 @@ import { DragonState, grewBetween, levelFor, SNACKS_FAST, SNACKS_RIGHT } from '.
 import { DEFAULT_FAST_MS, Progress, recordAnswer } from './engine/scheduler';
 import { practiced, streakStatus } from './engine/streak';
 import { LanternHunt } from './modes/LanternHunt';
-import { PenaltyKicks, StatKey } from './modes/PenaltyKicks';
+import { PenaltyKicks, pickRival, StatKey } from './modes/PenaltyKicks';
 import { cloudEnabled, cloudStore, signInWithGoogle, signOutUser, User, watchUser } from './storage/firebase';
 import { listGuests, localStore } from './storage/localStore';
 import { ProgressStore, SaveData } from './storage/types';
@@ -18,8 +18,8 @@ type Mode = 'soccer' | 'lantern';
 type Screen =
   | { name: 'who' }
   | { name: 'home' }
-  | { name: 'play'; mode: Mode; before: Progress }
-  | { name: 'done'; mode: Mode; summary: SessionSummary; grew: DragonState[] }
+  | { name: 'play'; mode: Mode; before: Progress; rival: string }
+  | { name: 'done'; mode: Mode; summary: SessionSummary; grew: DragonState[]; rival: string }
   | { name: 'map' }
   | { name: 'hatchery' };
 
@@ -120,7 +120,7 @@ export default function App() {
       {screen.name === 'home' && data && (
         <Home
           data={data}
-          onPlay={(mode) => setScreen({ name: 'play', mode, before: data.progress })}
+          onPlay={(mode) => setScreen({ name: 'play', mode, before: data.progress, rival: pickRival() })}
           onMap={() => setScreen({ name: 'map' })}
           onHatchery={() => setScreen({ name: 'hatchery' })}
           onSwitch={switchPlayer}
@@ -147,26 +147,39 @@ export default function App() {
             setScreen({ name: 'home' });
           }}
           onFinish={(summary) => {
+            const won = screen.mode === 'soccer' && summary.correct > summary.answered - summary.correct;
             update(
               (d) => ({
                 ...d,
-                stats: { ...d.stats, sessions: d.stats.sessions + 1, lastPlayed: Date.now() },
+                stats: {
+                  ...d.stats,
+                  sessions: d.stats.sessions + 1,
+                  lastPlayed: Date.now(),
+                  matchesWon: d.stats.matchesWon + (won ? 1 : 0),
+                },
                 streak: practiced(d.streak, Date.now()),
               }),
               true,
             );
-            setScreen({ name: 'done', mode: screen.mode, summary, grew: grewBetween(screen.before, latest.current?.progress ?? {}) });
+            setScreen({
+              name: 'done',
+              mode: screen.mode,
+              summary,
+              rival: screen.rival,
+              grew: grewBetween(screen.before, latest.current?.progress ?? {}),
+            });
           }}
           stage={(props) =>
-            screen.mode === 'soccer' ? <PenaltyKicks {...props} onStat={onStat} /> : <LanternHunt {...props} onStat={onStat} />
+            screen.mode === 'soccer' ? <PenaltyKicks {...props} onStat={onStat} rival={screen.rival} /> : <LanternHunt {...props} onStat={onStat} />
           }
         />
       )}
       {screen.name === 'done' && (
         <Done
           summary={screen.summary}
+          match={screen.mode === 'soccer' ? screen.rival : undefined}
           grew={screen.grew}
-          onAgain={() => data && setScreen({ name: 'play', mode: screen.mode, before: data.progress })}
+          onAgain={() => data && setScreen({ name: 'play', mode: screen.mode, before: data.progress, rival: pickRival() })}
           onHome={() => setScreen({ name: 'home' })}
         />
       )}
@@ -305,6 +318,7 @@ function Home({ data, onPlay, onMap, onHatchery, onSwitch, muteButton }: HomePro
       <div className="stats">
         <span>⚽ {data.stats.goals} goals</span>
         <span>⭐ {data.stats.topCorners} top corners</span>
+        <span>🏆 {data.stats.matchesWon} matches won</span>
         <span>👾 {data.stats.monstersFound} monsters found</span>
         <span>🤗 {data.stats.tickles} tickle attacks</span>
         <span>🍖 {data.stats.snacks} dragon snacks</span>
@@ -321,12 +335,13 @@ function Home({ data, onPlay, onMap, onHatchery, onSwitch, muteButton }: HomePro
 
 interface DoneProps {
   summary: SessionSummary;
+  match?: string; // rival team name after a soccer match
   grew: DragonState[];
   onAgain: () => void;
   onHome: () => void;
 }
 
-function Done({ summary, grew, onAgain, onHome }: DoneProps) {
+function Done({ summary, match, grew, onAgain, onHome }: DoneProps) {
   useEffect(() => {
     if (grew.length) sounds.hatch();
   }, [grew]);
@@ -334,6 +349,7 @@ function Done({ summary, grew, onAgain, onHome }: DoneProps) {
   return (
     <div className="done">
       <h1>Nice work!</h1>
+      {match && <MatchResult us={summary.correct} them={summary.answered - summary.correct} rival={match} />}
       <p className="big-stat">{pct}% right</p>
       <p className="snack-total">🍖 Your dragon ate {summary.snacks} snacks!</p>
       {grew.map((d) => (
@@ -362,5 +378,14 @@ function Done({ summary, grew, onAgain, onHome }: DoneProps) {
         Done for today
       </button>
     </div>
+  );
+}
+
+function MatchResult({ us, them, rival }: { us: number; them: number; rival: string }) {
+  const text = us > them ? `🏆 You beat the ${rival}` : us === them ? `🤝 A draw with the ${rival}` : `The ${rival} won this time`;
+  return (
+    <p className="match-result">
+      {text}, {us}–{them}!
+    </p>
   );
 }
