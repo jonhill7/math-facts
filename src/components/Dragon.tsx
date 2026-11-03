@@ -107,7 +107,10 @@ function Grown({ c, crown }: { c: Colors; crown: boolean }) {
   );
 }
 
-export function Dragon({ dragon, size = 1 }: { dragon: DragonState; size?: number }) {
+// Where a hat sits on each stage's head, in the 100x100 drawing.
+const HAT_AT: Record<string, { x: number; y: number }> = { hatchling: { x: 50, y: 25 }, young: { x: 64, y: 22 }, grown: { x: 64, y: 14 } };
+
+export function Dragon({ dragon, size = 1, hat }: { dragon: DragonState; size?: number; hat?: string }) {
   const { stage, species } = dragon;
   const c = colorsFor(species.hue);
   return (
@@ -122,7 +125,12 @@ export function Dragon({ dragon, size = 1 }: { dragon: DragonState; size?: numbe
       {stage === 'none' && <Mystery />}
       {stage === 'egg' && <Egg c={c} />}
       {stage === 'hatchling' && <Hatchling c={c} />}
-      {(stage === 'young' || stage === 'grown') && <Grown c={c} crown={stage === 'grown'} />}
+      {(stage === 'young' || stage === 'grown') && <Grown c={c} crown={stage === 'grown' && !hat} />}
+      {hat && HAT_AT[stage] && (
+        <text x={HAT_AT[stage].x} y={HAT_AT[stage].y} fontSize="24" textAnchor="middle">
+          {hat}
+        </text>
+      )}
     </svg>
   );
 }

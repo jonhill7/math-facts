@@ -2,9 +2,9 @@ import { useEffect, useRef, useState } from 'react';
 import { StageProps } from '../components/PracticeSession';
 import { sounds } from '../sound';
 import { Confetti } from '../components/Confetti';
-import type { StatKey } from './PenaltyKicks';
+import type { SoccerProps } from './PenaltyKicks';
 
-type Result = 'dive' | 'save' | 'goal' | 'late';
+type Result = 'dive' | 'save' | 'goal' | 'late' | 'blocked';
 
 interface Shot {
   id: number; // which question this shot belongs to
@@ -15,18 +15,29 @@ interface Shot {
 
 // The kid is the goalkeeper. A rival shooter runs up while the shot clock drains.
 // Answer right before the kick and you make the save (a fast answer is a diving
-// save). Answer wrong, or too slowly, and the rivals score.
-interface Props extends StageProps {
-  onStat: (key: StatKey) => void;
-  rival: string;
+// save). Answer wrong, or too slowly, and the rivals score. A power move is a
+// super save that counts twice.
+interface Props extends StageProps, SoccerProps {
   timeLimitMs: number;
 }
 
-export function PenaltySaves({ last, turn, onStat, rival, timeLimitMs }: Props) {
+export function PenaltySaves({ last, turn, onStat, onScore, rival, timeLimitMs, shield, shieldName, gloveStyle, ballStyle }: Props) {
   const [shot, setShot] = useState<Shot | null>(null);
   const [score, setScore] = useState({ saves: 0, rival: 0 });
   const timer = useRef<number | undefined>(undefined);
   const decided = useRef(-1); // the turn whose shot has already been taken
+  const shieldUsed = useRef(false);
+
+  useEffect(() => onScore({ us: score.saves, them: score.rival }), [score]);
+
+  // The companion's Shield stops the first goal against, once per game.
+  const tryShield = (side: -1 | 1): boolean => {
+    if (!shield || shieldUsed.current) return false;
+    shieldUsed.current = true;
+    setShot({ id: turn, result: 'blocked', side, message: `🛡️ ${shieldName} blocked the shot!` });
+    window.setTimeout(sounds.save, 250);
+    return true;
+  };
 
   // Each new question: the shooter starts the run-up and the shot clock starts.
   useEffect(() => {
@@ -35,9 +46,10 @@ export function PenaltySaves({ last, turn, onStat, rival, timeLimitMs }: Props) 
       if (decided.current === turn) return;
       decided.current = turn;
       const side = Math.random() < 0.5 ? -1 : 1;
+      sounds.kick();
+      if (tryShield(side)) return;
       setShot({ id: turn, result: 'goal', side, message: `Too late! ${rival} score!` });
       setScore((s) => ({ ...s, rival: s.rival + 1 }));
-      sounds.kick();
       window.setTimeout(sounds.save, 250);
     }, timeLimitMs);
     return () => window.clearTimeout(timer.current);
@@ -56,11 +68,16 @@ export function PenaltySaves({ last, turn, onStat, rival, timeLimitMs }: Props) 
     decided.current = turn;
     if (last.correct && last.ms <= timeLimitMs) {
       const dive = last.fast;
-      setShot({ id: turn, result: dive ? 'dive' : 'save', side, message: dive ? 'DIVING SAVE!' : 'Saved!' });
-      setScore((s) => ({ ...s, saves: s.saves + 1 }));
-      onStat('saves');
+      const message = last.power ? 'SUPER SAVE! Counts as 2!' : dive ? 'DIVING SAVE!' : 'Saved!';
+      setShot({ id: turn, result: dive ? 'dive' : 'save', side, message });
+      const n = last.power ? 2 : 1;
+      setScore((s) => ({ ...s, saves: s.saves + n }));
+      for (let i = 0; i < n; i++) onStat('saves');
+      if (last.power) onStat('powers');
       sounds.kick();
       window.setTimeout(sounds.goal, 250);
+    } else if (!last.correct && tryShield(side)) {
+      // Blocked by the companion: no goal.
     } else {
       setShot({ id: turn, result: 'goal', side, message: `${rival} score!` });
       setScore((s) => ({ ...s, rival: s.rival + 1 }));
@@ -70,13 +87,20 @@ export function PenaltySaves({ last, turn, onStat, rival, timeLimitMs }: Props) 
 
   const kicked = shot !== null;
   const saved = shot?.result === 'save' || shot?.result === 'dive';
-  // Where the ball ends, in % of the pitch. Saved balls stop in the keeper's gloves.
+  // Where the save happens, in % of the pitch: a dive reaches high and wide.
+  const catchAt = !shot || !saved ? null : shot.result === 'dive' ? { x: 50 + shot.side * 30, y: 38 } : { x: 50 + shot.side * 15, y: 50 };
+  // Saved balls end in the keeper's gloves. Goals hit the net in the far corner.
+  // A shot the companion blocks stops short of the goal.
   const ball = !shot
     ? undefined
-    : saved
-      ? { left: `${50 + shot.side * (shot.result === 'dive' ? 30 : 16)}%`, top: '34%' }
-      : { left: `${50 + shot.side * 32}%`, top: '30%' };
-  const keeperX = !shot ? 0 : saved ? shot.side * (shot.result === 'dive' ? 30 : 16) : -shot.side * 20;
+    : catchAt
+      ? { left: `${catchAt.x}%`, top: `${catchAt.y}%` }
+      : shot.result === 'blocked'
+        ? { left: `${50 + shot.side * 22}%`, top: '64%' }
+        : { left: `${50 + shot.side * 32}%`, top: '32%' };
+  // On a goal the keeper guesses wrong and dives the other way.
+  const keeper = catchAt ?? (shot ? { x: 50 - shot.side * 20, y: 50 } : { x: 50, y: 50 });
+  const lean = (keeper.x - 50) * 2;
 
   return (
     <div className="pitch pitch-keeper">
@@ -104,8 +128,8 @@ export function PenaltySaves({ last, turn, onStat, rival, timeLimitMs }: Props) 
         />
       </div>
       <div
-        className={`my-keeper ${shot?.result === 'dive' ? 'my-keeper-dive' : ''}`}
-        style={{ left: `${50 + keeperX}%`, transform: `translateX(-50%) rotate(${keeperX * 1.5}deg)` }}
+        className={`my-keeper ${!shot ? 'my-keeper-ready' : ''} ${shot?.result === 'dive' ? 'my-keeper-dive' : ''}`}
+        style={{ ...gloveStyle, left: `${keeper.x}%`, top: `${keeper.y}%`, transform: `translate(-50%, -50%) rotate(${lean}deg)` }}
         aria-hidden="true"
       >
         🧤
@@ -118,12 +142,20 @@ export function PenaltySaves({ last, turn, onStat, rival, timeLimitMs }: Props) 
       >
         🏃
       </div>
-      <div key={`b${turn}`} className={`ball keeper-ball ${kicked ? 'ball-kicked' : ''}`} style={ball} aria-hidden="true">
+      <div
+        key={`b${turn}`}
+        className={`ball keeper-ball ${kicked ? 'ball-kicked' : ''} ${catchAt ? 'ball-caught' : ''}`}
+        style={{ ...ballStyle, ...ball }}
+        aria-hidden="true"
+      >
         ⚽
       </div>
-      {shot?.result === 'dive' && <Confetti key={`c${shot.id}`} count={30} />}
+      {catchAt && (
+        <div key={`r${turn}`} className="catch-ring" style={{ left: `${catchAt.x}%`, top: `${catchAt.y}%` }} aria-hidden="true" />
+      )}
+      {(shot?.result === 'dive' || last?.power) && shot && <Confetti key={`c${shot.id}`} count={30} />}
       {shot && (
-        <div key={`m${shot.id}${shot.result}`} className={`shot-message shot-${saved ? 'saved' : shot.result === 'late' ? 'late' : 'save'}`} role="status">
+        <div key={`m${shot.id}${shot.result}`} className={`shot-message shot-${saved ? 'saved' : shot.result === 'late' || shot.result === 'blocked' ? 'late' : 'save'}`} role="status">
           {shot.message}
         </div>
       )}
