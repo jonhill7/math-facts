@@ -3,27 +3,43 @@ import { StageProps } from '../components/PracticeSession';
 import type { StatKey } from './PenaltyKicks';
 import { sounds } from '../sound';
 
-const SPOTS = ['🛏️', '🛋️', '🚪', '🧺', '🪴', '📦', '🧥', '🪑', '🛁'];
-const SIZE = 3; // 3 x 3 house
+const ALL_SPOTS = ['🛏️', '🛋️', '🚪', '🧺', '🪴', '📦', '🧥', '🪑', '🛁', '🧸', '🗄️', '🎹', '🧳', '🖼️', '🪟', '🛒'];
 const TICKLES_TO_ATTACK = 3;
 
-type Mark = 'empty' | 'footprints' | 'found';
+// The house grows as the kid gets better at finding the monster.
+export const houseSize = (monstersFoundTotal: number) => (monstersFoundTotal < 3 ? 3 : 4);
 
-const randomSpot = (avoid = -1) => {
-  let s = avoid;
-  while (s === avoid) s = Math.floor(Math.random() * SPOTS.length);
-  return s;
+type Mark = 'empty' | 'hot' | 'warm' | 'cold' | 'found';
+
+const MARK_ICON: Record<Mark, string> = { empty: '✖', hot: '🔥', warm: '🌡️', cold: '❄️', found: '' };
+
+const CLUE: Record<string, string> = {
+  hot: "Hot! It's right next to this spot!",
+  warm: "Warm... it's close.",
+  cold: "Cold. It's far from here.",
 };
-
-const nextTo = (a: number, b: number) =>
-  Math.abs((a % SIZE) - (b % SIZE)) + Math.abs(Math.floor(a / SIZE) - Math.floor(b / SIZE)) === 1;
 
 // Tickle hider: the Tickle Monster hides somewhere in a dark house.
 // Each right answer charges the lantern for one search. A fast answer makes it
-// bright enough to spot footprints when the monster is next door.
+// bright enough to show a warmer/colder clue about where the monster is.
 // Wrong answers let the monster creep closer. Three, and it's a tickle attack!
-export function LanternHunt({ last, waiting, resume, onStat }: StageProps & { onStat: (key: StatKey) => void }) {
-  const [monster, setMonster] = useState(randomSpot);
+interface Props extends StageProps {
+  onStat: (key: StatKey) => void;
+  monstersFoundTotal: number;
+}
+
+export function LanternHunt({ last, waiting, resume, onStat, monstersFoundTotal }: Props) {
+  const [size] = useState(() => houseSize(monstersFoundTotal));
+  const spots = ALL_SPOTS.slice(0, size * size);
+  const randomSpot = (avoid = -1) => {
+    let s = avoid;
+    while (s === avoid) s = Math.floor(Math.random() * spots.length);
+    return s;
+  };
+  const distance = (a: number, b: number) =>
+    Math.abs((a % size) - (b % size)) + Math.abs(Math.floor(a / size) - Math.floor(b / size));
+
+  const [monster, setMonster] = useState(() => randomSpot());
   const [marks, setMarks] = useState<Record<number, Mark>>({});
   const [creep, setCreep] = useState(0);
   const [found, setFound] = useState(0);
@@ -36,7 +52,7 @@ export function LanternHunt({ last, waiting, resume, onStat }: StageProps & { on
   useEffect(() => {
     if (!last) return;
     if (last.correct) {
-      setMessage(last.fast ? 'Bright lantern! Tap a hiding spot to search.' : 'Lantern lit. Tap a hiding spot to search.');
+      setMessage(last.fast ? 'Bright lantern! Search a spot for a warmer/colder clue.' : 'Lantern lit. Tap a hiding spot to search.');
       return;
     }
     const nextCreep = creep + 1;
@@ -74,9 +90,10 @@ export function LanternHunt({ last, waiting, resume, onStat }: StageProps & { on
       return;
     }
     sounds.search();
-    const clue = bright && nextTo(spot, monster);
-    setMarks({ ...marks, [spot]: clue ? 'footprints' : 'empty' });
-    setMessage(clue ? 'Footprints! The monster is right next to this spot.' : 'Nothing here...');
+    const d = distance(spot, monster);
+    const mark: Mark = !bright ? 'empty' : d === 1 ? 'hot' : d === 2 ? 'warm' : 'cold';
+    setMarks({ ...marks, [spot]: mark });
+    setMessage(bright ? CLUE[mark] : 'Nothing here... answer faster for a clue!');
     setTimeout(resume, 700);
   };
 
@@ -94,8 +111,11 @@ export function LanternHunt({ last, waiting, resume, onStat }: StageProps & { on
           {'○'.repeat(TICKLES_TO_ATTACK - creep)}
         </span>
       </div>
-      <div className={`rooms ${waiting ? 'rooms-ready' : ''} ${bright && waiting ? 'rooms-bright' : ''}`}>
-        {SPOTS.map((emoji, i) => {
+      <div
+        className={`rooms ${waiting ? 'rooms-ready' : ''} ${bright && waiting ? 'rooms-bright' : ''}`}
+        style={{ gridTemplateColumns: `repeat(${size}, 1fr)` }}
+      >
+        {spots.map((emoji, i) => {
           const mark = marks[i];
           return (
             <button
@@ -107,8 +127,7 @@ export function LanternHunt({ last, waiting, resume, onStat }: StageProps & { on
               aria-label={`Hiding spot ${i + 1}`}
             >
               <span className="spot-emoji">{mark === 'found' ? '👾' : emoji}</span>
-              {mark === 'footprints' && <span className="spot-mark">👣</span>}
-              {mark === 'empty' && <span className="spot-mark">✖</span>}
+              {mark && mark !== 'found' && <span className="spot-mark">{MARK_ICON[mark]}</span>}
             </button>
           );
         })}

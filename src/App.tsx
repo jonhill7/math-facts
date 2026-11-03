@@ -170,7 +170,7 @@ export default function App() {
             });
           }}
           stage={(props) =>
-            screen.mode === 'soccer' ? <PenaltyKicks {...props} onStat={onStat} rival={screen.rival} /> : <LanternHunt {...props} onStat={onStat} />
+            screen.mode === 'soccer' ? <PenaltyKicks {...props} onStat={onStat} rival={screen.rival} /> : <LanternHunt {...props} onStat={onStat} monstersFoundTotal={data.stats.monstersFound} />
           }
         />
       )}

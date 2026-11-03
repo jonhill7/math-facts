@@ -443,13 +443,17 @@ h2 {
 }
 
 .spot-empty,
-.spot-footprints,
+.spot-hot,
+.spot-warm,
+.spot-cold,
 .spot-found {
   background: radial-gradient(circle, #fde68a 0%, #a16207 120%);
 }
 
 .spot-empty .spot-emoji,
-.spot-footprints .spot-emoji,
+.spot-hot .spot-emoji,
+.spot-warm .spot-emoji,
+.spot-cold .spot-emoji,
 .spot-found .spot-emoji {
   filter: none;
 }
@@ -460,6 +464,14 @@ h2 {
   bottom: 2px;
   font-size: 1rem;
   color: #7c2d12;
+}
+
+.spot-hot {
+  background: radial-gradient(circle, #fecaca 0%, #b91c1c 120%);
+}
+
+.spot-cold {
+  background: radial-gradient(circle, #e0f2fe 0%, #0369a1 120%);
 }
 
 .spot-found {
