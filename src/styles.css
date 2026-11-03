@@ -19,6 +19,10 @@
   --box-3: #facc15;
   --box-4: #86efac;
   --box-5: #16a34a;
+  --shadow: rgba(20, 33, 61, 0.18);
+  --press: #c9c2b2;
+  --primary-dark: #1e3a8a;
+  --good-dark: #15803d;
   color-scheme: light;
 }
 
@@ -31,6 +35,9 @@
     --border: #334155;
     --primary: #3b82f6;
     --box-0: #334155;
+    --shadow: rgba(0, 0, 0, 0.4);
+    --press: #0b1222;
+    --primary-dark: #1e3a8a;
     color-scheme: dark;
   }
 }
@@ -927,4 +934,98 @@ h2 {
 .trouble li span {
   color: var(--muted);
   font-size: 0.85rem;
+}
+
+/* Chunky game look: buttons and cards sit on a solid bottom edge and press
+   down when tapped, like real game buttons. */
+.big-button,
+.key,
+.chip,
+.mode-card,
+.companion,
+.dragon-card:not(:disabled),
+.mute-button {
+  box-shadow: 0 4px 0 var(--press);
+  transition: transform 0.08s, box-shadow 0.08s;
+}
+
+.big-button {
+  box-shadow: 0 5px 0 var(--primary-dark);
+}
+
+.big-button.secondary,
+.big-button.google {
+  box-shadow: 0 5px 0 var(--press);
+}
+
+.key-go {
+  box-shadow: 0 4px 0 var(--good-dark);
+}
+
+.mode-card.soccer {
+  box-shadow: 0 6px 0 #17521f;
+}
+
+.mode-card.lantern {
+  box-shadow: 0 6px 0 #05070f;
+}
+
+.companion {
+  box-shadow: 0 5px 0 #c27c0e;
+}
+
+.big-button:active,
+.key:active:not(:disabled),
+.chip:active,
+.mode-card:active,
+.companion:active,
+.dragon-card:active:not(:disabled),
+.mute-button:active {
+  transform: translateY(4px);
+  box-shadow: 0 0 0 transparent;
+}
+
+.mode-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.mode-card::after {
+  content: '';
+  position: absolute;
+  right: -30px;
+  top: -30px;
+  width: 110px;
+  height: 110px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.mode-card .mode-emoji {
+  filter: drop-shadow(0 3px 2px rgba(0, 0, 0, 0.3));
+}
+
+.streak,
+.note,
+.hint,
+.trouble li,
+.name-form,
+.answer-box {
+  box-shadow: 0 3px 0 var(--press);
+}
+
+.key {
+  border-width: 2px;
+}
+
+.answer-box {
+  border-width: 3px;
+}
+
+body {
+  background:
+    radial-gradient(circle at 15% -10%, rgba(252, 163, 17, 0.14), transparent 45%),
+    radial-gradient(circle at 110% 20%, rgba(29, 78, 216, 0.1), transparent 40%),
+    var(--bg);
+  background-attachment: fixed;
 }
