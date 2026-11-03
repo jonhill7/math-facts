@@ -19,6 +19,7 @@ export interface StageProps {
   last: AnswerEvent | null;
   waiting: boolean; // true while the game wants the kid to do something
   resume: () => void; // the game calls this to move on to the next question
+  turn: number; // goes up each time a new question appears
 }
 
 export interface SessionSummary {
@@ -26,6 +27,7 @@ export interface SessionSummary {
   correct: number;
   fast: number;
   snacks: number;
+  inTime: number; // right answers given before the time limit (games with a shot clock)
 }
 
 interface Props {
@@ -38,18 +40,28 @@ interface Props {
   topRight?: ReactNode;
   options?: SessionOptions;
   fastMs?: number;
+  buddy?: ReactNode; // the kid's companion dragon, along for the game
+  timeLimitMs?: number; // games with a shot clock count right answers given in time
+}
+
+// What the companion says after each answer.
+function buddyLine(last: AnswerEvent, timeLimitMs?: number): string {
+  if (last.correct && timeLimitMs !== undefined && last.ms > timeLimitMs) return 'Got it! Quicker next time!';
+  if (last.correct && last.fast) return 'Yum! Triple snack!';
+  if (last.correct) return 'Nice one!';
+  return "We'll get it next time!";
 }
 
 type Phase = 'ask' | 'fix' | 'pause' | 'hold';
 
-export function PracticeSession({ progress, onAnswer, onFinish, onQuit, stage, holdAfterCorrect, topRight, options, fastMs = DEFAULT_FAST_MS }: Props) {
+export function PracticeSession({ progress, onAnswer, onFinish, onQuit, stage, holdAfterCorrect, topRight, options, fastMs = DEFAULT_FAST_MS, buddy, timeLimitMs }: Props) {
   const [queue, setQueue] = useState<Fact[]>(() => buildSession(progress, Date.now(), options));
   const [index, setIndex] = useState(0);
   const [phase, setPhase] = useState<Phase>('ask');
   const [input, setInput] = useState('');
   const [last, setLast] = useState<AnswerEvent | null>(null);
   const shownAt = useRef(Date.now());
-  const summary = useRef<SessionSummary>({ answered: 0, correct: 0, fast: 0, snacks: 0 });
+  const summary = useRef<SessionSummary>({ answered: 0, correct: 0, fast: 0, snacks: 0, inTime: 0 });
 
   const fact = queue[index];
 
@@ -80,11 +92,12 @@ export function PracticeSession({ progress, onAnswer, onFinish, onQuit, stage, h
     summary.current.answered++;
     if (correct) summary.current.correct++;
     if (fast) summary.current.fast++;
+    if (correct && timeLimitMs !== undefined && ms <= timeLimitMs) summary.current.inTime++;
     if (correct) summary.current.snacks += fast ? SNACKS_FAST : SNACKS_RIGHT;
     onAnswer(fact, correct, ms);
     setLast({ id: (last?.id ?? 0) + 1, fact, correct, fast, ms });
     if (correct) {
-      if (!holdAfterCorrect) sounds.kick();
+      if (!holdAfterCorrect && timeLimitMs === undefined) sounds.kick();
       else sounds.right();
       setPhase(holdAfterCorrect ? 'hold' : 'pause');
       if (!holdAfterCorrect) setTimeout(next, 900);
@@ -94,7 +107,7 @@ export function PracticeSession({ progress, onAnswer, onFinish, onQuit, stage, h
       setPhase('fix');
       setInput('');
     }
-  }, [fact, input, phase, next, onAnswer, last, holdAfterCorrect, queue, index, fastMs]);
+  }, [fact, input, phase, next, onAnswer, last, holdAfterCorrect, queue, index, fastMs, timeLimitMs]);
 
   if (!fact) return null;
   const progressPct = Math.round((index / queue.length) * 100);
@@ -119,7 +132,15 @@ export function PracticeSession({ progress, onAnswer, onFinish, onQuit, stage, h
         {topRight}
       </div>
 
-      <div className="stage">{stage({ last, waiting: phase === 'hold', resume: next })}</div>
+      <div className="stage">
+        {stage({ last, waiting: phase === 'hold', resume: next, turn: index })}
+        {buddy && (
+          <div className={`buddy ${last ? (last.correct ? 'buddy-cheer' : 'buddy-oops') : ''}`} key={last?.id ?? 0}>
+            {buddy}
+            {last && <span className="buddy-bubble">{buddyLine(last, timeLimitMs)}</span>}
+          </div>
+        )}
+      </div>
 
       <div className={`question ${phase === 'fix' ? 'question-fix' : ''}`}>
         <span className="question-text">{fact.text} =</span>

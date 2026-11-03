@@ -3,7 +3,7 @@ import { StageProps } from '../components/PracticeSession';
 import { sounds } from '../sound';
 import { Confetti } from '../components/Confetti';
 
-export type StatKey = 'goals' | 'topCorners' | 'monstersFound' | 'tickles';
+export type StatKey = 'goals' | 'topCorners' | 'saves' | 'monstersFound' | 'tickles';
 
 export const RIVALS = [
   'Thunder Toads',

@@ -5,6 +5,7 @@ export interface Stats {
   sessions: number;
   goals: number;
   topCorners: number;
+  saves: number; // shots stopped in Penalty Saves
   monstersFound: number;
   tickles: number;
   snacks: number; // food the companion dragon has eaten
@@ -35,6 +36,7 @@ export const emptyStats = (): Stats => ({
   sessions: 0,
   goals: 0,
   topCorners: 0,
+  saves: 0,
   monstersFound: 0,
   tickles: 0,
   snacks: 0,

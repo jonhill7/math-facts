@@ -10,12 +10,16 @@ import { Progress, recordAnswer } from './engine/scheduler';
 import { practiced, streakStatus } from './engine/streak';
 import { LanternHunt } from './modes/LanternHunt';
 import { PenaltyKicks, pickRival, StatKey } from './modes/PenaltyKicks';
+import { PenaltySaves } from './modes/PenaltySaves';
 import { cloudEnabled, cloudStore, signInWithGoogle, signOutUser, User, watchUser } from './storage/firebase';
 import { listGuests, localStore } from './storage/localStore';
 import { ProgressStore, SaveData, Settings } from './storage/types';
 import { setMuted, sounds } from './sound';
 
-type Mode = 'soccer' | 'lantern';
+type Mode = 'soccer' | 'keeper' | 'lantern';
+
+// How long the shooter takes to kick in Penalty Saves: a bit longer than the speed goal.
+const shotClock = (fastMs: number) => fastMs + 2000;
 type Screen =
   | { name: 'who' }
   | { name: 'home' }
@@ -151,14 +155,19 @@ export default function App() {
           onAnswer={onAnswer}
           holdAfterCorrect={screen.mode === 'lantern'}
           topRight={muteButton}
+          buddy={(() => {
+            const c = companionFor(data.progress, data.companion);
+            return c && c.stage !== 'none' ? <Dragon dragon={c} size={3.4} /> : undefined;
+          })()}
           fastMs={data.settings.fastMs}
+          timeLimitMs={screen.mode === 'keeper' ? shotClock(data.settings.fastMs) : undefined}
           options={{ focusTable: data.settings.focusTable || undefined, length: data.settings.length }}
           onQuit={() => {
             update((d) => ({ ...d }), true); // save right away
             setScreen({ name: 'home' });
           }}
           onFinish={(summary) => {
-            const won = screen.mode === 'soccer' && summary.correct > summary.answered - summary.correct;
+            const won = matchWon(screen.mode, summary);
             update(
               (d) => ({
                 ...d,
@@ -181,14 +190,21 @@ export default function App() {
             });
           }}
           stage={(props) =>
-            screen.mode === 'soccer' ? <PenaltyKicks {...props} onStat={onStat} rival={screen.rival} /> : <LanternHunt {...props} onStat={onStat} monstersFoundTotal={data.stats.monstersFound} />
+            screen.mode === 'soccer' ? (
+              <PenaltyKicks {...props} onStat={onStat} rival={screen.rival} />
+            ) : screen.mode === 'keeper' ? (
+              <PenaltySaves {...props} onStat={onStat} rival={screen.rival} timeLimitMs={shotClock(data.settings.fastMs)} />
+            ) : (
+              <LanternHunt {...props} onStat={onStat} monstersFoundTotal={data.stats.monstersFound} />
+            )
           }
         />
       )}
       {screen.name === 'done' && (
         <Done
           summary={screen.summary}
-          match={screen.mode === 'soccer' ? screen.rival : undefined}
+          mode={screen.mode}
+          rival={screen.rival}
           grew={screen.grew}
           names={data?.dragonNames ?? {}}
           onAgain={() => data && setScreen({ name: 'play', mode: screen.mode, before: data.progress, rival: pickRival() })}
@@ -317,11 +333,19 @@ function Home({ data, onPlay, onMap, onHatchery, onSwitch, muteButton, onSetting
         </span>
       </button>
       <div className="modes">
-        <button type="button" className="mode-card soccer" onClick={() => onPlay('soccer')}>
+        <div className="mode-card soccer soccer-pair">
           <span className="mode-emoji">⚽</span>
           <strong>Penalty Kicks</strong>
-          <span>Fast answers fly into the top corner.</span>
-        </button>
+          <span>Shoot for the top corner, or be the keeper.</span>
+          <span className="mode-pills">
+            <button type="button" className="mode-pill" onClick={() => onPlay('soccer')}>
+              ⚽ Shoot
+            </button>
+            <button type="button" className="mode-pill" onClick={() => onPlay('keeper')}>
+              🧤 Save
+            </button>
+          </span>
+        </div>
         <button type="button" className="mode-card lantern" onClick={() => onPlay('lantern')}>
           <span className="mode-emoji">🔦</span>
           <strong>Lantern Hunt</strong>
@@ -384,8 +408,10 @@ function Home({ data, onPlay, onMap, onHatchery, onSwitch, muteButton, onSetting
         <Stat icon="🏆" value={data.stats.matchesWon} label="wins" />
         <Stat icon="👾" value={data.stats.monstersFound} label="monsters found" />
         <Stat icon="⭐" value={data.stats.topCorners} label="top corners" />
+        <Stat icon="🧤" value={data.stats.saves} label="saves" />
         <Stat icon="🤗" value={data.stats.tickles} label="tickle attacks" />
         <Stat icon="🍖" value={data.stats.snacks} label="dragon snacks" />
+        <Stat icon="🎮" value={data.stats.sessions} label="games played" />
       </div>
       <div className="home-buttons">
         <button type="button" className="big-button" onClick={onHatchery}>
@@ -411,27 +437,45 @@ function Stat({ icon, value, label }: { icon: string; value: number; label: stri
   );
 }
 
+// A soccer match is won by scoring (or saving) more than the rivals score.
+function matchWon(mode: Mode, s: SessionSummary): boolean {
+  if (mode === 'soccer') return s.correct > s.answered - s.correct;
+  if (mode === 'keeper') return s.inTime > s.answered - s.inTime;
+  return false;
+}
+
 interface DoneProps {
   summary: SessionSummary;
-  match?: string; // rival team name after a soccer match
+  mode: Mode;
+  rival: string; // rival team name for soccer matches
   grew: DragonState[];
   names: Record<string, string>;
   onAgain: () => void;
   onHome: () => void;
 }
 
-function Done({ summary, match, grew, names, onAgain, onHome }: DoneProps) {
+function Done({ summary, mode, rival, grew, names, onAgain, onHome }: DoneProps) {
   useEffect(() => {
     if (grew.length) sounds.hatch();
   }, [grew]);
   const pct = summary.answered ? Math.round((summary.correct / summary.answered) * 100) : 0;
-  const won = match !== undefined && summary.correct > summary.answered - summary.correct;
+  const won = matchWon(mode, summary);
   const party = won || grew.length > 0 || pct === 100;
   return (
     <div className="done">
       {party && <Confetti count={70} fixed />}
       <h1>Nice work!</h1>
-      {match && <MatchResult us={summary.correct} them={summary.answered - summary.correct} rival={match} />}
+      {mode === 'soccer' && <MatchResult us={summary.correct} them={summary.answered - summary.correct} rival={rival} />}
+      {mode === 'keeper' && (
+        <>
+          <p className="match-result">
+            {won ? `🏆 You stopped the ${rival}!` : `The ${rival} got past you this time.`}
+          </p>
+          <p className="snack-total">
+            🧤 You saved {summary.inTime} of {summary.answered} shots!
+          </p>
+        </>
+      )}
       <p className="big-stat">{pct}% right</p>
       <p className="snack-total">🍖 Your dragon ate {summary.snacks} snacks!</p>
       {grew.map((d) => (
