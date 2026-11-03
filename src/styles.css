@@ -1029,3 +1029,36 @@ body {
     var(--bg);
   background-attachment: fixed;
 }
+
+/* Friendly rounded font (Fredoka, bundled so it works offline) for
+   headings, numbers and buttons. Body text stays in the system font. */
+h1,
+h2,
+h3,
+.big-button,
+.mode-card strong,
+.question,
+.key,
+.scoreboard,
+.shot-message,
+.big-stat,
+.match-result,
+.snack-total,
+.streak strong,
+.companion strong,
+.dragon-card strong,
+.lantern-message,
+.tickle-overlay,
+.chip {
+  font-family: 'Fredoka', system-ui, sans-serif;
+  letter-spacing: 0.01em;
+}
+
+h1 {
+  font-weight: 700;
+}
+
+.question,
+.key {
+  font-weight: 600;
+}
