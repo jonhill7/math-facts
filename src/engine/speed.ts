@@ -3,8 +3,9 @@
 // 1 × 1 is much quicker to recall than 7 × 8, so every fact gets its own speed
 // goal based on how hard it is. Beating it is what counts as "fast" everywhere:
 // the triple snack, the power meter, Lantern Hunt's bright lantern, a top-corner
-// shot, a diving save, a Sky Race super flap, and moving up on the fact map.
-// Sky Race and the speed titles also use it to measure pace fairly.
+// shot, a diving save, and a Sky Race super flap. Sky Race and the speed titles
+// also use it to measure pace fairly. (The fact map is the exception: a fact
+// moves up when it's answered within the flat speed-goal setting.)
 //
 // The kid's speed-goal setting (3 seconds by default, the fluency standard used
 // by XtraMath and Reflex) is the goal for the hardest facts. No fact's goal goes
