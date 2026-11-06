@@ -72,5 +72,11 @@ export const sounds = {
     notes([392, 523, 659, 784, 1047, 1319], 0.05, 0.18, 'sawtooth');
   },
   boss: () => notes([196, 185, 175, 165], 0.18, 0.3, 'square'),
+  // A dragon saying hi: little ones squeak high, big ones rumble low.
+  chirp: (stage: string) => {
+    const base = stage === 'grown' ? 330 : stage === 'young' ? 520 : 780;
+    notes([base, base * 1.25, base * 1.5], 0.06, 0.1, 'triangle');
+  },
+  wobble: () => notes([392, 349, 392], 0.08, 0.08, 'triangle'),
   hatch: () => notes([523, 784, 1047, 1319, 1568], 0.1, 0.35),
 };

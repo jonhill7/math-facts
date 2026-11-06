@@ -9,6 +9,8 @@ grow a hatchery of dragons as they learn:
   hatches when half the table's facts are known well, and is fully grown
   when every fact is mastered. Right answers in any game are snacks for the
   kid's companion dragon (fast answers are triple snacks), which levels up.
+  Every dragon found lives in an animated meadow where they wander, nap and
+  play together. Tap one to say hi, or tap the grass to throw it a ball.
 
 The practice happens inside two games:
 
