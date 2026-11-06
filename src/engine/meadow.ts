@@ -23,7 +23,12 @@ export type Activity =
   | 'splash' // splashing in the pond
   | 'warm' // warming up by the campfire
   | 'bounce' // bouncing on the trampoline
-  | 'dance'; // dancing to the drum
+  | 'dance' // dancing to the drum
+  // Things to do in some of the world tour places:
+  | 'soak' // soaking in an Iceland hot spring
+  | 'gaze' // looking up at the northern lights in Norway
+  | 'slide' // a belly slide across the Antarctic ice (moving)
+  | 'moonhop'; // a big floaty jump on the Moon
 
 export type PlayKind = 'hop' | 'nuzzle' | 'roar';
 
@@ -79,6 +84,39 @@ export const THINGS: MeadowThing[] = [
 
 export const thingById = (id: string) => THINGS.find((t) => t.id === id);
 
+// How the meadow works in each world tour place (the places' ids). Every place
+// looks different (that's drawn in the Meadow component); some also change how
+// the dragons get about or give them something new to do there.
+export interface Land {
+  speed: number; // walking speed, times the usual
+  spots: MeadowThing[]; // places to go that come with the land, like a hot spring
+  solo?: { activity: Activity; chance: number; ms: [number, number] }; // something to do alone now and then
+}
+
+export const LANDS: Record<string, Land> = {
+  meadow: { speed: 1, spots: [] },
+  // A hot spring to soak in, steaming next to the volcano.
+  iceland: { speed: 1, spots: [{ id: 'land-hotspring', x: 18, y: 54, activity: 'soak', ms: [5000, 9000], room: 3 }] },
+  // Splashing about where the waves come in.
+  brazil: { speed: 1, spots: [{ id: 'land-sea', x: 46, y: 50, activity: 'splash', ms: [3000, 5500], room: 3 }] },
+  kenya: { speed: 1, spots: [] },
+  japan: { speed: 1, spots: [] },
+  // A nap in the shade of the palm tree, out of the desert sun.
+  egypt: { speed: 0.9, spots: [{ id: 'land-shade', x: 84, y: 51, activity: 'nap', ms: [8000, 14000], room: 2 }] },
+  // Everyone hops about like a kangaroo (drawn by the Meadow), a bit quicker.
+  australia: { speed: 1.2, spots: [] },
+  // Slippery ice: dragons glide when they walk, and sometimes belly slide.
+  antarctica: { speed: 1.3, spots: [], solo: { activity: 'slide', chance: 0.25, ms: [800, 1600] } },
+  // Dragons stop and look up at the northern lights.
+  norway: { speed: 1, spots: [], solo: { activity: 'gaze', chance: 0.2, ms: [3500, 6000] } },
+  india: { speed: 1, spots: [] },
+  peru: { speed: 0.9, spots: [] },
+  // Low gravity: slow floaty walks and huge jumps.
+  moon: { speed: 0.65, spots: [], solo: { activity: 'moonhop', chance: 0.3, ms: [2400, 3600] } },
+};
+
+export const landFor = (place: string | undefined): Land => LANDS[place ?? ''] ?? LANDS.meadow;
+
 // The spot next to a thing where a dragon stands to use it. The trampoline is
 // used right on top, the drum from just behind it, and the rest have dragons
 // gathered around.
@@ -93,16 +131,16 @@ function spotAt(t: MeadowThing, rand: Rand): { x: number; y: number } {
 const usersOf = (critters: Critter[], t: MeadowThing) =>
   critters.filter((c) => (c.then?.activity === t.activity || c.activity === t.activity) && Math.hypot(c.x - t.x, c.y - t.y) < 14).length;
 
-function goUse(c: Critter, t: MeadowThing, now: number, rand: Rand): Critter {
+function goUse(c: Critter, t: MeadowThing, now: number, rand: Rand, land: Land = LANDS.meadow): Critter {
   const { x, y } = spotAt(t, rand);
-  return walkTo(c, x, y, now, { activity: t.activity, ms: between(rand, ...t.ms), faceX: t.x });
+  return walkTo(c, x, y, now, { activity: t.activity, ms: between(rand, ...t.ms), faceX: t.x }, land);
 }
 
 const between = (rand: Rand, lo: number, hi: number) => lo + rand() * (hi - lo);
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 
-export function walkMs(c: Pick<Critter, 'stage' | 'x' | 'y'>, x: number, y: number): number {
-  const speed = SPEED[c.stage] ?? 10;
+export function walkMs(c: Pick<Critter, 'stage' | 'x' | 'y'>, x: number, y: number, land: Land = LANDS.meadow): number {
+  const speed = (SPEED[c.stage] ?? 10) * land.speed;
   const dist = Math.hypot(x - c.x, (y - c.y) * 1.6); // the meadow is wider than it is deep
   return Math.round((dist / speed) * 1000);
 }
@@ -138,10 +176,10 @@ export function offNest(x: number, y: number): number {
   return y > NEST.y - 12 && x < NEST.x + 14 ? NEST.x + 14 : x;
 }
 
-function walkTo(c: Critter, x: number, y: number, now: number, then?: Critter['then']): Critter {
+function walkTo(c: Critter, x: number, y: number, now: number, then?: Critter['then'], land: Land = LANDS.meadow): Critter {
   y = clamp(y, GROUND.back, GROUND.front);
   x = offNest(clamp(x, GROUND.left, GROUND.right), y);
-  const ms = walkMs(c, x, y);
+  const ms = walkMs(c, x, y, land);
   return {
     ...c,
     x,
@@ -157,7 +195,7 @@ function walkTo(c: Critter, x: number, y: number, now: number, then?: Critter['t
 }
 
 // Pick what one dragon does next, on its own.
-function nextAlone(c: Critter, now: number, rand: Rand, night: boolean, things: MeadowThing[], everyone: Critter[]): Critter {
+function nextAlone(c: Critter, now: number, rand: Rand, night: boolean, things: MeadowThing[], everyone: Critter[], land: Land): Critter {
   const base = { ...c, moveMs: 0, partner: undefined, play: undefined, then: undefined };
   if (c.stage === 'egg') {
     return rand() < 0.35 ? { ...base, activity: 'wobble', until: now + 1200 } : { ...base, activity: 'idle', until: now + between(rand, 2000, 6000) };
@@ -165,26 +203,36 @@ function nextAlone(c: Critter, now: number, rand: Rand, night: boolean, things: 
   const has = (id: string) => things.find((t) => t.id === id && usersOf(everyone, t) < t.room);
   const fire = has('meadow-campfire');
   // At night, a campfire keeps dragons up: they gather round it instead of sleeping.
-  if (night && fire && rand() < 0.45) return goUse(c, fire, now, rand);
+  if (night && fire && rand() < 0.45) return goUse(c, fire, now, rand, land);
   const napChance = (SLEEPY.has(c.id) ? 0.3 : 0.12) + (night ? (things.some((t) => t.id === 'meadow-campfire') ? 0.1 : 0.35) : 0);
   const r = rand();
   if (r < napChance && c.activity !== 'nap') {
     // With a cloud bed, sleepy dragons go and curl up on it for a long nap.
     const bed = has('meadow-cloud');
-    if (bed) return goUse(c, bed, now, rand);
+    if (bed) return goUse(c, bed, now, rand, land);
     return { ...base, activity: 'nap', until: now + between(rand, 6000, 14000) };
   }
   // Off to try one of the things in the meadow.
   const free = things.filter((t) => t.id !== 'meadow-cloud' && usersOf(everyone, t) < t.room);
-  if (free.length && rand() < 0.4) return goUse(c, free[Math.floor(rand() * free.length)], now, rand);
+  if (free.length && rand() < 0.4) return goUse(c, free[Math.floor(rand() * free.length)], now, rand, land);
+  // Something only this place has.
+  if (land.solo && rand() < land.solo.chance) {
+    const ms = between(rand, ...land.solo.ms);
+    if (land.solo.activity !== 'slide') return { ...base, activity: land.solo.activity, until: now + ms };
+    // A belly slide: whoosh a long way across the ice, much faster than walking.
+    const dir = c.x < 30 ? 1 : c.x > 70 ? -1 : rand() < 0.5 ? 1 : -1;
+    const slide = walkTo(c, c.x + dir * between(rand, 25, 45), c.y + between(rand, -6, 6), now, { activity: 'idle', ms: between(rand, 600, 1400) }, land);
+    const fast = Math.max(500, Math.round(slide.moveMs * 0.45));
+    return { ...slide, activity: 'slide', moveMs: fast, until: now + fast };
+  }
   if (r < napChance + 0.2) return { ...base, activity: 'idle', facing: rand() < 0.5 ? 1 : -1, until: now + between(rand, 1200, 3500) };
   // A stroll to somewhere nearby.
-  return walkTo(c, c.x + between(rand, -30, 30), c.y + between(rand, -14, 14), now, { activity: 'idle', ms: between(rand, 600, 2000) });
+  return walkTo(c, c.x + between(rand, -30, 30), c.y + between(rand, -14, 14), now, { activity: 'idle', ms: between(rand, 600, 2000) }, land);
 }
 
 // Move the meadow on to `now`: everyone whose activity is over picks the next one.
-export function step(critters: Critter[], now: number, rand: Rand, night = false, placed: string[] = []): Critter[] {
-  const things = placed.map(thingById).filter((t): t is MeadowThing => !!t);
+export function step(critters: Critter[], now: number, rand: Rand, night = false, placed: string[] = [], land: Land = LANDS.meadow): Critter[] {
+  const things = [...placed.map(thingById).filter((t): t is MeadowThing => !!t), ...land.spots];
   // Every so often the drum starts a dance party for everyone who's awake.
   if (things.some((t) => t.id === 'meadow-drum') && rand() < 0.006) return danceParty(critters, now);
   const out = critters.map((c) => ({ ...c }));
@@ -214,8 +262,8 @@ export function step(critters: Critter[], now: number, rand: Rand, night = false
         const right = left === c ? friend : c;
         const kinds: PlayKind[] = c.stage === 'hatchling' || friend.stage === 'hatchling' ? ['hop', 'nuzzle'] : ['hop', 'nuzzle', 'roar'];
         const play = kinds[Math.floor(rand() * kinds.length)];
-        const meetL = walkTo(left, mx - 6, my, now);
-        const meetR = walkTo(right, mx + 6, my, now);
+        const meetL = walkTo(left, mx - 6, my, now, undefined, land);
+        const meetR = walkTo(right, mx + 6, my, now, undefined, land);
         // Both play until the same moment, starting when each arrives.
         const done = now + Math.max(meetL.moveMs, meetR.moveMs) + 3500;
         for (const [who, walk] of [
@@ -230,7 +278,7 @@ export function step(critters: Critter[], now: number, rand: Rand, night = false
         continue;
       }
     }
-    out[i] = nextAlone(c, now, rand, night, things, out);
+    out[i] = nextAlone(c, now, rand, night, things, out, land);
     byId.set(c.id, out[i]);
   }
   return party ? danceParty(out, now) : out;
@@ -249,7 +297,7 @@ export function danceParty(critters: Critter[], now: number): Critter[] {
 // (waking it if it was asleep). With no hatched dragon selected, the nearest
 // awake one goes. A dragon sent to the drum starts a dance party when it
 // gets there.
-export function tapThing(critters: Critter[], id: string, now: number, rand: Rand, selected?: number): Critter[] {
+export function tapThing(critters: Critter[], id: string, now: number, rand: Rand, selected?: number, land: Land = LANDS.meadow): Critter[] {
   const t = thingById(id);
   if (!t) return critters;
   const hatched = critters.filter((c) => c.stage !== 'egg');
@@ -260,7 +308,7 @@ export function tapThing(critters: Critter[], id: string, now: number, rand: Ran
   if (!pick) return critters;
   return tapDragon(critters, pick.id, now).map((c) => {
     if (c.id !== pick.id) return c;
-    const go = goUse(c, t, now, rand);
+    const go = goUse(c, t, now, rand, land);
     return t.id === 'meadow-drum' && go.then ? { ...go, then: { ...go.then, ms: 4500, party: true } } : go;
   });
 }
@@ -278,7 +326,7 @@ export function tapDragon(critters: Critter[], id: number, now: number): Critter
 
 // A tap on the grass throws a ball there, and the nearest awake hatched dragon
 // runs to fetch it. Returns the ball with its chaser, or no chaser if nobody can.
-export function throwBall(critters: Critter[], x: number, y: number, now: number): { critters: Critter[]; ball: Ball } {
+export function throwBall(critters: Critter[], x: number, y: number, now: number, land: Land = LANDS.meadow): { critters: Critter[]; ball: Ball } {
   x = clamp(x, GROUND.left, GROUND.right);
   y = clamp(y, GROUND.back, GROUND.front);
   const hatched = critters.filter((c) => c.stage !== 'egg');
@@ -287,7 +335,7 @@ export function throwBall(critters: Critter[], x: number, y: number, now: number
   const score = (c: Critter) => Math.hypot(c.x - x, c.y - y) + (c.activity === 'nap' ? 1000 : 0);
   const chaser = hatched.reduce((a, b) => (score(b) < score(a) ? b : a));
   const next = tapDragon(critters, chaser.id, now).map((c) =>
-    c.id === chaser.id ? walkTo(c, x - 3 * (x >= c.x ? 1 : -1), y, now, { activity: 'fetch', ms: 1800 }) : c,
+    c.id === chaser.id ? walkTo(c, x - 3 * (x >= c.x ? 1 : -1), y, now, { activity: 'fetch', ms: 1800 }, land) : c,
   );
   return { critters: next, ball: { x, y, chaser: chaser.id } };
 }
@@ -320,26 +368,36 @@ export function doingText(c: Critter): string {
         case 'munch':
           return 'off to eat berries';
         case 'splash':
-          return 'off to the pond';
+          return 'off for a splash';
         case 'warm':
           return 'off to the campfire';
         case 'bounce':
           return 'off to the trampoline';
         case 'dance':
           return 'off to play the drum';
+        case 'soak':
+          return 'off to the hot spring';
         default:
           return 'going for a walk';
       }
     case 'munch':
       return 'eating berries';
     case 'splash':
-      return 'splashing in the pond';
+      return 'splashing in the water';
     case 'warm':
       return 'warming up by the campfire';
     case 'bounce':
       return 'bouncing on the trampoline';
     case 'dance':
       return 'dancing';
+    case 'soak':
+      return 'soaking in the hot spring';
+    case 'gaze':
+      return 'looking up at the northern lights';
+    case 'slide':
+      return 'belly sliding on the ice';
+    case 'moonhop':
+      return 'doing a big Moon jump';
     case 'nap':
       return 'napping';
     case 'play':
