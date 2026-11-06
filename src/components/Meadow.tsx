@@ -1,6 +1,7 @@
 import { CSSProperties, MouseEvent, useEffect, useRef, useState } from 'react';
 import { DragonState } from '../engine/dragons';
-import { Ball, Critter, doingText, GROUND, isNight, startMeadow, step, syncMeadow, tapDragon, throwBall } from '../engine/meadow';
+import { Ball, Critter, doingText, GROUND, isNight, startMeadow, step, syncMeadow, tapDragon, tapThing, thingById, throwBall } from '../engine/meadow';
+import { itemById } from '../engine/shop';
 import { sounds } from '../sound';
 import { Dragon, Eyes } from './Dragon';
 
@@ -50,6 +51,67 @@ function bubbleFor(c: Critter): string | null {
       return REACTION[c.id] ?? '✨';
     case 'fetch':
       return '🎉';
+    case 'munch':
+      return '🫐';
+    case 'splash':
+      return c.id === 8 ? '❄️' : '💦'; // Octofrost freezes the splashes
+    case 'warm':
+      return '✨';
+    case 'bounce':
+      return '⭐';
+    case 'dance':
+      return '🎵';
+    default:
+      return null;
+  }
+}
+
+// How each meadow thing is drawn. (x, y) is where it sits on the ground.
+function ThingArt({ id, active, iced, night }: { id: string; active: boolean; iced: boolean; night: boolean }) {
+  switch (id) {
+    case 'meadow-berries':
+      return (
+        <span className="thing-bush">
+          <span>🫐</span>
+          <span>🍓</span>
+          <span>🫐</span>
+        </span>
+      );
+    case 'meadow-pond':
+      return (
+        <span className={`thing-pond ${iced ? 'thing-pond-ice' : ''} ${active ? 'thing-pond-splash' : ''}`}>
+          <span>🪷</span>
+        </span>
+      );
+    case 'meadow-cloud':
+      return <span className="thing-cloud">☁️</span>;
+    case 'meadow-campfire':
+      return (
+        <span className={`thing-fire ${night ? 'thing-fire-night' : ''}`}>
+          <span className="thing-fire-glow" />
+          <span className="thing-fire-flame">🔥</span>
+          <span className="thing-fire-logs">🪵</span>
+        </span>
+      );
+    case 'meadow-trampoline':
+      return (
+        <span className={`thing-tramp ${active ? 'thing-tramp-on' : ''}`}>
+          <span className="thing-tramp-mat" />
+        </span>
+      );
+    case 'meadow-drum':
+      return (
+        <span className={`thing-drum ${active ? 'thing-drum-on' : ''}`}>
+          🥁
+          {active && (
+            <span className="critter-bubble" aria-hidden="true">
+              <span>♪</span>
+              <span>♫</span>
+              <span>♪</span>
+            </span>
+          )}
+        </span>
+      );
     default:
       return null;
   }
@@ -57,7 +119,7 @@ function bubbleFor(c: Critter): string | null {
 
 function eyesFor(c: Critter): Eyes {
   if (c.activity === 'nap') return 'sleep';
-  if (c.activity === 'happy' || c.activity === 'fetch' || (c.activity === 'play' && c.play !== 'roar')) return 'happy';
+  if (['happy', 'fetch', 'munch', 'splash', 'bounce', 'dance'].includes(c.activity) || (c.activity === 'play' && c.play !== 'roar')) return 'happy';
   return 'open';
 }
 
@@ -66,14 +128,18 @@ interface Props {
   names: Record<string, string>;
   companionId: number;
   hat?: string;
+  placed?: string[]; // meadow things bought in the shop and put out
+  onShop?: () => void;
 }
 
-export function Meadow({ dragons, names, companionId, hat }: Props) {
+export function Meadow({ dragons, names, companionId, hat, placed = [], onShop }: Props) {
   const reduce = useReducedMotion();
   const [night] = useState(() => isNight(new Date()));
   const [critters, setCritters] = useState(() => startMeadow(dragons, Date.now(), Math.random));
   const [ball, setBall] = useState<(Ball & { key: number }) | null>(null);
   const meadowRef = useRef<HTMLDivElement>(null);
+  const placedRef = useRef(placed);
+  placedRef.current = placed;
 
   // New eggs and dragons that grew show up without resetting everyone else.
   // (Keyed on the stages so it only runs when one changes.)
@@ -91,7 +157,7 @@ export function Meadow({ dragons, names, companionId, hat }: Props) {
       setCritters((cs) =>
         reduce
           ? cs.map((c) => (c.until <= now && c.activity !== 'idle' ? { ...c, activity: 'idle', until: Number.MAX_SAFE_INTEGER } : c))
-          : step(cs, now, Math.random, night),
+          : step(cs, now, Math.random, night, placedRef.current),
       );
     }, TICK_MS);
     return () => window.clearInterval(id);
@@ -112,6 +178,13 @@ export function Meadow({ dragons, names, companionId, hat }: Props) {
     if (c.stage === 'egg') sounds.wobble();
     else sounds.chirp(c.stage);
     setCritters((cs) => tapDragon(cs, c.id, Date.now()));
+  };
+
+  const pokeThing = (id: string, e: MouseEvent) => {
+    e.stopPropagation();
+    if (id === 'meadow-drum') sounds.drum();
+    else sounds.search();
+    if (!reduce) setCritters((cs) => tapThing(cs, id, Date.now(), Math.random));
   };
 
   const throwAt = (x: number, y: number) => {
@@ -151,6 +224,24 @@ export function Meadow({ dragons, names, companionId, hat }: Props) {
           <span className="meadow-flower meadow-flower-3">🌼</span>
           <span className="meadow-nest" />
         </div>
+        {placed.map((id) => {
+          const t = thingById(id);
+          const item = itemById(id);
+          if (!t || !item) return null;
+          const near = critters.filter((c) => c.activity === t.activity && Math.hypot(c.x - t.x, c.y - t.y) < 14);
+          return (
+            <button
+              key={id}
+              type="button"
+              className={`thing thing-at-${id.replace('meadow-', '')}`}
+              style={{ left: `${t.x}%`, top: `${t.y}%`, zIndex: 10 + Math.round(t.y) - (t.room === 1 ? 1 : 0) }}
+              onClick={(e) => pokeThing(id, e)}
+              aria-label={id === 'meadow-drum' ? 'Party drum. Tap to start a dance party.' : `${item.name}. Tap to call a dragon over.`}
+            >
+              <ThingArt id={id} active={near.length > 0} iced={near.some((c) => c.id === 8)} night={night} />
+            </button>
+          );
+        })}
         {critters.map((c) => {
           const d = dragons.find((x) => x.species.id === c.id);
           if (!d) return null;
@@ -214,6 +305,11 @@ export function Meadow({ dragons, names, companionId, hat }: Props) {
               ? 'Tap your dragon to say hi, or tap the grass to throw a ball. Hatch more eggs and they will play together.'
               : 'Tap a dragon to say hi, or tap the grass to throw a ball.'}
         </span>
+        {onShop && placed.length === 0 && hatched > 0 && (
+          <button type="button" className="chip" onClick={onShop}>
+            🛍️ Get things for the meadow
+          </button>
+        )}
         {hatched > 0 && !reduce && (
           <button
             type="button"

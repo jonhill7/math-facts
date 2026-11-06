@@ -11,6 +11,10 @@ grow a hatchery of dragons as they learn:
   kid's companion dragon (fast answers are triple snacks), which levels up.
   Every dragon found lives in an animated meadow where they wander, nap and
   play together. Tap one to say hi, or tap the grass to throw it a ball.
+  Snacks buy things for the meadow in the shop, and each one changes what
+  the dragons get up to: a berry bush, a splash pond, a cloud bed for group
+  naps, a campfire that keeps them up at night, a trampoline, and a party
+  drum that starts a dance party when you tap it.
 
 The practice happens inside two games:
 

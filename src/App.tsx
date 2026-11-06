@@ -248,6 +248,8 @@ export default function App() {
           companion={companionOf(data)}
           names={data.dragonNames}
           hat={hat}
+          placed={data.shop.placed}
+          onShop={() => setScreen({ name: 'shop' })}
           onPick={(id) => update((d) => ({ ...d, companion: id }), true)}
           onName={(id, name) => update((d) => ({ ...d, dragonNames: { ...d.dragonNames, [String(id)]: name } }), true)}
           onBack={() => setScreen({ name: 'home' })}

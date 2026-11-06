@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { dragonState, speciesById } from './dragons';
-import { Critter, GROUND, isNight, offNest, startMeadow, step, syncMeadow, tapDragon, throwBall, walkMs } from './meadow';
+import { Critter, danceParty, GROUND, isNight, offNest, startMeadow, step, syncMeadow, tapDragon, tapThing, thingById, THINGS, throwBall, walkMs } from './meadow';
+import { buy, emptyShop, isOn, ITEMS, toggleEquip } from './shop';
 
 // A predictable "random" number source.
 function seeded(seed = 1) {
@@ -15,10 +16,10 @@ const dragon = (id: number, snacks: number) => dragonState(speciesById(id), { [S
 const EGG = 0; // level 1
 const GROWN = 500; // level 10
 
-function run(cs: Critter[], from: number, ms: number, rand = seeded()) {
+function run(cs: Critter[], from: number, ms: number, rand = seeded(), placed: string[] = [], night = false) {
   const seen: Critter[][] = [];
   for (let t = from; t <= from + ms; t += 300) {
-    cs = step(cs, t, rand);
+    cs = step(cs, t, rand, night, placed);
     seen.push(cs);
   }
   return seen;
@@ -118,5 +119,80 @@ describe('the nest', () => {
         expect(c.x === offNest(c.x, c.y)).toBe(true);
       }
     }
+  });
+});
+
+describe('meadow things', () => {
+  const herd = () => startMeadow([dragon(2, GROWN), dragon(8, GROWN), dragon(5, GROWN), dragon(7, EGG)], 0, seeded(4));
+  const activities = (placed: string[], night = false) => new Set(run(herd(), 0, 300_000, seeded(21), placed, night).flatMap((cs) => cs.map((c) => c.activity)));
+
+  it('are all for sale in the shop', () => {
+    for (const t of THINGS) expect(ITEMS.find((i) => i.id === t.id)?.slot).toBe('meadow');
+  });
+
+  it('give the dragons new things to do', () => {
+    const none = activities([]);
+    for (const a of ['munch', 'splash', 'bounce', 'dance', 'warm']) expect(none).not.toContain(a);
+    const all = activities(THINGS.map((t) => t.id));
+    for (const a of ['munch', 'splash', 'bounce', 'dance', 'warm']) expect(all).toContain(a);
+  });
+
+  it('never put more dragons on a thing than fit', () => {
+    const placed = THINGS.map((t) => t.id);
+    for (const cs of run(herd(), 0, 300_000, seeded(8), placed)) {
+      const bouncing = cs.filter((c) => c.activity === 'bounce' || c.then?.activity === 'bounce');
+      expect(bouncing.length).toBeLessThanOrEqual(1);
+    }
+  });
+
+  it('sends nappers to the cloud bed', () => {
+    const bed = thingById('meadow-cloud')!;
+    const naps = run(herd(), 0, 300_000, seeded(5), ['meadow-cloud']).flatMap((cs) => cs.filter((c) => c.activity === 'nap'));
+    expect(naps.length).toBeGreaterThan(0);
+    expect(naps.every((c) => Math.hypot(c.x - bed.x, c.y - bed.y) < 14)).toBe(true);
+  });
+
+  it('keeps dragons up at night when there is a campfire', () => {
+    const count = (placed: string[]) =>
+      run(herd(), 0, 300_000, seeded(13), placed, true)
+        .flat()
+        .filter((c) => c.activity === 'nap').length;
+    expect(count(['meadow-campfire'])).toBeLessThan(count([]));
+  });
+
+  it('starts a dance party when the drum is tapped', () => {
+    const cs = tapThing(herd(), 'meadow-drum', 1000, seeded());
+    expect(cs.filter((c) => c.stage !== 'egg').every((c) => c.activity === 'dance')).toBe(true);
+    expect(cs.find((c) => c.stage === 'egg')!.activity).not.toBe('dance');
+    const asleep = danceParty([{ ...herd()[0], activity: 'nap' }], 0);
+    expect(asleep[0].activity).toBe('nap');
+  });
+
+  it('calls the nearest dragon over when a thing is tapped', () => {
+    const pond = thingById('meadow-pond')!;
+    const [a, b] = herd();
+    const near = { ...a, x: pond.x + 10, y: pond.y };
+    const far = { ...b, x: 20, y: 50 };
+    const cs = tapThing([near, far], 'meadow-pond', 0, seeded());
+    expect(cs[0].then?.activity).toBe('splash');
+    expect(cs[1]).toEqual(far);
+  });
+});
+
+describe('buying meadow things', () => {
+  const pond = ITEMS.find((i) => i.id === 'meadow-pond')!;
+  const drum = ITEMS.find((i) => i.id === 'meadow-drum')!;
+  it('puts them out straight away, and lets you have lots at once', () => {
+    let shop = buy(emptyShop(), pond, 1000)!;
+    shop = buy(shop, drum, 1000)!;
+    expect(shop.placed).toEqual(['meadow-pond', 'meadow-drum']);
+    expect(shop.spent).toBe(pond.price + drum.price);
+    expect(isOn(shop, pond)).toBe(true);
+    expect(shop.equipped).toEqual({});
+  });
+  it('can be put away and back out', () => {
+    const shop = toggleEquip(buy(emptyShop(), pond, 1000)!, pond);
+    expect(isOn(shop, pond)).toBe(false);
+    expect(isOn(toggleEquip(shop, pond), pond)).toBe(true);
   });
 });
