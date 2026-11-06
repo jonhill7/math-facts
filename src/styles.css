@@ -3247,3 +3247,671 @@ h1 {
 .meadow-more-right {
   right: 6px;
 }
+
+/* ---------- The meadow in each world tour place ---------- */
+/* Every place but the Home Meadow recolors the sky, hills and ground, swaps the
+   tree and flowers for its own landmarks (PlaceScenery.tsx), and some change
+   how the dragons move. */
+
+.hatchery-place {
+  margin: -6px 0 0;
+}
+
+.meadow-themed .meadow-tree,
+.meadow-themed .meadow-rock,
+.meadow-themed .meadow-flower {
+  display: none;
+}
+
+/* Night falls as a blue wash over a place's scenery (the dragons stay bright). */
+.pl-dusk {
+  inset: 0;
+  background: linear-gradient(180deg, rgba(8, 12, 40, 0.62) 0%, rgba(8, 12, 40, 0.45) 45%, rgba(8, 12, 40, 0.38) 100%);
+}
+
+.meadow-themed.meadow-night .meadow-stars {
+  z-index: 1;
+}
+
+/* Shapes drawn in em grow with the meadow on big screens. */
+.meadow-scenery [class^='pl-'] {
+  position: absolute;
+  pointer-events: none;
+  line-height: 1;
+}
+
+/* Iceland: mossy lava fields, a smoking volcano, a geyser and a hot spring. */
+.meadow-at-iceland { background: linear-gradient(180deg, #8fb3c9 0%, #c2d6e0 34%, #e3edf1 46%); }
+.meadow-at-iceland .meadow-hill-back { background: #5b6b64; }
+.meadow-at-iceland .meadow-hill-front { background: #4d5e55; }
+.meadow-at-iceland .meadow-grass { background: linear-gradient(180deg, #7d9a5c 0%, #66834a 55%, #4f6b3a 100%); }
+.pl-volcano {
+  left: 22%;
+  bottom: 56%;
+  width: 30%;
+  height: 32%;
+  background: linear-gradient(90deg, #3f3a38 0%, #57504c 55%, #3a3533 100%);
+  clip-path: polygon(0 100%, 40% 6%, 60% 6%, 100% 100%);
+}
+.pl-volcano-lava {
+  position: absolute;
+  left: 40%;
+  top: 4%;
+  width: 20%;
+  height: 22%;
+  background: linear-gradient(180deg, #ff8a1f, #e5481a 60%, rgba(229, 72, 26, 0));
+  clip-path: polygon(0 0, 100% 0, 70% 100%, 55% 60%, 40% 100%);
+  animation: pl-glow 1.6s ease-in-out infinite alternate;
+}
+.pl-smoke {
+  left: 36%;
+  bottom: 86%;
+  width: 2.6em;
+  height: 2.6em;
+  border-radius: 50%;
+  background: rgba(120, 120, 125, 0.55);
+  animation: pl-smoke 6s ease-out infinite;
+}
+.pl-smoke-2 { animation-delay: -2s; }
+.pl-smoke-3 { animation-delay: -4s; }
+.pl-glacier {
+  left: 62%;
+  bottom: 56%;
+  width: 34%;
+  height: 12%;
+  border-radius: 50% 50% 0 0;
+  background: linear-gradient(180deg, #ffffff, #d7ebf5);
+}
+.pl-hotspring {
+  left: 18%;
+  top: 54%;
+  width: 7em;
+  height: 2.2em;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  border: 3px solid #8a8f86;
+  background: radial-gradient(ellipse at 50% 40%, #b8f1f0, #57c7d4 70%, #2c9bb0);
+}
+.pl-steam {
+  position: absolute;
+  bottom: 60%;
+  width: 1.6em;
+  height: 1.6em;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.7);
+  filter: blur(3px);
+  animation: pl-steam 3s ease-out infinite;
+}
+.pl-steam-1 { left: 25%; }
+.pl-steam-2 { left: 60%; animation-delay: -1.5s; }
+.pl-geyser {
+  left: 80%;
+  top: 50%;
+  width: 3.4em;
+  height: 1em;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: radial-gradient(ellipse, #3fb0c0, #64746a 70%);
+}
+.pl-geyser-jet {
+  position: absolute;
+  left: 50%;
+  bottom: 40%;
+  width: 1.4em;
+  height: 8em;
+  margin-left: -0.7em;
+  border-radius: 50% 50% 20% 20%;
+  background: linear-gradient(0deg, rgba(255, 255, 255, 0.95), rgba(220, 240, 250, 0.4));
+  transform-origin: 50% 100%;
+  transform: scaleY(0);
+  animation: pl-geyser 9s ease-out infinite;
+}
+.pl-moss {
+  width: 5em;
+  height: 1.2em;
+  border-radius: 50%;
+  background: #8fae66;
+}
+.pl-moss-1 { left: 44%; top: 88%; }
+.pl-moss-2 { left: 90%; top: 70%; }
+
+/* Brazil: a sunny beach with the sea at the back and Sugarloaf Mountain. */
+.meadow-at-brazil { background: linear-gradient(180deg, #38a6f0 0%, #8fd3fb 34%, #cdefff 46%); }
+.meadow-at-brazil .meadow-hill-back { background: #3a8f55; width: 40%; left: -8%; top: 26%; }
+.meadow-at-brazil .meadow-hill-front { background: #2f7c47; width: 30%; right: 4%; top: 30%; }
+.meadow-at-brazil .meadow-grass { background: linear-gradient(180deg, #f6dfa8 0%, #eed08c 50%, #e0bb6e 100%); }
+.pl-sugarloaf {
+  left: 44%;
+  bottom: 56%;
+  width: 10%;
+  height: 26%;
+  border-radius: 48% 52% 0 0 / 70% 70% 0 0;
+  background: linear-gradient(90deg, #4c6b4f, #6b8a63 50%, #3f5c43);
+}
+.pl-sea {
+  left: 0;
+  right: 0;
+  top: 41%;
+  height: 8%;
+  overflow: hidden;
+  background: linear-gradient(180deg, #1e88c8 0%, #36aee0 60%, #7fd3ee 100%);
+}
+.pl-waves {
+  position: absolute;
+  left: -10%;
+  right: -10%;
+  bottom: -2px;
+  height: 40%;
+  background: radial-gradient(circle at 50% 100%, #ffffff 0 35%, rgba(255, 255, 255, 0) 38%) 0 0 / 2.4em 100% repeat-x;
+  animation: pl-waves 3.2s ease-in-out infinite alternate;
+}
+.pl-palm {
+  font-size: 4em;
+  transform: translate(-50%, -92%);
+  filter: drop-shadow(0 6px 3px rgba(0, 0, 0, 0.12));
+}
+.pl-palm-1 { left: 86%; top: 58%; }
+.pl-palm-2 { left: 28%; top: 96%; font-size: 3.2em; }
+.pl-shell { left: 60%; top: 90%; font-size: 1.1em; }
+
+/* Kenya: golden savanna, a flat-topped acacia, Kilimanjaro and a big low sun. */
+.meadow-at-kenya { background: linear-gradient(180deg, #f2a65a 0%, #f8cf7f 34%, #fde7b0 46%); }
+.meadow-at-kenya .meadow-sun { width: 90px; height: 90px; right: 30%; top: 8%; background: radial-gradient(circle, #ffe9a8 0%, #ffb347 55%, rgba(255, 179, 71, 0) 72%); }
+.meadow-at-kenya .meadow-hill-back { background: #c7a253; height: 20%; top: 36%; }
+.meadow-at-kenya .meadow-hill-front { background: #b8923f; height: 18%; top: 38%; }
+.meadow-at-kenya .meadow-grass { background: linear-gradient(180deg, #d9b45a 0%, #c9a14a 55%, #b08a3a 100%); }
+.meadow-at-kenya .meadow-cloud { opacity: 0.6; }
+.pl-kilimanjaro {
+  left: 8%;
+  bottom: 56%;
+  width: 34%;
+  height: 22%;
+  background: linear-gradient(180deg, #ffffff 0 18%, #7a6a8a 19% 100%);
+  clip-path: polygon(0 100%, 36% 8%, 62% 4%, 100% 100%);
+  opacity: 0.85;
+}
+.pl-giraffe { left: 56%; top: 44%; font-size: 3.4em; transform: translate(-50%, -88%) scaleX(-1); }
+.pl-zebra { left: 64%; top: 46%; font-size: 1.6em; transform: translate(-50%, -88%); }
+.pl-acacia {
+  left: 84%;
+  top: 60%;
+  width: 0.6em;
+  height: 5em;
+  transform: translate(-50%, -100%);
+  background: #5b3a1f;
+  border-radius: 4px;
+}
+.pl-acacia-top {
+  position: absolute;
+  left: 50%;
+  top: -0.6em;
+  width: 10em;
+  height: 1.8em;
+  transform: translateX(-50%);
+  border-radius: 50% 50% 40% 40%;
+  background: radial-gradient(ellipse at 50% 30%, #5f8a2e, #3e6620 70%);
+  box-shadow: 0 4px 0 rgba(0, 0, 0, 0.12);
+}
+.pl-tufts {
+  left: 0;
+  right: 0;
+  top: 84%;
+  height: 1.4em;
+  background: linear-gradient(135deg, transparent 45%, #a8862f 46% 54%, transparent 55%) 0 0 / 1.3em 100% repeat-x;
+  opacity: 0.6;
+}
+
+/* Japan: Mount Fuji, a red torii gate and a cherry tree dropping petals. */
+.meadow-at-japan { background: linear-gradient(180deg, #8ec5f2 0%, #d9e6f7 34%, #fbe4ee 46%); }
+.meadow-at-japan .meadow-hill-back { background: #7fb46a; }
+.meadow-at-japan .meadow-hill-front { background: #6ea65a; }
+.meadow-at-japan .meadow-grass { background: linear-gradient(180deg, #78bb5a 0%, #64a84a 60%, #53953c 100%); }
+.pl-fuji {
+  left: 16%;
+  bottom: 56%;
+  width: 38%;
+  height: 34%;
+  background: linear-gradient(180deg, #ffffff 0 26%, #5e7ab0 27% 100%);
+  clip-path: polygon(0 100%, 40% 4%, 60% 4%, 100% 100%, 100% 100%);
+}
+.pl-torii {
+  left: 66%;
+  bottom: 54%;
+  width: 4.2em;
+  height: 4.4em;
+  border-left: 0.5em solid #d63a2a;
+  border-right: 0.5em solid #d63a2a;
+}
+.pl-torii > span {
+  position: absolute;
+  left: -1.2em;
+  right: -1.2em;
+  top: 0;
+  height: 0.55em;
+  background: #1f1f1f;
+  border-radius: 40% 40% 0 0;
+  box-shadow: 0 0.55em 0 #d63a2a, 0 1.3em 0 -0.08em #d63a2a;
+}
+.pl-sakura {
+  left: 86%;
+  top: 62%;
+  width: 0.7em;
+  height: 4em;
+  transform: translate(-50%, -100%);
+  background: #6b4226;
+  border-radius: 4px;
+}
+.pl-sakura-blossom {
+  position: absolute;
+  left: 50%;
+  bottom: 70%;
+  width: 7em;
+  height: 5em;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 40%, #ffd1e3 0 22%, transparent 23%), radial-gradient(circle at 70% 35%, #ffc2d9 0 24%, transparent 25%),
+    radial-gradient(circle at 50% 65%, #f9a8c9 0 30%, transparent 31%), radial-gradient(ellipse, #ffb6d1 0 60%, transparent 61%);
+}
+.pl-petal {
+  top: -4%;
+  width: 0.5em;
+  height: 0.4em;
+  border-radius: 60% 0 60% 0;
+  background: #ffb6d1;
+  animation: pl-fall 9s linear infinite;
+}
+.pl-petal-1, .pl-petal-4 { animation-duration: 11s; background: #ffc8dd; }
+.pl-petal-2 { animation-duration: 7.5s; }
+
+/* Egypt: sand dunes, the pyramids, a camel and a palm to nap under. */
+.meadow-at-egypt { background: linear-gradient(180deg, #7cc0ef 0%, #cfe6f2 34%, #fbf0d6 46%); }
+.meadow-at-egypt .meadow-sun { width: 60px; height: 60px; }
+.meadow-at-egypt .meadow-hill-back { background: #e3b36a; height: 26%; top: 36%; }
+.meadow-at-egypt .meadow-hill-front { background: #d9a85c; height: 24%; top: 38%; }
+.meadow-at-egypt .meadow-grass { background: linear-gradient(180deg, #ecc47c 0%, #e2b56a 55%, #d3a259 100%); }
+.meadow-at-egypt .meadow-cloud { opacity: 0.45; }
+.pl-pyramid {
+  bottom: 56%;
+  background: linear-gradient(100deg, #e9c27a 0 50%, #b98a4a 50% 100%);
+  clip-path: polygon(0 100%, 50% 0, 100% 100%);
+}
+.pl-pyramid-big { left: 30%; width: 24%; height: 30%; }
+.pl-pyramid-small { left: 52%; width: 14%; height: 17%; }
+.pl-camel { left: 70%; top: 47%; font-size: 2em; transform: translate(-50%, -88%) scaleX(-1); }
+.pl-palm-egypt { left: 88%; top: 52%; font-size: 4.2em; }
+.pl-cactus { left: 34%; top: 92%; font-size: 1.6em; transform: translate(-50%, -90%); }
+
+/* Australia: the red outback, Uluru and a kangaroo bounding past. */
+.meadow-at-australia { background: linear-gradient(180deg, #2f86d6 0%, #79bdee 34%, #ffe1b8 46%); }
+.meadow-at-australia .meadow-hill-back { background: #c0794a; height: 16%; top: 38%; }
+.meadow-at-australia .meadow-hill-front { background: #b06a3d; height: 14%; top: 40%; }
+.meadow-at-australia .meadow-grass { background: linear-gradient(180deg, #cf7a42 0%, #bd6634 55%, #a6552b 100%); }
+.meadow-at-australia .meadow-cloud { opacity: 0.55; }
+.pl-uluru {
+  left: 28%;
+  bottom: 56%;
+  width: 34%;
+  height: 16%;
+  border-radius: 40% 46% 6% 6% / 90% 90% 10% 10%;
+  background: linear-gradient(180deg, #e0773c 0%, #c2562a 60%, #a44522 100%);
+  box-shadow: inset 0 -0.4em 0 rgba(0, 0, 0, 0.12);
+}
+.pl-roo {
+  left: 0;
+  top: 46%;
+  font-size: 1.8em;
+  animation: pl-roo 14s linear infinite;
+}
+.pl-scrub {
+  width: 2.4em;
+  height: 1.4em;
+  border-radius: 50%;
+  background: radial-gradient(circle at 40% 40%, #a7a85a, #7c7c3a 70%);
+}
+.pl-scrub-1 { left: 24%; top: 90%; }
+.pl-scrub-2 { left: 56%; top: 58%; }
+.pl-scrub-3 { left: 86%; top: 76%; }
+
+/* Antarctica: snow and ice, icebergs, penguins, falling snow. */
+.meadow-at-antarctica { background: linear-gradient(180deg, #a9d2ee 0%, #d3e9f7 34%, #eef7fd 46%); }
+.meadow-at-antarctica .meadow-hill-back { background: #e8f3fa; }
+.meadow-at-antarctica .meadow-hill-front { background: #dcecf6; }
+.meadow-at-antarctica .meadow-grass { background: linear-gradient(180deg, #f7fbfe 0%, #e4f0f8 55%, #d2e5f2 100%); }
+.meadow-at-antarctica .meadow-nest { filter: saturate(0.7) brightness(1.05); }
+.pl-berg {
+  bottom: 56%;
+  background: linear-gradient(100deg, #ffffff 0 50%, #bfe0f2 50% 100%);
+  clip-path: polygon(0 100%, 18% 30%, 34% 44%, 52% 0, 70% 38%, 84% 24%, 100% 100%);
+}
+.pl-berg-1 { left: 6%; width: 32%; height: 26%; }
+.pl-berg-2 { left: 58%; width: 26%; height: 18%; }
+.pl-penguin { font-size: 1.6em; transform: translate(-50%, -88%); }
+.pl-penguin-1 { left: 44%; top: 47%; }
+.pl-penguin-2 { left: 49%; top: 48%; font-size: 1.3em; animation: pl-waddle 1.2s ease-in-out infinite; }
+/* The slippery patch in the middle where everyone slides. */
+.pl-ice {
+  left: 22%;
+  right: 18%;
+  top: 60%;
+  height: 22%;
+  border-radius: 50%;
+  background: linear-gradient(160deg, rgba(186, 230, 253, 0.85), rgba(125, 200, 240, 0.55) 60%, rgba(186, 230, 253, 0.8));
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.8);
+}
+.pl-ice::after {
+  content: '';
+  position: absolute;
+  left: 20%;
+  top: 25%;
+  width: 30%;
+  height: 12%;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.7);
+  transform: rotate(-8deg);
+}
+.pl-snow {
+  top: -4%;
+  width: 0.35em;
+  height: 0.35em;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 0 2px rgba(90, 130, 170, 0.6);
+  animation: pl-fall 8s linear infinite;
+}
+.pl-snow-1, .pl-snow-4 { width: 0.5em; height: 0.5em; animation-duration: 6s; }
+.pl-snow-2 { animation-duration: 10s; }
+
+/* Norway: always dusk, with the northern lights over the fjords. */
+.meadow-at-norway { background: linear-gradient(180deg, #050b22 0%, #10264a 30%, #1f4a6a 46%); }
+.meadow-at-norway .meadow-sun,
+.meadow-at-norway .meadow-cloud,
+.meadow-at-norway .meadow-stars { display: none; }
+.meadow-at-norway .meadow-hill-back { background: #24423f; }
+.meadow-at-norway .meadow-hill-front { background: #1e3a35; }
+.meadow-at-norway .meadow-grass { background: linear-gradient(180deg, #2f5a45 0%, #284d3b 55%, #1f4030 100%); }
+.pl-stars {
+  top: 6%;
+  left: 4%;
+  color: #fef9c3;
+  letter-spacing: 0.9em;
+  font-size: 12px;
+  white-space: nowrap;
+  animation: meadow-twinkle 3s ease-in-out infinite alternate;
+}
+.pl-aurora {
+  left: -10%;
+  width: 120%;
+  height: 16%;
+  border-radius: 50%;
+  filter: blur(8px);
+  mix-blend-mode: screen;
+  animation: pl-aurora 9s ease-in-out infinite alternate;
+}
+.pl-aurora-1 { top: 6%; background: linear-gradient(90deg, rgba(52, 211, 153, 0), rgba(52, 211, 153, 0.85) 30%, rgba(110, 231, 183, 0.6) 55%, rgba(52, 211, 153, 0)); }
+.pl-aurora-2 { top: 14%; background: linear-gradient(90deg, rgba(167, 139, 250, 0), rgba(167, 139, 250, 0.6) 45%, rgba(52, 211, 153, 0.7) 70%, rgba(52, 211, 153, 0)); animation-duration: 12s; animation-delay: -4s; }
+.pl-aurora-3 { top: 2%; height: 10%; background: linear-gradient(90deg, rgba(45, 212, 191, 0), rgba(45, 212, 191, 0.55) 60%, rgba(45, 212, 191, 0)); animation-duration: 7s; animation-delay: -2s; }
+.pl-fjord {
+  bottom: 56%;
+  background: linear-gradient(100deg, #3b5470 0 50%, #2a3f57 50% 100%);
+  clip-path: polygon(0 100%, 30% 10%, 42% 22%, 56% 0, 100% 100%);
+}
+.pl-fjord::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, #e6f0fa 0 14%, transparent 15%);
+}
+.pl-fjord-1 { left: 2%; width: 40%; height: 32%; }
+.pl-fjord-2 { left: 54%; width: 44%; height: 28%; }
+.pl-fjord-water {
+  left: 38%;
+  width: 20%;
+  bottom: 56%;
+  height: 3%;
+  background: linear-gradient(90deg, rgba(52, 211, 153, 0.2), rgba(110, 231, 183, 0.45), rgba(52, 211, 153, 0.2));
+}
+.pl-pine { font-size: 3.4em; transform: translate(-50%, -94%); }
+.pl-pine-1 { left: 86%; top: 56%; }
+.pl-pine-2 { left: 92%; top: 62%; font-size: 2.6em; }
+.pl-pine-3 { left: 30%; top: 52%; font-size: 2.4em; }
+
+/* India: a warm sunset, a white palace with a dome, kites, an elephant and a peacock. */
+.meadow-at-india { background: linear-gradient(180deg, #f59e6b 0%, #fbc98a 34%, #ffe8c2 46%); }
+.meadow-at-india .meadow-sun { background: radial-gradient(circle, #fff1c2 0%, #ff9f43 55%, rgba(255, 159, 67, 0) 72%); }
+.meadow-at-india .meadow-hill-back { background: #8fae5a; }
+.meadow-at-india .meadow-hill-front { background: #7f9e4c; }
+.meadow-at-india .meadow-grass { background: linear-gradient(180deg, #87b24f 0%, #73a042 55%, #5f8c36 100%); }
+.pl-palace {
+  left: 34%;
+  bottom: 56%;
+  width: 22%;
+  height: 12%;
+  background: linear-gradient(180deg, #fffaf0, #efe3cf);
+  border-radius: 3px 3px 0 0;
+  box-shadow: inset 0 -0.3em 0 rgba(0, 0, 0, 0.06);
+}
+.pl-dome {
+  position: absolute;
+  left: 50%;
+  bottom: 96%;
+  width: 46%;
+  height: 120%;
+  transform: translateX(-50%);
+  background: linear-gradient(90deg, #fffaf0 0 55%, #e8dcc6 55% 100%);
+  border-radius: 50% 50% 10% 10% / 70% 70% 10% 10%;
+}
+.pl-dome::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: -18%;
+  width: 4%;
+  height: 24%;
+  background: #d4a537;
+}
+.pl-minaret {
+  position: absolute;
+  bottom: 0;
+  width: 7%;
+  height: 230%;
+  background: #f6ecd9;
+  border-radius: 40% 40% 0 0;
+}
+.pl-minaret-l { left: -12%; }
+.pl-minaret-r { right: -12%; }
+.pl-kite {
+  width: 1.4em;
+  height: 1.4em;
+  transform: rotate(45deg);
+  animation: pl-kite 4s ease-in-out infinite alternate;
+}
+.pl-kite-1 { left: 22%; top: 10%; background: linear-gradient(135deg, #e11d48 50%, #facc15 50%); }
+.pl-kite-2 { left: 70%; top: 22%; width: 1.1em; height: 1.1em; background: linear-gradient(135deg, #16a34a 50%, #2563eb 50%); animation-delay: -2s; }
+.pl-elephant { left: 76%; top: 50%; font-size: 2.6em; transform: translate(-50%, -88%) scaleX(-1); }
+.pl-peacock { left: 30%; top: 90%; font-size: 1.8em; transform: translate(-50%, -88%); }
+.pl-bloom { font-size: 1em; }
+.pl-bloom-1 { left: 56%; top: 62%; }
+.pl-bloom-2 { left: 90%; top: 86%; }
+
+/* Peru: green Andes peaks with terraces, stone ruins in the mist and a llama. */
+.meadow-at-peru { background: linear-gradient(180deg, #4f9ee0 0%, #a6cfee 34%, #e6f1f8 46%); }
+.meadow-at-peru .meadow-hill-back { background: #5f8f45; }
+.meadow-at-peru .meadow-hill-front { background: #527f3a; }
+.meadow-at-peru .meadow-grass { background: linear-gradient(180deg, #74a552 0%, #649446 55%, #53803a 100%); }
+.pl-andes {
+  bottom: 56%;
+  background: repeating-linear-gradient(170deg, #4f7f3c 0 0.7em, #5e9047 0.7em 1.4em);
+  clip-path: polygon(0 100%, 34% 4%, 46% 14%, 58% 0, 100% 100%);
+}
+.pl-andes-1 { left: 4%; width: 42%; height: 40%; }
+.pl-andes-2 { left: 50%; width: 46%; height: 34%; filter: brightness(0.9); }
+.pl-ruins {
+  left: 58%;
+  bottom: 70%;
+  width: 9%;
+  height: 4%;
+  background: repeating-linear-gradient(90deg, #9a958c 0 0.8em, #7c776e 0.8em 1em);
+  border-radius: 2px;
+}
+.pl-mist {
+  left: -5%;
+  right: -5%;
+  bottom: 62%;
+  height: 8%;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.55);
+  filter: blur(6px);
+  animation: pl-mist 16s ease-in-out infinite alternate;
+}
+.pl-terraces {
+  left: 0;
+  right: 0;
+  top: 44%;
+  height: 5%;
+  background: repeating-linear-gradient(0deg, #6c9d4c 0 0.35em, #8fb963 0.35em 0.5em);
+  opacity: 0.7;
+}
+.pl-llama { left: 84%; top: 58%; font-size: 2.4em; transform: translate(-50%, -88%) scaleX(-1); }
+
+/* The Moon: black sky, the Earth overhead, grey dust and craters. */
+.meadow-at-moon { background: linear-gradient(180deg, #000000 0%, #05060c 34%, #0d0f1a 46%); }
+.meadow-at-moon .meadow-sun,
+.meadow-at-moon .meadow-cloud,
+.meadow-at-moon .meadow-stars { display: none; }
+.meadow-at-moon .meadow-hill-back { background: #6b6e76; height: 22%; top: 36%; }
+.meadow-at-moon .meadow-hill-front { background: #5e6169; height: 20%; top: 38%; }
+.meadow-at-moon .meadow-grass { background: linear-gradient(180deg, #a3a6ad 0%, #8e9198 55%, #7a7d85 100%); }
+.meadow-at-moon .meadow-nest { filter: grayscale(0.3); }
+.pl-earth { right: 10%; top: 7%; font-size: 2.6em; filter: drop-shadow(0 0 10px rgba(96, 165, 250, 0.6)); }
+.pl-rocket { left: 24%; top: 26%; font-size: 1.8em; transform: rotate(-20deg); }
+.pl-crater {
+  border-radius: 50%;
+  background: radial-gradient(ellipse at 50% 60%, #6c6f77 0%, #7f828a 55%, #b4b7be 70%, rgba(180, 183, 190, 0) 72%);
+}
+.pl-crater-1 { left: 32%; top: 56%; width: 6em; height: 1.6em; }
+.pl-crater-2 { left: 58%; top: 74%; width: 9em; height: 2.4em; }
+.pl-crater-3 { left: 82%; top: 60%; width: 4em; height: 1.1em; }
+.pl-crater-4 { left: 40%; top: 90%; width: 5em; height: 1.4em; }
+
+/* ---- How dragons move in some places ---- */
+
+/* Australia: hop everywhere, like a kangaroo. */
+.meadow-at-australia .critter-walk .critter-body { animation: critter-roo 0.5s ease-out infinite; }
+
+/* Antarctica: walks turn into glides that slow down as they stop, and belly slides. */
+.meadow-at-antarctica .critter { transition-timing-function: cubic-bezier(0.2, 0.7, 0.35, 1); }
+.meadow-at-antarctica .critter-walk .critter-body { animation: critter-glide 1.1s ease-in-out infinite; }
+.critter-slide .critter-body { transform: rotate(62deg) translate(10%, 22%); transition: transform 0.2s; }
+.critter-slide { transition-timing-function: cubic-bezier(0.1, 0.8, 0.3, 1); }
+
+/* Norway: stop and look up at the lights. */
+.critter-gaze .critter-body { transform: rotate(-14deg); transition: transform 0.6s; }
+
+/* Iceland: a warm soak, half under the water. */
+.critter-soak .critter-body { animation: critter-soak 2.4s ease-in-out infinite; clip-path: inset(-50% -20% 30% -20%); }
+
+/* The Moon: low gravity makes walks floaty and jumps huge and slow. */
+.meadow-at-moon .critter-walk .critter-body { animation: critter-moonwalk 1.4s ease-in-out infinite; }
+.critter-moonhop .critter-body { animation: critter-moonjump 1.6s ease-in-out infinite; }
+.meadow-at-moon .critter-happy .critter-body,
+.meadow-at-moon .critter-fetch .critter-body,
+.meadow-at-moon .critter-play-hop.critter-play .critter-body { animation: critter-moonjump 1.6s ease-in-out infinite; }
+.meadow-at-moon .meadow-ball > span { animation: moon-ball-drop 3s cubic-bezier(0.3, 0, 0.6, 1); }
+
+@keyframes critter-roo {
+  0%, 100% { transform: translateY(0) scale(1.06, 0.92); }
+  45% { transform: translateY(-30%) scale(0.94, 1.08) rotate(-4deg); }
+}
+
+@keyframes critter-glide {
+  0%, 100% { transform: rotate(6deg) translateX(0); }
+  50% { transform: rotate(10deg) translateX(2%); }
+}
+
+@keyframes critter-soak {
+  0%, 100% { transform: translateY(30%); }
+  50% { transform: translateY(26%) rotate(2deg); }
+}
+
+@keyframes critter-moonwalk {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-45%) rotate(4deg); }
+}
+
+@keyframes critter-moonjump {
+  0%, 100% { transform: translateY(0) scale(1, 1); }
+  8% { transform: translateY(0) scale(1.08, 0.9); }
+  50% { transform: translateY(-140%) scale(1, 1) rotate(-8deg); }
+  92% { transform: translateY(0) scale(1.04, 0.96); }
+}
+
+@keyframes moon-ball-drop {
+  0% { transform: translateY(-160px); }
+  40% { transform: translateY(0); }
+  65% { transform: translateY(-70px); }
+  85% { transform: translateY(0); }
+  93% { transform: translateY(-20px); }
+  100% { transform: translateY(0); }
+}
+
+@keyframes pl-glow {
+  from { filter: brightness(0.9); }
+  to { filter: brightness(1.3); }
+}
+
+@keyframes pl-smoke {
+  0% { opacity: 0; transform: translate(0, 0) scale(0.5); }
+  20% { opacity: 0.8; }
+  100% { opacity: 0; transform: translate(3em, -5em) scale(2.2); }
+}
+
+@keyframes pl-steam {
+  0% { opacity: 0; transform: translateY(0) scale(0.6); }
+  30% { opacity: 0.8; }
+  100% { opacity: 0; transform: translateY(-2.6em) scale(1.5); }
+}
+
+/* The geyser rests, then shoots up for a moment. */
+@keyframes pl-geyser {
+  0%, 70% { transform: scaleY(0); opacity: 0; }
+  74% { transform: scaleY(1.05); opacity: 1; }
+  86% { transform: scaleY(0.9); opacity: 0.9; }
+  94%, 100% { transform: scaleY(0); opacity: 0; }
+}
+
+@keyframes pl-waves {
+  from { transform: translateX(0); }
+  to { transform: translateX(1.2em); }
+}
+
+@keyframes pl-fall {
+  0% { transform: translate(0, 0) rotate(0); }
+  50% { transform: translate(1.6em, 18em) rotate(180deg); }
+  100% { transform: translate(-0.6em, 36em) rotate(360deg); }
+}
+
+@keyframes pl-roo {
+  0% { transform: translate(-2em, -88%) scaleX(1); }
+  100% { transform: translate(60em, -88%) scaleX(1); }
+}
+
+@keyframes pl-waddle {
+  0%, 100% { transform: translate(-50%, -88%) rotate(-6deg); }
+  50% { transform: translate(-50%, -88%) rotate(6deg); }
+}
+
+@keyframes pl-aurora {
+  0% { transform: translateX(-4%) skewX(-10deg) scaleY(0.8); opacity: 0.6; }
+  50% { opacity: 1; }
+  100% { transform: translateX(4%) skewX(12deg) scaleY(1.2); opacity: 0.75; }
+}
+
+@keyframes pl-kite {
+  from { transform: rotate(38deg) translateY(0); }
+  to { transform: rotate(52deg) translateY(-0.8em); }
+}
+
+@keyframes pl-mist {
+  from { transform: translateX(-4%); }
+  to { transform: translateX(4%); }
+}

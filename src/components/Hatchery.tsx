@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Dragon } from './Dragon';
 import { abilityOf, ABILITY_INFO } from '../engine/abilities';
 import { Meadow } from './Meadow';
+import { placeById } from '../engine/places';
 
 export function stageText(d: DragonState): string {
   switch (d.stage) {
@@ -39,9 +40,10 @@ interface Props {
   hatFor: (id: number) => string | undefined; // the hat each dragon has on
   placed?: string[];
   onShop?: () => void;
+  place?: string; // the world tour place the meadow looks like
 }
 
-export function Hatchery({ hoard, snacksEarned, companion, names, onPick, onName, onBack, hatFor, placed, onShop }: Props) {
+export function Hatchery({ hoard, snacksEarned, companion, names, onPick, onName, onBack, hatFor, placed, onShop, place }: Props) {
   const dragons = allDragons(hoard, snacksEarned);
   const nextEgg = nextEggIn(snacksEarned, dragons.filter((d) => d.stage !== 'none').length);
   const firstMissing = dragons.find((d) => d.stage === 'none');
@@ -53,7 +55,12 @@ export function Hatchery({ hoard, snacksEarned, companion, names, onPick, onName
         ← Back
       </button>
       <h2>Dragon hatchery</h2>
-      <Meadow dragons={dragons} names={names} companionId={companion.species.id} hatFor={hatFor} placed={placed} onShop={onShop} />
+      {place && place !== 'meadow' && (
+        <p className="muted hatchery-place">
+          Your dragons are visiting {placeById(place).name} on the world tour.
+        </p>
+      )}
+      <Meadow dragons={dragons} names={names} companionId={companion.species.id} hatFor={hatFor} placed={placed} onShop={onShop} place={place} />
       <p className="muted">
         Your companion eats a snack for every right answer, and snacks level it up. Eggs hatch at level {STAGE_LEVEL.hatchling}, and a hatched dragon gives you
         its power in every game. Tap any egg or dragon to make it your companion.

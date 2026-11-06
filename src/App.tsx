@@ -260,6 +260,7 @@ export default function App() {
           names={data.dragonNames}
           hatFor={hatFor}
           placed={data.shop.placed}
+          place={place.id}
           onShop={() => setScreen({ name: 'shop' })}
           onPick={(id) => update((d) => ({ ...d, companion: id }), true)}
           onName={(id, name) => update((d) => ({ ...d, dragonNames: { ...d.dragonNames, [String(id)]: name } }), true)}

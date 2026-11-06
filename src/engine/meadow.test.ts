@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { dragonState, speciesById } from './dragons';
-import { Critter, danceParty, GROUND, isNight, offNest, startMeadow, step, syncMeadow, tapDragon, tapThing, thingById, THINGS, throwBall, walkMs } from './meadow';
+import { Critter, danceParty, GROUND, isNight, landFor, LANDS, offNest, startMeadow, step, syncMeadow, tapDragon, tapThing, thingById, THINGS, throwBall, walkMs } from './meadow';
+import { PLACES } from './places';
 import { buy, emptyShop, isOn, ITEMS, toggleEquip } from './shop';
 
 // A predictable "random" number source.
@@ -210,5 +211,49 @@ describe('buying meadow things', () => {
     const shop = toggleEquip(buy(emptyShop(), pond, 1000)!, pond);
     expect(isOn(shop, pond)).toBe(false);
     expect(isOn(toggleEquip(shop, pond), pond)).toBe(true);
+  });
+});
+
+describe('the meadow in world tour places', () => {
+  const herd = () => startMeadow([dragon(2, GROWN), dragon(8, GROWN), dragon(5, GROWN), dragon(3, GROWN)], 0, seeded(5));
+  const activities = (place: string, seed = 9) =>
+    new Set(run2(herd(), 300_000, seeded(seed), landFor(place)).flatMap((cs) => cs.map((c) => c.activity)));
+  function run2(cs: Critter[], ms: number, rand: () => number, land = landFor('meadow')) {
+    const seen: Critter[][] = [];
+    for (let t = 0; t <= ms; t += 300) {
+      cs = step(cs, t, rand, false, [], land);
+      seen.push(cs);
+    }
+    return seen;
+  }
+
+  it('has a land for every place on the tour', () => {
+    for (const p of PLACES) expect(LANDS[p.id], p.id).toBeDefined();
+    expect(landFor('nowhere')).toBe(LANDS.meadow);
+  });
+
+  it('gives some places something only they have', () => {
+    expect(activities('moon')).toContain('moonhop');
+    expect(activities('antarctica')).toContain('slide');
+    expect(activities('norway')).toContain('gaze');
+    expect(activities('iceland')).toContain('soak');
+    const home = activities('meadow');
+    for (const a of ['moonhop', 'slide', 'gaze', 'soak']) expect(home).not.toContain(a);
+  });
+
+  it('walks slowly on the Moon and quickly on the ice', () => {
+    const c = { stage: 'grown' as const, x: 20, y: 60 };
+    expect(walkMs(c, 60, 60, landFor('moon'))).toBeGreaterThan(walkMs(c, 60, 60));
+    expect(walkMs(c, 60, 60, landFor('antarctica'))).toBeLessThan(walkMs(c, 60, 60));
+  });
+
+  it('keeps belly sliders on the ice and off the nest', () => {
+    for (const cs of run2(herd(), 300_000, seeded(4), landFor('antarctica'))) {
+      for (const c of cs) {
+        expect(c.x).toBeGreaterThanOrEqual(GROUND.left - 0.01);
+        expect(c.x).toBeLessThanOrEqual(GROUND.right + 0.01);
+        if (c.activity === 'slide') expect(c.until).toBeGreaterThan(0);
+      }
+    }
   });
 });

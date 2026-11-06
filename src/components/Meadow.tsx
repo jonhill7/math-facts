@@ -1,9 +1,10 @@
 import { CSSProperties, MouseEvent, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { DragonState } from '../engine/dragons';
-import { Ball, Critter, doingText, GROUND, isNight, startMeadow, step, syncMeadow, tapDragon, tapThing, thingById, throwBall } from '../engine/meadow';
+import { Ball, Critter, doingText, GROUND, isNight, landFor, startMeadow, step, syncMeadow, tapDragon, tapThing, thingById, throwBall } from '../engine/meadow';
 import { itemById } from '../engine/shop';
 import { sounds } from '../sound';
 import { Dragon, Eyes } from './Dragon';
+import { PlaceScenery } from './PlaceScenery';
 
 // The hatchery meadow: every dragon found so far, wandering about, napping and
 // playing together. Tap a dragon to say hi, or tap the grass to throw a ball.
@@ -61,6 +62,14 @@ function bubbleFor(c: Critter): string | null {
       return '⭐';
     case 'dance':
       return '🎵';
+    case 'soak':
+      return '♨️';
+    case 'gaze':
+      return '✨';
+    case 'slide':
+      return '❄️';
+    case 'moonhop':
+      return '⭐';
     default:
       return null;
   }
@@ -119,7 +128,7 @@ function ThingArt({ id, active, iced, night }: { id: string; active: boolean; ic
 
 function eyesFor(c: Critter): Eyes {
   if (c.activity === 'nap') return 'sleep';
-  if (['happy', 'fetch', 'munch', 'splash', 'bounce', 'dance'].includes(c.activity) || (c.activity === 'play' && c.play !== 'roar')) return 'happy';
+  if (['happy', 'fetch', 'munch', 'splash', 'bounce', 'dance', 'soak', 'gaze', 'slide', 'moonhop'].includes(c.activity) || (c.activity === 'play' && c.play !== 'roar')) return 'happy';
   return 'open';
 }
 
@@ -130,10 +139,14 @@ interface Props {
   hatFor?: (id: number) => string | undefined; // the hat each dragon has on
   placed?: string[]; // meadow things bought in the shop and put out
   onShop?: () => void;
+  place?: string; // the world tour place, which changes how the meadow looks and works
 }
 
-export function Meadow({ dragons, names, companionId, hatFor, placed = [], onShop }: Props) {
+export function Meadow({ dragons, names, companionId, hatFor, placed = [], onShop, place = 'meadow' }: Props) {
   const reduce = useReducedMotion();
+  const land = landFor(place);
+  const landRef = useRef(land);
+  landRef.current = land;
   const [night] = useState(() => isNight(new Date()));
   const [critters, setCritters] = useState(() => startMeadow(dragons, Date.now(), Math.random));
   const [ball, setBall] = useState<(Ball & { key: number }) | null>(null);
@@ -159,7 +172,7 @@ export function Meadow({ dragons, names, companionId, hatFor, placed = [], onSho
       setCritters((cs) =>
         reduce
           ? cs.map((c) => (c.until <= now && c.activity !== 'idle' ? { ...c, activity: 'idle', until: Number.MAX_SAFE_INTEGER } : c))
-          : step(cs, now, Math.random, night, placedRef.current),
+          : step(cs, now, Math.random, night, placedRef.current, landRef.current),
       );
     }, TICK_MS);
     return () => window.clearInterval(id);
@@ -210,12 +223,12 @@ export function Meadow({ dragons, names, companionId, hatFor, placed = [], onSho
     e.stopPropagation();
     if (id === 'meadow-drum') sounds.drum();
     else sounds.search();
-    if (!reduce) setCritters((cs) => tapThing(cs, id, Date.now(), Math.random, companionId));
+    if (!reduce) setCritters((cs) => tapThing(cs, id, Date.now(), Math.random, companionId, land));
   };
 
   const throwAt = (x: number, y: number) => {
     if (reduce) return;
-    const { critters: next, ball: b } = throwBall(critters, x, y, Date.now());
+    const { critters: next, ball: b } = throwBall(critters, x, y, Date.now(), land);
     setCritters(next);
     setBall({ ...b, key: Date.now() });
     sounds.search();
@@ -235,7 +248,7 @@ export function Meadow({ dragons, names, companionId, hatFor, placed = [], onSho
   return (
     <section className="meadow-wrap" aria-label="Dragon meadow">
       <div className="meadow-frame">
-        <div ref={scrollRef} className={`meadow ${night ? 'meadow-night' : ''} ${reduce ? 'meadow-still' : ''}`} onScroll={checkMore}>
+        <div ref={scrollRef} className={`meadow meadow-at-${place} ${place !== 'meadow' ? 'meadow-themed' : ''} ${night ? 'meadow-night' : ''} ${reduce ? 'meadow-still' : ''}`} onScroll={checkMore}>
           <div ref={meadowRef} className="meadow-world" onClick={tapGrass}>
             <div className="meadow-scenery" aria-hidden="true">
               <span className="meadow-sun">{night ? '🌙' : ''}</span>
@@ -244,6 +257,7 @@ export function Meadow({ dragons, names, companionId, hatFor, placed = [], onSho
               <span className="meadow-cloud meadow-cloud-2">☁️</span>
               <span className="meadow-hill meadow-hill-back" />
               <span className="meadow-hill meadow-hill-front" />
+              <PlaceScenery place={place} layer="far" night={night} />
               <span className="meadow-grass" />
               <span className="meadow-tree">🌳</span>
               <span className="meadow-rock" />
@@ -251,6 +265,7 @@ export function Meadow({ dragons, names, companionId, hatFor, placed = [], onSho
               <span className="meadow-flower meadow-flower-2">🌷</span>
               <span className="meadow-flower meadow-flower-3">🌼</span>
               <span className="meadow-nest" />
+              <PlaceScenery place={place} layer="near" night={night} />
             </div>
             {placed.map((id) => {
               const t = thingById(id);
@@ -266,7 +281,7 @@ export function Meadow({ dragons, names, companionId, hatFor, placed = [], onSho
                   onClick={(e) => pokeThing(id, e)}
                   aria-label={id === 'meadow-drum' ? 'Party drum. Tap to send your companion to start a dance party.' : `${item.name}. Tap to send your companion over.`}
                 >
-                  <ThingArt id={id} active={near.length > 0} iced={near.some((c) => c.id === 8)} night={night} />
+                  <ThingArt id={id} active={near.length > 0} iced={place === 'antarctica' || near.some((c) => c.id === 8)} night={night} />
                 </button>
               );
             })}
