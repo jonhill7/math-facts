@@ -2,6 +2,7 @@ import { allDragons, DragonState, Hoard, nextEggIn, STAGE_LEVEL } from '../engin
 import { useState } from 'react';
 import { Dragon } from './Dragon';
 import { abilityOf, ABILITY_INFO } from '../engine/abilities';
+import { Meadow } from './Meadow';
 
 export function stageText(d: DragonState): string {
   switch (d.stage) {
@@ -47,6 +48,7 @@ export function Hatchery({ hoard, snacksEarned, companion, names, onPick, onName
         ← Back
       </button>
       <h2>Dragon hatchery</h2>
+      <Meadow dragons={dragons} names={names} companionId={companion.species.id} hat={hat} />
       <p className="muted">
         Your companion eats a snack for every right answer, and snacks level it up. Eggs hatch at level {STAGE_LEVEL.hatchling}, and a hatched dragon gives you
         its power in every game. Tap any egg or dragon to make it your companion.

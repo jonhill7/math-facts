@@ -166,7 +166,10 @@ function HornShapes({ c, horns, x, y, r }: { c: Colors; horns: Horns; x: number;
   }
 }
 
-function Face({ c, look, x, y, r }: { c: Colors; look: Look; x: number; y: number; r: number }) {
+// How a dragon's eyes look: wide open, shut tight for a nap, or happy curves.
+export type Eyes = 'open' | 'sleep' | 'happy';
+
+function Face({ c, look, x, y, r, eyes = 'open' }: { c: Colors; look: Look; x: number; y: number; r: number; eyes?: Eyes }) {
   // Head with snout, eye, horns and cheek, facing right.
   return (
     <g>
@@ -174,9 +177,25 @@ function Face({ c, look, x, y, r }: { c: Colors; look: Look; x: number; y: numbe
       <circle cx={x} cy={y} r={r} fill={c.body} stroke={c.dark} strokeWidth="2.5" />
       <ellipse cx={x + r * 0.75} cy={y + r * 0.35} rx={r * 0.6} ry={r * 0.45} fill={c.body} stroke={c.dark} strokeWidth="2.5" />
       <circle cx={x + r * 1.05} cy={y + r * 0.2} r={r * 0.07} fill={c.dark} />
-      <circle cx={x + r * 0.15} cy={y - r * 0.15} r={r * 0.32} fill="#fff" stroke={c.dark} strokeWidth="1.5" />
-      <circle cx={x + r * 0.22} cy={y - r * 0.12} r={r * 0.17} fill="#1f2937" />
-      <circle cx={x + r * 0.28} cy={y - r * 0.2} r={r * 0.06} fill="#fff" />
+      {eyes === 'open' ? (
+        <g>
+          <circle cx={x + r * 0.15} cy={y - r * 0.15} r={r * 0.32} fill="#fff" stroke={c.dark} strokeWidth="1.5" />
+          <circle cx={x + r * 0.22} cy={y - r * 0.12} r={r * 0.17} fill="#1f2937" />
+          <circle cx={x + r * 0.28} cy={y - r * 0.2} r={r * 0.06} fill="#fff" />
+        </g>
+      ) : (
+        <path
+          d={
+            eyes === 'sleep'
+              ? `M${x - r * 0.12} ${y - r * 0.12} q${r * 0.27} ${r * 0.25} ${r * 0.54} 0`
+              : `M${x - r * 0.12} ${y - r * 0.05} q${r * 0.27} ${-r * 0.4} ${r * 0.54} 0`
+          }
+          fill="none"
+          stroke="#1f2937"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+        />
+      )}
       <ellipse cx={x - r * 0.25} cy={y + r * 0.45} rx={r * 0.2} ry={r * 0.12} fill="#f9a8d4" opacity="0.8" />
       <path d={`M${x + r * 0.55} ${y + r * 0.62} q${r * 0.25} ${r * 0.18} ${r * 0.5} 0`} fill="none" stroke={c.dark} strokeWidth="2" strokeLinecap="round" />
       {look.whiskers && (
@@ -278,7 +297,7 @@ function BackShape({ c, back }: { c: Colors; back: Back }) {
   }
 }
 
-function Hatchling({ c, look }: { c: Colors; look: Look }) {
+function Hatchling({ c, look, eyes }: { c: Colors; look: Look; eyes?: Eyes }) {
   return (
     <g>
       <ellipse cx="50" cy="94" rx="26" ry="4" fill="rgba(0,0,0,0.15)" />
@@ -286,13 +305,13 @@ function Hatchling({ c, look }: { c: Colors; look: Look }) {
       <ellipse cx="46" cy="66" rx="20" ry="18" fill={c.body} stroke={c.dark} strokeWidth="2.5" />
       <ellipse cx="50" cy="70" rx="11" ry="10" fill={c.belly} />
       <PatternMarks pattern={look.pattern} color={c.dark} size={0.7} at={[[32, 60], [30, 70], [62, 58]]} />
-      <Face c={c} look={look} x={52} y={40} r={17} />
+      <Face c={c} look={look} x={52} y={40} r={17} eyes={eyes} />
       <path d="M22 76 L28 68 L34 76 L41 67 L48 76 L55 67 L62 76 L69 68 L76 76 L76 84 C76 92 64 94 50 94 C36 94 22 92 22 84 Z" fill="#fffbeb" stroke="#d6c7a1" strokeWidth="2.5" strokeLinejoin="round" />
     </g>
   );
 }
 
-function Grown({ c, look, sparkle }: { c: Colors; look: Look; sparkle: boolean }) {
+function Grown({ c, look, sparkle, eyes }: { c: Colors; look: Look; sparkle: boolean; eyes?: Eyes }) {
   const rx = look.big ? 25 : 22;
   return (
     <g>
@@ -308,7 +327,7 @@ function Grown({ c, look, sparkle }: { c: Colors; look: Look; sparkle: boolean }
       {/* legs */}
       <rect x="32" y="80" width="10" height="12" rx="5" fill={c.body} stroke={c.dark} strokeWidth="2.5" />
       <rect x="54" y="80" width="10" height="12" rx="5" fill={c.body} stroke={c.dark} strokeWidth="2.5" />
-      <Face c={c} look={look} x={66} y={38} r={15} />
+      <Face c={c} look={look} x={66} y={38} r={15} eyes={eyes} />
       {sparkle && (
         <g fill="#fde047">
           <path d="M88 18 l2 -5 l2 5 l5 2 l-5 2 l-2 5 l-2 -5 l-5 -2 Z" />
@@ -323,7 +342,7 @@ function Grown({ c, look, sparkle }: { c: Colors; look: Look; sparkle: boolean }
 // Where a hat sits on each stage's head, in the 100x100 drawing.
 const HAT_AT: Record<string, { x: number; y: number }> = { hatchling: { x: 50, y: 25 }, young: { x: 63, y: 31 }, grown: { x: 64, y: 22 } };
 
-export function Dragon({ dragon, size = 1, hat }: { dragon: DragonState; size?: number; hat?: string }) {
+export function Dragon({ dragon, size = 1, hat, eyes }: { dragon: DragonState; size?: number; hat?: string; eyes?: Eyes }) {
   const { stage, species } = dragon;
   const c = colorsFor(species.hue, species.sat);
   const look = LOOKS[species.id] ?? LOOKS[7];
@@ -338,14 +357,14 @@ export function Dragon({ dragon, size = 1, hat }: { dragon: DragonState; size?: 
     >
       {stage === 'none' && <Mystery />}
       {stage === 'egg' && <Egg c={c} look={look} />}
-      {stage === 'hatchling' && <Hatchling c={c} look={look} />}
+      {stage === 'hatchling' && <Hatchling c={c} look={look} eyes={eyes} />}
       {/* A young dragon is a smaller version of the grown one. */}
       {stage === 'young' && (
         <g transform="translate(9 12) scale(0.85)">
-          <Grown c={c} look={look} sparkle={false} />
+          <Grown c={c} look={look} sparkle={false} eyes={eyes} />
         </g>
       )}
-      {stage === 'grown' && <Grown c={c} look={look} sparkle />}
+      {stage === 'grown' && <Grown c={c} look={look} sparkle eyes={eyes} />}
       {hat && HAT_AT[stage] && look.horns !== 'crown' && (
         <text x={HAT_AT[stage].x} y={HAT_AT[stage].y} fontSize="24" textAnchor="middle">
           {hat}
