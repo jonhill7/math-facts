@@ -38,12 +38,15 @@ interface Props extends StageProps, SoccerProps {
   slowSaveChance: number;
 }
 
-export function PenaltyKicks({ last, onStat, onScore, rival, shield, shieldName, slowSaveChance, ballStyle, powerSize }: Props) {
+export function PenaltyKicks({ last, turn, onStat, onScore, rival, shield, shieldName, slowSaveChance, ballStyle, powerSize }: Props) {
   const [shot, setShot] = useState<Shot | null>(null);
   const [score, setScore] = useState({ goals: 0, rival: 0, top: 0 });
   const shieldUsed = useRef(false);
 
   useEffect(() => onScore({ us: score.goals, them: score.rival }), [score]);
+
+  // Each new question: the keeper walks back to the middle and the ball goes back on the spot.
+  useEffect(() => setShot(null), [turn]);
 
   useEffect(() => {
     if (!last) return;
@@ -96,8 +99,8 @@ export function PenaltyKicks({ last, onStat, onScore, rival, shield, shieldName,
         <rect x="20" y="8" width="260" height="104" fill="url(#net)" />
         <path d="M20 112 V8 H280 V112" fill="none" stroke="#fff" strokeWidth="6" strokeLinecap="round" />
       </svg>
+      {/* Not keyed by shot, so the keeper glides back to center and dives from there. */}
       <div
-        key={`k${shot?.id ?? 0}`}
         className="keeper"
         style={{ left: `${50 + (shot?.keeper ?? 0)}%`, transform: `translateX(-50%) rotate(${(shot?.keeper ?? 0) * 2}deg)` }}
         aria-hidden="true"
