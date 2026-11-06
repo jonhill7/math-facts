@@ -205,7 +205,7 @@ export default function App() {
   const companionName = companion && data ? (data.dragonNames[String(companion.species.id)] || companion.species.name) : 'Your dragon';
 
   return (
-    <main className="app">
+    <main className={`app app-${screen.name}`}>
       {error && (
         <div className="error" role="alert" onClick={() => setError('')}>
           {error} <span className="muted">(tap to close)</span>
@@ -477,182 +477,186 @@ function Home({ data, onPlay, onMap, onHatchery, onShop, onWorld, onSwitch, mute
           ? 'Your first game is a warm-up to find the facts you already know.'
           : `${mastered} of ${ALL_FACTS.length} facts mastered. Pick a game for today's practice.`}
       </p>
-      {data.stats.sessions > 0 && (
-        <div className={`streak ${streak.doneToday ? 'streak-done' : ''}`}>
-          <span className="streak-flame">{streak.count > 0 ? '🔥' : '🌱'}</span>
-          <span>
-            <strong>{streak.count > 0 ? `${streak.count}-day streak` : 'Start a new streak today!'}</strong>
-            <small>
-              {streak.doneToday
-                ? "Today's practice is done ✓"
-                : streak.atRisk
-                  ? 'Rest day used. Play today to keep it!'
-                  : 'Play one game today. One rest day a week is free.'}
-            </small>
+      <div className="home-profile">
+        {data.stats.sessions > 0 && (
+          <div className={`streak ${streak.doneToday ? 'streak-done' : ''}`}>
+            <span className="streak-flame">{streak.count > 0 ? '🔥' : '🌱'}</span>
+            <span>
+              <strong>{streak.count > 0 ? `${streak.count}-day streak` : 'Start a new streak today!'}</strong>
+              <small>
+                {streak.doneToday
+                  ? "Today's practice is done ✓"
+                  : streak.atRisk
+                    ? 'Rest day used. Play today to keep it!'
+                    : 'Play one game today. One rest day a week is free.'}
+              </small>
+            </span>
+          </div>
+        )}
+        {title && (
+          <div className="speed-title" aria-label={`Speed title: ${title.name}`}>
+            <span className="speed-title-icon" aria-hidden="true">
+              {title.icon}
+            </span>
+            <span>
+              <strong>{title.name}</strong>
+              <small>{title.next ? `Answer faster to become a ${title.next}.` : 'The fastest title there is!'}</small>
+            </span>
+          </div>
+        )}
+        <button type="button" className="companion" onClick={onHatchery}>
+          <Dragon dragon={companion} size={4.2} hat={hat} />
+          <span className="companion-text">
+            <strong>
+              {dragonName(companion, data.dragonNames)} · level {companion.level}
+            </strong>
+            <span className="dragon-meter" aria-label={`${companion.into} of ${companion.needed} snacks to the next level`}>
+              <span style={{ width: `${(companion.into / companion.needed) * 100}%` }} />
+            </span>
+            {ability ? (
+              <small className="ability">
+                {ABILITY_INFO[ability].icon} <b>{ABILITY_INFO[ability].name}:</b> {ABILITY_INFO[ability].text}
+              </small>
+            ) : (
+              <small>
+                {data.stats.sessions === 0
+                  ? `Your egg eats a snack for every right answer. It hatches at level ${STAGE_LEVEL.hatchling}.`
+                  : `${stageText(companion)} Hatched dragons give you a power.`}
+              </small>
+            )}
           </span>
-        </div>
-      )}
-      {title && (
-        <div className="speed-title" aria-label={`Speed title: ${title.name}`}>
-          <span className="speed-title-icon" aria-hidden="true">
-            {title.icon}
-          </span>
-          <span>
-            <strong>{title.name}</strong>
-            <small>{title.next ? `Answer faster to become a ${title.next}.` : 'The fastest title there is!'}</small>
-          </span>
-        </div>
-      )}
-      <button type="button" className="companion" onClick={onHatchery}>
-        <Dragon dragon={companion} size={4.2} hat={hat} />
-        <span className="companion-text">
-          <strong>
-            {dragonName(companion, data.dragonNames)} · level {companion.level}
-          </strong>
-          <span className="dragon-meter" aria-label={`${companion.into} of ${companion.needed} snacks to the next level`}>
-            <span style={{ width: `${(companion.into / companion.needed) * 100}%` }} />
-          </span>
-          {ability ? (
-            <small className="ability">
-              {ABILITY_INFO[ability].icon} <b>{ABILITY_INFO[ability].name}:</b> {ABILITY_INFO[ability].text}
-            </small>
-          ) : (
-            <small>
-              {data.stats.sessions === 0
-                ? `Your egg eats a snack for every right answer. It hatches at level ${STAGE_LEVEL.hatchling}.`
-                : `${stageText(companion)} Hatched dragons give you a power.`}
-            </small>
-          )}
-        </span>
-      </button>
-      {data.stats.sessions > 0 && (
-        <div className="quests">
-          <h3>Today's quests</h3>
-          {todays.map((q) => {
-            const done = quests.done.includes(q.id);
-            const n = Math.min(quests.counts[q.key] ?? 0, q.target);
-            return (
-              <div key={q.id} className={`quest ${done ? 'quest-done' : ''}`}>
-                <span className="quest-check" aria-hidden="true">
-                  {done ? '✅' : '⬜'}
-                </span>
-                <span className="quest-text">
-                  <span>{q.text}</span>
-                  <span className="quest-bar" aria-label={`${n} of ${q.target}`}>
-                    <span style={{ width: `${(n / q.target) * 100}%` }} />
-                  </span>
-                </span>
-                <small>{done ? 'Done!' : `🍖 +${QUEST_REWARD}`}</small>
-              </div>
-            );
-          })}
-        </div>
-      )}
-      {boss && (
-        <p className="boss-next">
-          <span aria-hidden="true">💥</span> Boss game next! Beat the boss at the end for 🍖 {BOSS_BONUS} bonus snacks.
-        </p>
-      )}
-      <div className="modes">
-        <div className="mode-card soccer soccer-pair">
-          <span className="mode-emoji">⚽</span>
-          <strong>Penalty Kicks</strong>
-          <span className="league-line">
-            League match {data.league.level + 1} of {LEAGUE.length}: vs the {rivalFor(data.league)}
-            {data.league.trophies > 0 && ` · 🏆×${data.league.trophies}`}
-          </span>
-          <span className="mode-pills">
-            <button type="button" className="mode-pill" onClick={() => onPlay('soccer')}>
-              ⚽ Shoot
-            </button>
-            <button type="button" className="mode-pill" onClick={() => onPlay('keeper')}>
-              🧤 Save
-            </button>
-          </span>
-        </div>
-        <button type="button" className="mode-card lantern" onClick={() => onPlay('lantern')}>
-          <span className="mode-emoji">🔦</span>
-          <strong>Lantern Hunt</strong>
-          <span>Find the Tickle Monster before it finds you.</span>
         </button>
-        <div className="mode-card race race-card">
-          <span className="mode-emoji">🏁</span>
-          <strong>Sky Race</strong>
-          <span className="league-line">
-            {data.race.rivalsBeaten >= RIVALS.length ? `Champion flier! Race ${rival.name} again.` : `Next rival: ${rival.name} (${nextRival(data.race) + 1} of ${RIVALS.length})`}
-          </span>
-          <span className="course-pills" role="radiogroup" aria-label="Course">
-            {COURSES.map((c) => (
-              <button
-                key={c.id}
-                type="button"
-                role="radio"
-                aria-checked={data.race.course === c.id}
-                className={`course-pill ${data.race.course === c.id ? 'course-pill-on' : ''}`}
-                onClick={() => onCourse(c.id)}
-                title={c.tables}
-              >
-                {c.icon} {c.name}
-              </button>
-            ))}
-          </span>
-          <small className="course-line">{COURSES.find((c) => c.id === data.race.course)?.tables}</small>
-          <span className="mode-pills">
-            <button type="button" className="mode-pill" onClick={() => onPlay('race', 'rival')}>
-              🐉 Rival
-            </button>
-            <button type="button" className="mode-pill" onClick={() => onPlay('race', 'ghost')} disabled={!data.race.ghosts[data.race.course]?.length} title={data.race.ghosts[data.race.course]?.length ? undefined : 'Race this course once to make a ghost'}>
-              👻 Ghost
-            </button>
-            <button type="button" className="mode-pill" onClick={() => onPlay('race', 'solo')}>
-              ☀️ Solo
-            </button>
-          </span>
-        </div>
+        {data.stats.sessions > 0 && (
+          <div className="quests">
+            <h3>Today's quests</h3>
+            {todays.map((q) => {
+              const done = quests.done.includes(q.id);
+              const n = Math.min(quests.counts[q.key] ?? 0, q.target);
+              return (
+                <div key={q.id} className={`quest ${done ? 'quest-done' : ''}`}>
+                  <span className="quest-check" aria-hidden="true">
+                    {done ? '✅' : '⬜'}
+                  </span>
+                  <span className="quest-text">
+                    <span>{q.text}</span>
+                    <span className="quest-bar" aria-label={`${n} of ${q.target}`}>
+                      <span style={{ width: `${(n / q.target) * 100}%` }} />
+                    </span>
+                  </span>
+                  <small>{done ? 'Done!' : `🍖 +${QUEST_REWARD}`}</small>
+                </div>
+              );
+            })}
+          </div>
+        )}
+        {boss && (
+          <p className="boss-next">
+            <span aria-hidden="true">💥</span> Boss game next! Beat the boss at the end for 🍖 {BOSS_BONUS} bonus snacks.
+          </p>
+        )}
       </div>
-      <details className="game-options">
-        <summary>
-          <span aria-hidden="true">⚙️</span>
-          <span className="options-summary">
-            {data.settings.focusTable ? `Just the ${data.settings.focusTable}s` : 'All facts'} · {data.settings.length} questions ·{' '}
-            {data.settings.fastMs / 1000}s speed
-          </span>
-          <span className="options-change">Change</span>
-        </summary>
-        <div className="options-body">
-          <label>
-            Practice
-            <select value={data.settings.focusTable} onChange={(e) => onSettings({ focusTable: Number(e.target.value) })} aria-label="Which facts to practice">
-              <option value={0}>All facts (recommended)</option>
-              {Array.from({ length: 12 }, (_, i) => (
-                <option key={i + 1} value={i + 1}>
-                  Just the {i + 1}s
-                </option>
+      <div className="home-play">
+        <div className="modes">
+          <div className="mode-card soccer soccer-pair">
+            <span className="mode-emoji">⚽</span>
+            <strong>Penalty Kicks</strong>
+            <span className="league-line">
+              League match {data.league.level + 1} of {LEAGUE.length}: vs the {rivalFor(data.league)}
+              {data.league.trophies > 0 && ` · 🏆×${data.league.trophies}`}
+            </span>
+            <span className="mode-pills">
+              <button type="button" className="mode-pill" onClick={() => onPlay('soccer')}>
+                ⚽ Shoot
+              </button>
+              <button type="button" className="mode-pill" onClick={() => onPlay('keeper')}>
+                🧤 Save
+              </button>
+            </span>
+          </div>
+          <button type="button" className="mode-card lantern" onClick={() => onPlay('lantern')}>
+            <span className="mode-emoji">🔦</span>
+            <strong>Lantern Hunt</strong>
+            <span>Find the Tickle Monster before it finds you.</span>
+          </button>
+          <div className="mode-card race race-card">
+            <span className="mode-emoji">🏁</span>
+            <strong>Sky Race</strong>
+            <span className="league-line">
+              {data.race.rivalsBeaten >= RIVALS.length ? `Champion flier! Race ${rival.name} again.` : `Next rival: ${rival.name} (${nextRival(data.race) + 1} of ${RIVALS.length})`}
+            </span>
+            <span className="course-pills" role="radiogroup" aria-label="Course">
+              {COURSES.map((c) => (
+                <button
+                  key={c.id}
+                  type="button"
+                  role="radio"
+                  aria-checked={data.race.course === c.id}
+                  className={`course-pill ${data.race.course === c.id ? 'course-pill-on' : ''}`}
+                  onClick={() => onCourse(c.id)}
+                  title={c.tables}
+                >
+                  {c.icon} {c.name}
+                </button>
               ))}
-            </select>
-          </label>
-          <label>
-            Game
-            <select value={data.settings.length} onChange={(e) => onSettings({ length: Number(e.target.value) })} aria-label="Game length">
-              <option value={10}>Quick (10)</option>
-              <option value={20}>Normal (20)</option>
-              <option value={30}>Long (30)</option>
-            </select>
-          </label>
-          <label>
-            Speed goal
-            <select
-              value={data.settings.fastMs}
-              onChange={(e) => onSettings({ fastMs: Number(e.target.value) })}
-              aria-label="Speed goal: how fast counts as knowing a fact"
-            >
-              <option value={5000}>Relaxed (5 sec)</option>
-              <option value={3000}>Standard (3 sec)</option>
-              <option value={2000}>Speedy (2 sec)</option>
-            </select>
-          </label>
+            </span>
+            <small className="course-line">{COURSES.find((c) => c.id === data.race.course)?.tables}</small>
+            <span className="mode-pills">
+              <button type="button" className="mode-pill" onClick={() => onPlay('race', 'rival')}>
+                🐉 Rival
+              </button>
+              <button type="button" className="mode-pill" onClick={() => onPlay('race', 'ghost')} disabled={!data.race.ghosts[data.race.course]?.length} title={data.race.ghosts[data.race.course]?.length ? undefined : 'Race this course once to make a ghost'}>
+                👻 Ghost
+              </button>
+              <button type="button" className="mode-pill" onClick={() => onPlay('race', 'solo')}>
+                ☀️ Solo
+              </button>
+            </span>
+          </div>
         </div>
-      </details>
+        <details className="game-options">
+          <summary>
+            <span aria-hidden="true">⚙️</span>
+            <span className="options-summary">
+              {data.settings.focusTable ? `Just the ${data.settings.focusTable}s` : 'All facts'} · {data.settings.length} questions ·{' '}
+              {data.settings.fastMs / 1000}s speed
+            </span>
+            <span className="options-change">Change</span>
+          </summary>
+          <div className="options-body">
+            <label>
+              Practice
+              <select value={data.settings.focusTable} onChange={(e) => onSettings({ focusTable: Number(e.target.value) })} aria-label="Which facts to practice">
+                <option value={0}>All facts (recommended)</option>
+                {Array.from({ length: 12 }, (_, i) => (
+                  <option key={i + 1} value={i + 1}>
+                    Just the {i + 1}s
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Game
+              <select value={data.settings.length} onChange={(e) => onSettings({ length: Number(e.target.value) })} aria-label="Game length">
+                <option value={10}>Quick (10)</option>
+                <option value={20}>Normal (20)</option>
+                <option value={30}>Long (30)</option>
+              </select>
+            </label>
+            <label>
+              Speed goal
+              <select
+                value={data.settings.fastMs}
+                onChange={(e) => onSettings({ fastMs: Number(e.target.value) })}
+                aria-label="Speed goal: how fast counts as knowing a fact"
+              >
+                <option value={5000}>Relaxed (5 sec)</option>
+                <option value={3000}>Standard (3 sec)</option>
+                <option value={2000}>Speedy (2 sec)</option>
+              </select>
+            </label>
+          </div>
+        </details>
+      </div>
       <div className="home-buttons home-buttons-4">
         <button type="button" className="big-button" onClick={onHatchery}>
           🐉 Hatchery
