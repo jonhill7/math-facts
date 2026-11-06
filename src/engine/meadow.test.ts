@@ -14,7 +14,7 @@ function seeded(seed = 1) {
 
 const dragon = (id: number, snacks: number) => dragonState(speciesById(id), { [String(id)]: snacks }, true);
 const EGG = 0; // level 1
-const GROWN = 500; // level 10
+const GROWN = 540; // level 10
 
 function run(cs: Critter[], from: number, ms: number, rand = seeded(), placed: string[] = [], night = false) {
   const seen: Critter[][] = [];

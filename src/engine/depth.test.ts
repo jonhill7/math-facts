@@ -4,7 +4,7 @@ import { bossFor, isBossGame } from './boss';
 import { companionFor, feed, SPECIES } from './dragons';
 import { afterMatch, emptyLeague, LEAGUE, shotClockMs, slowSaveChance } from './league';
 import { bumpQuest, emptyQuests, questsFor, QUESTS_PER_DAY } from './quests';
-import { buy, emptyShop, ITEMS, toggleEquip, balance } from './shop';
+import { buy, emptyShop, hatOf, ITEMS, owns, splitHats, toggleEquip, balance } from './shop';
 import { Progress } from './scheduler';
 
 const NOW = new Date(2026, 10, 3, 12).getTime();
@@ -20,9 +20,10 @@ describe('league', () => {
   it('gets harder up the ladder', () => {
     expect(slowSaveChance(0)).toBe(0);
     expect(slowSaveChance(7)).toBeGreaterThan(slowSaveChance(3));
+    expect(slowSaveChance(LEAGUE.length - 1)).toBe(0.42);
     expect(shotClockMs(3000, 0)).toBe(5000);
     expect(shotClockMs(3000, 7)).toBeLessThan(shotClockMs(3000, 3));
-    expect(shotClockMs(3000, 7)).toBeGreaterThanOrEqual(3600);
+    expect(shotClockMs(3000, LEAGUE.length - 1)).toBe(3600);
   });
 });
 
@@ -52,12 +53,31 @@ describe('shop', () => {
   const hat = ITEMS.find((i) => i.id === 'hat-cap')!;
   it('buys and wears an item when there are enough snacks', () => {
     expect(buy(emptyShop(), hat, hat.price - 1)).toBeNull();
-    const shop = buy(emptyShop(), hat, 100)!;
-    expect(shop.owned).toContain(hat.id);
-    expect(shop.equipped.hat).toBe(hat.id);
+    const shop = buy(emptyShop(), hat, 100, 7)!;
+    expect(owns(shop, hat, 0, 7)).toBe(true);
+    expect(hatOf(shop, 7)).toBe(hat.icon);
     expect(balance(100, shop)).toBe(100 - hat.price);
-    expect(buy(shop, hat, 1000)).toBeNull(); // already owned
-    expect(toggleEquip(shop, hat).equipped.hat).toBeUndefined();
+    expect(buy(shop, hat, 1000, 7)).toBeNull(); // already owned
+    expect(hatOf(toggleEquip(shop, hat, 7), 7)).toBeUndefined();
+  });
+  it('gives each dragon its own hats', () => {
+    const shop = buy(emptyShop(), hat, 1000, 7)!;
+    expect(owns(shop, hat, 0, 2)).toBe(false);
+    expect(hatOf(shop, 2)).toBeUndefined();
+    const both = buy(shop, hat, 1000, 2)!;
+    expect(both.spent).toBe(hat.price * 2);
+    expect(hatOf(toggleEquip(both, hat, 2), 7)).toBe(hat.icon); // taking one off leaves the other
+  });
+  it('keeps hats from older saves for every dragon found so far', () => {
+    const red = ITEMS.find((i) => i.id === 'gloves-red')!;
+    const old = { ...emptyShop(), owned: [hat.id, red.id], equipped: { hat: hat.id, gloves: red.id } };
+    const shop = splitHats(old, [7, 2], 2);
+    expect(owns(shop, hat, 0, 7) && owns(shop, hat, 0, 2)).toBe(true);
+    expect(owns(shop, hat, 0, 8)).toBe(false); // a dragon not found yet buys its own
+    expect(hatOf(shop, 2)).toBe(hat.icon);
+    expect(hatOf(shop, 7)).toBeUndefined();
+    expect(owns(shop, red, 0)).toBe(true);
+    expect(shop.equipped.gloves).toBe(red.id);
   });
   it('never sells trophy items', () => {
     const gold = ITEMS.find((i) => i.trophy)!;
@@ -70,7 +90,7 @@ describe('dragon powers', () => {
     const egg = companionFor({}, 0);
     expect(egg.stage).toBe('egg');
     expect(activeAbility(egg)).toBeUndefined();
-    const hatched = companionFor(feed({}, egg.species.id, 30), 30);
+    const hatched = companionFor(feed({}, egg.species.id, 36), 36);
     expect(activeAbility(hatched)).toBe(abilityOf(egg.species.id));
   });
   it('are different for every dragon', () => {

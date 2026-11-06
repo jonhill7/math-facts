@@ -127,12 +127,12 @@ interface Props {
   dragons: DragonState[];
   names: Record<string, string>;
   companionId: number;
-  hat?: string;
+  hatFor?: (id: number) => string | undefined; // the hat each dragon has on
   placed?: string[]; // meadow things bought in the shop and put out
   onShop?: () => void;
 }
 
-export function Meadow({ dragons, names, companionId, hat, placed = [], onShop }: Props) {
+export function Meadow({ dragons, names, companionId, hatFor, placed = [], onShop }: Props) {
   const reduce = useReducedMotion();
   const [night] = useState(() => isNight(new Date()));
   const [critters, setCritters] = useState(() => startMeadow(dragons, Date.now(), Math.random));
@@ -296,7 +296,7 @@ export function Meadow({ dragons, names, companionId, hat, placed = [], onShop }
                   <span className="critter-depth">
                     <span className="critter-flip" style={{ transform: `scaleX(${c.facing})` }}>
                       <span className="critter-body">
-                        <Dragon dragon={shown} size={SIZE[c.stage] ?? 3} hat={c.id === companionId ? hat : undefined} eyes={eyesFor(c)} />
+                        <Dragon dragon={shown} size={SIZE[c.stage] ?? 3} hat={hatFor?.(c.id)} eyes={eyesFor(c)} />
                       </span>
                     </span>
                   </span>

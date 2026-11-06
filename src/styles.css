@@ -890,6 +890,36 @@ h2 {
   color: var(--muted);
 }
 
+/* Ranks for grown dragons that keep leveling: Elder, Ancient, Legendary. */
+.dragon-rank-elder {
+  filter: drop-shadow(0 0 0.08em #fde68a) drop-shadow(0 0 0.16em #facc15);
+}
+
+.dragon-rank-ancient {
+  filter: drop-shadow(0 0 0.08em #a5f3fc) drop-shadow(0 0 0.18em #22d3ee);
+}
+
+.dragon-rank-legendary {
+  animation: legend-glow 3s ease-in-out infinite;
+}
+
+@keyframes legend-glow {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 0.1em #f0abfc) drop-shadow(0 0 0.2em #c026d3);
+  }
+  50% {
+    filter: drop-shadow(0 0 0.14em #fde68a) drop-shadow(0 0 0.26em #a855f7);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dragon-rank-legendary {
+    animation: none;
+    filter: drop-shadow(0 0 0.1em #f0abfc) drop-shadow(0 0 0.2em #c026d3);
+  }
+}
+
 .dragon-meter {
   display: block;
   width: 100%;

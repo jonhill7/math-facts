@@ -1,4 +1,4 @@
-import { balance, buy, isOn, Item, ITEMS, owns, ShopState, Slot, SLOT_NAMES, toggleEquip, GLOVE_FILTER, BALL_GLOW } from '../engine/shop';
+import { balance, buy, hatOf, isOn, Item, ITEMS, owns, ShopState, Slot, SLOT_NAMES, toggleEquip, GLOVE_FILTER, BALL_GLOW } from '../engine/shop';
 import { DragonState } from '../engine/dragons';
 import { Dragon } from './Dragon';
 
@@ -7,6 +7,7 @@ interface Props {
   snacks: number; // every snack ever earned
   trophies: number;
   companion?: DragonState;
+  companionName?: string;
   onChange: (shop: ShopState) => void;
   onBack: () => void;
 }
@@ -20,9 +21,11 @@ function ItemIcon({ item }: { item: Item }) {
   return <span style={filter ? { filter } : undefined}>{item.icon}</span>;
 }
 
-export function Shop({ shop, snacks, trophies, companion, onChange, onBack }: Props) {
+export function Shop({ shop, snacks, trophies, companion, companionName, onChange, onBack }: Props) {
   const left = balance(snacks, shop);
-  const hat = ITEMS.find((i) => i.id === shop.equipped.hat)?.icon;
+  const dragon = companion?.species.id ?? 0;
+  const hat = hatOf(shop, dragon);
+  const name = companionName ?? companion?.species.name ?? 'your dragon';
   return (
     <div className="shop">
       <button type="button" className="link-button" onClick={onBack}>
@@ -38,12 +41,18 @@ export function Shop({ shop, snacks, trophies, companion, onChange, onBack }: Pr
       </div>
       {SLOTS.map((slot) => (
         <section key={slot} className="shop-section">
-          <h3>{SLOT_NAMES[slot]}</h3>
+          <h3>{slot === 'hat' ? `Hats for ${name}` : SLOT_NAMES[slot]}</h3>
+          {slot === 'hat' && (
+            <p className="muted shop-note">
+              Every dragon has its own hats and wears them in the meadow. To shop for another dragon, make it your companion in the hatchery.
+              {companion?.stage === 'egg' && ' Your egg can wear its hat once it hatches.'}
+            </p>
+          )}
           {slot === 'meadow' && <p className="muted shop-note">Things for your dragons to play with in the hatchery. Put out as many as you like.</p>}
           <div className="shop-items">
             {ITEMS.filter((i) => i.slot === slot).map((item) => {
-              const have = owns(shop, item, trophies);
-              const on = isOn(shop, item);
+              const have = owns(shop, item, trophies, dragon);
+              const on = isOn(shop, item, dragon);
               const canBuy = !have && !item.trophy && left >= item.price;
               return (
                 <button
@@ -52,9 +61,9 @@ export function Shop({ shop, snacks, trophies, companion, onChange, onBack }: Pr
                   className={`shop-item ${on ? 'shop-item-on' : ''}`}
                   disabled={!have && !canBuy}
                   onClick={() => {
-                    if (have) onChange(toggleEquip(shop, item));
+                    if (have) onChange(toggleEquip(shop, item, dragon));
                     else {
-                      const next = buy(shop, item, snacks);
+                      const next = buy(shop, item, snacks, dragon);
                       if (next) onChange(next);
                     }
                   }}

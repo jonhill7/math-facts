@@ -1,4 +1,4 @@
-import { allDragons, DragonState, Hoard, nextEggIn, STAGE_LEVEL } from '../engine/dragons';
+import { allDragons, DragonState, Hoard, nextEggIn, nextRank, STAGE_LEVEL } from '../engine/dragons';
 import { useState } from 'react';
 import { Dragon } from './Dragon';
 import { abilityOf, ABILITY_INFO } from '../engine/abilities';
@@ -12,8 +12,11 @@ export function stageText(d: DragonState): string {
       return `Hatchling · level ${d.level}. Grows up at level ${STAGE_LEVEL.young}.`;
     case 'young':
       return `Young dragon · level ${d.level}. Fully grown at level ${STAGE_LEVEL.grown}.`;
-    case 'grown':
-      return `Fully grown · level ${d.level}!`;
+    case 'grown': {
+      const next = nextRank(d.level);
+      const now = d.rank ? `${d.rank.icon} ${d.rank.name} dragon` : 'Fully grown';
+      return next ? `${now} · level ${d.level}. ${next.name} at level ${next.level}.` : `${now} · level ${d.level}!`;
+    }
     default:
       return 'Not found yet.';
   }
@@ -33,14 +36,14 @@ interface Props {
   onPick: (id: number) => void;
   onName: (id: number, name: string) => void;
   onBack: () => void;
-  hat?: string;
+  hatFor: (id: number) => string | undefined; // the hat each dragon has on
   placed?: string[];
   onShop?: () => void;
 }
 
-export function Hatchery({ hoard, snacksEarned, companion, names, onPick, onName, onBack, hat, placed, onShop }: Props) {
+export function Hatchery({ hoard, snacksEarned, companion, names, onPick, onName, onBack, hatFor, placed, onShop }: Props) {
   const dragons = allDragons(hoard, snacksEarned);
-  const nextEgg = nextEggIn(snacksEarned);
+  const nextEgg = nextEggIn(snacksEarned, dragons.filter((d) => d.stage !== 'none').length);
   const firstMissing = dragons.find((d) => d.stage === 'none');
   const [draft, setDraft] = useState(names[String(companion.species.id)] ?? '');
   const [savedName, setSavedName] = useState(false);
@@ -50,7 +53,7 @@ export function Hatchery({ hoard, snacksEarned, companion, names, onPick, onName
         ← Back
       </button>
       <h2>Dragon hatchery</h2>
-      <Meadow dragons={dragons} names={names} companionId={companion.species.id} hat={hat} placed={placed} onShop={onShop} />
+      <Meadow dragons={dragons} names={names} companionId={companion.species.id} hatFor={hatFor} placed={placed} onShop={onShop} />
       <p className="muted">
         Your companion eats a snack for every right answer, and snacks level it up. Eggs hatch at level {STAGE_LEVEL.hatchling}, and a hatched dragon gives you
         its power in every game. Tap any egg or dragon to make it your companion.
@@ -99,7 +102,7 @@ export function Hatchery({ hoard, snacksEarned, companion, names, onPick, onName
               }}
             >
               {found && <span className="dragon-table">Lv {d.level}</span>}
-              <Dragon dragon={d} size={4.2} hat={isCompanion ? hat : undefined} />
+              <Dragon dragon={d} size={4.2} hat={hatFor(d.species.id)} />
               <strong>{found ? dragonName(d, names) : '???'}</strong>
               {found && (
                 <span className="dragon-meter" aria-label={`${d.into} of ${d.needed} snacks to the next level`}>
