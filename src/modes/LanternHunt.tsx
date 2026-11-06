@@ -1,4 +1,4 @@
-import { PointerEvent, useEffect, useRef, useState } from 'react';
+import { CSSProperties, PointerEvent, useEffect, useRef, useState } from 'react';
 import { StageProps } from '../components/PracticeSession';
 import type { StatKey } from './PenaltyKicks';
 import { sounds } from '../sound';
@@ -81,11 +81,28 @@ export function LanternHunt({ last, waiting, resume, onStat, monstersFoundTotal,
   // It follows the finger or mouse while a search is ready.
   const roomsRef = useRef<HTMLDivElement>(null);
   const [beam, setBeam] = useState({ x: 50, y: 50 });
-  const beamSize = canSearch ? (last?.power ? 60 : bright ? 46 : 30) : 14;
+  const beamSize = canSearch ? (bright ? 46 : 30) : 14;
+  // A charged super lantern lights up exactly the square it will search, snapped
+  // to the spot under the finger, so kids can see what a power move covers.
+  const superLantern = canSearch && Boolean(last?.power);
+  const superArea = (() => {
+    const reach = lanternReach(power);
+    const cell = 100 / size;
+    const col = Math.min(size - 1, Math.floor(beam.x / cell));
+    const row = Math.min(size - 1, Math.floor(beam.y / cell));
+    const [c0, c1, r0, r1] = [Math.max(0, col - reach), Math.min(size - 1, col + reach), Math.max(0, row - reach), Math.min(size - 1, row + reach)];
+    return { x: c0 * cell, y: r0 * cell, w: (c1 - c0 + 1) * cell, h: (r1 - r0 + 1) * cell };
+  })();
   const aim = (e: PointerEvent) => {
     const box = roomsRef.current?.getBoundingClientRect();
     if (!box || !canSearch) return;
-    setBeam({ x: ((e.clientX - box.left) / box.width) * 100, y: ((e.clientY - box.top) / box.height) * 100 });
+    const x = ((e.clientX - box.left) / box.width) * 100;
+    const y = ((e.clientY - box.top) / box.height) * 100;
+    if (superLantern) {
+      const col = Math.min(size - 1, Math.max(0, Math.floor((x / 100) * size)));
+      const row = Math.min(size - 1, Math.max(0, Math.floor((y / 100) * size)));
+      aimAtSpot(row * size + col);
+    } else setBeam({ x, y });
   };
   const aimAtSpot = (spot: number) =>
     setBeam({ x: ((spot % size) + 0.5) * (100 / size), y: (Math.floor(spot / size) + 0.5) * (100 / size) });
@@ -214,7 +231,7 @@ export function LanternHunt({ last, waiting, resume, onStat, monstersFoundTotal,
       <div
         ref={roomsRef}
         key={`floor${floor}`}
-        className={`rooms ${canSearch ? 'rooms-ready' : ''} ${bright && canSearch ? 'rooms-bright' : ''} ${last?.fast && canSearch ? 'rooms-flash' : ''}`}
+        className={`rooms ${canSearch ? 'rooms-ready' : ''} ${bright && canSearch ? 'rooms-bright' : ''} ${last?.fast && canSearch ? 'rooms-flash' : ''} ${superLantern ? 'rooms-super' : ''}`}
         style={{ gridTemplateColumns: `repeat(${size}, 1fr)` }}
         onPointerMove={aim}
       >
@@ -222,9 +239,28 @@ export function LanternHunt({ last, waiting, resume, onStat, monstersFoundTotal,
           className="darkness"
           aria-hidden="true"
           style={{
-            background: `radial-gradient(circle at ${beam.x}% ${beam.y}%, rgba(${beamRgb}, 0.22) 0%, rgba(${beamRgb}, 0.08) ${beamSize * 0.6}%, rgba(4, 7, 18, 0.82) ${beamSize}%)`,
+            background: superLantern
+              ? 'none'
+              : `radial-gradient(circle at ${beam.x}% ${beam.y}%, rgba(${beamRgb}, 0.22) 0%, rgba(${beamRgb}, 0.08) ${beamSize * 0.6}%, rgba(4, 7, 18, 0.82) ${beamSize}%)`,
           }}
-        />
+        >
+          {superLantern && (
+            // The darkness overhangs the house by 4px on each side and 6px top
+            // and bottom, so house percentages are converted to its box.
+            <div
+              className="super-square"
+              style={
+                {
+                  left: `calc(${superArea.x / 100} * (100% + 8px) - 4px)`,
+                  top: `calc(${superArea.y / 100} * (100% - 12px) + 6px)`,
+                  width: `calc(${superArea.w / 100} * (100% + 8px))`,
+                  height: `calc(${superArea.h / 100} * (100% - 12px))`,
+                  '--beam': beamRgb,
+                } as CSSProperties
+              }
+            />
+          )}
+        </div>
         {spots.map((emoji, i) => {
           const mark = marks[i];
           return (
