@@ -3,6 +3,7 @@ import { Fact } from '../engine/facts';
 import { hintFor } from '../engine/hints';
 import { SNACKS_FAST, SNACKS_RIGHT } from '../engine/dragons';
 import { DEFAULT_FAST_MS, Progress } from '../engine/scheduler';
+import { speedGoalMs } from '../engine/speed';
 import { buildSession, requeueMiss, SessionOptions } from '../engine/session';
 import { sounds } from '../sound';
 import { Keypad } from './Keypad';
@@ -12,8 +13,9 @@ export interface AnswerEvent {
   id: number;
   fact: Fact;
   correct: boolean;
-  fast: boolean;
+  fast: boolean; // right and beat the fact's speed goal
   ms: number;
+  goalMs: number; // this fact's speed goal (the same in every game)
   power: boolean; // this answer filled the power meter: the game does a power move
   boss: boolean; // asked during the boss round
 }
@@ -49,7 +51,7 @@ interface Props {
   options?: SessionOptions;
   fastMs?: number;
   buddy?: ReactNode; // the kid's companion dragon, along for the game
-  timeLimitMs?: number; // games with a shot clock count right answers given in time
+  timeLimitFor?: (fact: Fact) => number; // games with a shot clock count right answers given in time
   pauseMs?: number; // how long to show a right answer before the next question
   chargeNeeded?: number; // fast answers in a row that fill the power meter
   snackBonus?: number; // extra snacks per right answer (the Feast power)
@@ -80,7 +82,7 @@ export function PracticeSession({
   options,
   fastMs = DEFAULT_FAST_MS,
   buddy,
-  timeLimitMs,
+  timeLimitFor,
   pauseMs = 900,
   chargeNeeded = 3,
   snackBonus = 0,
@@ -133,7 +135,9 @@ export function PracticeSession({
     if (phase !== 'ask') return;
     const ms = Date.now() - shownAt.current;
     const correct = value === fact.answer;
-    const fast = correct && ms <= fastMs;
+    const goalMs = speedGoalMs(fact, fastMs);
+    const fast = correct && ms <= goalMs;
+    const timeLimitMs = timeLimitFor?.(fact);
     // Fast answers in a row charge the power meter. Anything else empties it.
     const newCharge = fast ? charge + 1 : 0;
     const power = newCharge >= chargeNeeded;
@@ -149,7 +153,7 @@ export function PracticeSession({
       else bossMisses.current++;
     }
     onAnswer(fact, correct, ms);
-    setLast({ id: (last?.id ?? 0) + 1, fact, correct, fast, ms, power, boss: inBoss });
+    setLast({ id: (last?.id ?? 0) + 1, fact, correct, fast, ms, goalMs, power, boss: inBoss });
     if (correct) {
       if (power) sounds.power();
       else if (!holdAfterCorrect && timeLimitMs === undefined) sounds.kick();
@@ -172,7 +176,7 @@ export function PracticeSession({
         setQueue(requeued);
       }
     }
-  }, [fact, input, phase, next, onAnswer, last, holdAfterCorrect, queue, index, fastMs, timeLimitMs, pauseMs, charge, chargeNeeded, snackBonus, inBoss, bossStart]);
+  }, [fact, input, phase, next, onAnswer, last, holdAfterCorrect, queue, index, fastMs, timeLimitFor, pauseMs, charge, chargeNeeded, snackBonus, inBoss, bossStart]);
 
   if (!fact) return null;
   const progressPct = Math.round((index / queue.length) * 100);
@@ -231,7 +235,7 @@ export function PracticeSession({
         {buddy && (
           <div className={`buddy ${last ? (last.correct ? 'buddy-cheer' : 'buddy-oops') : ''}`} key={last?.id ?? 0}>
             {buddy}
-            {last && <span className="buddy-bubble">{buddyLine(last, timeLimitMs)}</span>}
+            {last && <span className="buddy-bubble">{buddyLine(last, timeLimitFor?.(last.fact))}</span>}
           </div>
         )}
         <div className={`power-meter ${last?.power ? 'power-meter-fired' : ''}`} key={`p${last?.id ?? 0}`} aria-label={`Power meter ${charge} of ${chargeNeeded}`}>

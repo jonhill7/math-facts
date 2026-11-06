@@ -31,6 +31,8 @@ export function afterMatch(league: League, won: boolean): League {
 // Fast answers always score.
 export const slowSaveChance = (level: number) => Math.min(level, LEAGUE.length - 1) * 0.06;
 
-// Better teams shoot sooner, so the keeper has less time to answer.
-export const shotClockMs = (fastMs: number, level: number) =>
-  Math.max(fastMs + 600, fastMs + 2000 - Math.min(level, LEAGUE.length - 1) * 200);
+// Better teams shoot sooner, so the keeper has less time to answer. The clock
+// starts from the fact's speed goal (see speed.ts), so hard facts get longer
+// and there's always time left after the goal for a plain (not diving) save.
+export const shotClockMs = (goalMs: number, level: number) =>
+  Math.max(goalMs + 600, goalMs + 2000 - Math.min(level, LEAGUE.length - 1) * 200);

@@ -16,6 +16,7 @@ import { afterMatch, League, LEAGUE, rivalFor, shotClockMs, slowSaveChance } fro
 import { placeById } from './engine/places';
 import { bumpQuest, Quest, QUEST_REWARD, QuestKey, questsFor, today } from './engine/quests';
 import { recordAnswer } from './engine/scheduler';
+import { speedGoalMs } from './engine/speed';
 import { BALL_GLOW, balance, BEAM_RGB, GLOVE_FILTER, itemById } from './engine/shop';
 import { practiced, streakStatus } from './engine/streak';
 import { LanternHunt } from './modes/LanternHunt';
@@ -139,10 +140,11 @@ export default function App() {
   const onAnswer = useCallback(
     (fact: Fact, correct: boolean, ms: number) =>
       update((d) => {
-        const fast = correct && ms <= d.settings.fastMs;
+        const goalMs = speedGoalMs(fact, d.settings.fastMs);
+        const fast = correct && ms <= goalMs;
         const bonus = snackBonus(activeAbility(companionOf(d)));
         let next: SaveData = eat(
-          { ...d, progress: { ...d.progress, [fact.id]: recordAnswer(d.progress[fact.id], correct, ms, Date.now(), d.settings.fastMs) } },
+          { ...d, progress: { ...d.progress, [fact.id]: recordAnswer(d.progress[fact.id], correct, ms, Date.now(), goalMs) } },
           correct ? (fast ? SNACKS_FAST : SNACKS_RIGHT) + bonus : 0,
         );
         if (correct) next = count(next, 'right');
@@ -277,7 +279,7 @@ export default function App() {
         const raceRival = RIVALS[nextRival(before.race)];
         const level = before.league.level;
         const rival = rivalFor(before.league);
-        const clock = shotClockMs(before.settings.fastMs, level) + extraClockMs(ability);
+        const clockFor = (fact: Fact) => shotClockMs(speedGoalMs(fact, before.settings.fastMs), level) + extraClockMs(ability);
         const soccer: SoccerProps = {
           onStat,
           onScore,
@@ -298,7 +300,7 @@ export default function App() {
               topRight={muteButton}
               buddy={mode !== 'race' && companion && companion.stage !== 'none' ? <Dragon dragon={companion} size={3.4} hat={hat} /> : undefined}
               fastMs={before.settings.fastMs}
-              timeLimitMs={mode === 'keeper' ? clock : undefined}
+              timeLimitFor={mode === 'keeper' ? clockFor : undefined}
               pauseMs={mode === 'keeper' ? 1500 : mode === 'race' ? 700 : undefined}
               chargeNeeded={chargeNeeded(ability)}
               startCharge={startCharge(ability)}
@@ -369,7 +371,7 @@ export default function App() {
                 ) : mode === 'soccer' ? (
                   <PenaltyKicks {...props} {...soccer} slowSaveChance={ability === 'spiky' ? 0 : slowSaveChance(level)} />
                 ) : mode === 'keeper' ? (
-                  <PenaltySaves {...props} {...soccer} timeLimitMs={clock} />
+                  <PenaltySaves {...props} {...soccer} clockFor={clockFor} />
                 ) : (
                   <LanternHunt
                     {...props}
@@ -630,7 +632,7 @@ function Home({ data, onPlay, onMap, onHatchery, onShop, onWorld, onBadges, onSw
             <span aria-hidden="true">⚙️</span>
             <span className="options-summary">
               {course.icon} {course.name} facts · {data.settings.length} questions ·{' '}
-              {data.settings.fastMs / 1000}s speed
+              up to {data.settings.fastMs / 1000}s speed goal
             </span>
             <span className="options-change">Change</span>
           </summary>
@@ -662,11 +664,12 @@ function Home({ data, onPlay, onMap, onHatchery, onShop, onWorld, onBadges, onSw
                 onChange={(e) => onSettings({ fastMs: Number(e.target.value) })}
                 aria-label="Speed goal: how fast counts as knowing a fact"
               >
-                <option value={5000}>Relaxed (5 sec)</option>
-                <option value={3000}>Standard (3 sec)</option>
-                <option value={2000}>Speedy (2 sec)</option>
+                <option value={5000}>Relaxed (up to 5 sec)</option>
+                <option value={3000}>Standard (up to 3 sec)</option>
+                <option value={2000}>Speedy (up to 2 sec)</option>
               </select>
             </label>
+            <small className="options-note">Every game uses the same speed goals. The hardest facts get the full time, easier ones like 2 × 3 a bit less.</small>
           </div>
         </details>
       </div>

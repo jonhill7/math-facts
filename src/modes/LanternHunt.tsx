@@ -5,6 +5,7 @@ import { sounds } from '../sound';
 import { Confetti } from '../components/Confetti';
 import { DEFAULT_BEAM_RGB } from '../engine/shop';
 import type { Ability } from '../engine/abilities';
+import { seconds } from '../engine/speed';
 
 const ALL_SPOTS = ['🛏️', '🛋️', '🚪', '🧺', '🪴', '📦', '🧥', '🪑', '🛁', '🧸', '🗄️', '🎹', '🧳', '🖼️', '🪟', '🛒'];
 const ATTIC_SPOTS = ['🕯️', '📚', '🪆', '🧶', '🎻', '🪞', '⏰', '🎲', '🧳', '📦', '🪑', '🖼️', '🧸', '🛏️', '🗄️', '🧥', '🪟', '🎹', '🧺', '🪴', '🚪', '🛋️', '🛁', '🛒', '🎩'];
@@ -201,7 +202,7 @@ export function LanternHunt({ last, waiting, resume, onStat, monstersFoundTotal,
       <div
         ref={roomsRef}
         key={`floor${floor}`}
-        className={`rooms ${canSearch ? 'rooms-ready' : ''} ${bright && canSearch ? 'rooms-bright' : ''}`}
+        className={`rooms ${canSearch ? 'rooms-ready' : ''} ${bright && canSearch ? 'rooms-bright' : ''} ${last?.fast && canSearch ? 'rooms-flash' : ''}`}
         style={{ gridTemplateColumns: `repeat(${size}, 1fr)` }}
         onPointerMove={aim}
       >
@@ -229,6 +230,29 @@ export function LanternHunt({ last, waiting, resume, onStat, monstersFoundTotal,
           );
         })}
       </div>
+      {last?.correct && (
+        // Right on submit: did that answer beat the speed goal? A fast answer is
+        // what makes the lantern bright enough for a clue, so say it loudly.
+        <div
+          key={`speed${last.id}`}
+          className={`lantern-speed ${last.fast ? 'lantern-speed-fast' : 'lantern-speed-slow'}`}
+          role="status"
+          aria-label={last.fast ? `Fast! ${seconds(last.ms)} seconds beat the ${seconds(last.goalMs)} second goal` : `${seconds(last.ms)} seconds. Goal ${seconds(last.goalMs)} seconds`}
+        >
+          {last.fast ? (
+            <>
+              <strong>⚡ FAST! Bright lantern!</strong>
+              <span>
+                {seconds(last.ms)}s · beat the {seconds(last.goalMs)}s goal
+              </span>
+            </>
+          ) : (
+            <span>
+              🐢 {seconds(last.ms)}s · goal {seconds(last.goalMs)}s{ability === 'secondLook' ? '' : ' for a clue'}
+            </span>
+          )}
+        </div>
+      )}
       {celebrate && <Confetti key={`found${found}`} count={36} />}
       <p className={`lantern-message ${celebrate ? 'celebrate' : ''}`} role="status">
         {message}
