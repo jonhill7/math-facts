@@ -611,6 +611,22 @@ h2 {
   background: radial-gradient(circle, #e0f2fe 0%, #0369a1 120%);
 }
 
+/* Searched after a slow answer: no clue, so it looks dull and says nothing
+   about the spots around it. */
+.spot-empty {
+  background: #374151;
+  border-color: #1f2937;
+}
+
+.spot.spot-empty .spot-emoji {
+  filter: grayscale(1) brightness(0.8);
+  opacity: 0.6;
+}
+
+.spot-empty .spot-mark {
+  color: #d1d5db;
+}
+
 .spot-found {
   animation: wiggle 0.4s ease-in-out 3;
 }

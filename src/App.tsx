@@ -140,11 +140,12 @@ export default function App() {
   const onAnswer = useCallback(
     (fact: Fact, correct: boolean, ms: number) =>
       update((d) => {
-        const goalMs = speedGoalMs(fact, d.settings.fastMs);
-        const fast = correct && ms <= goalMs;
+        // Games reward beating the fact's own speed goal. The fact map stays on
+        // the flat speed-goal setting (3s by default), the fluency standard.
+        const fast = correct && ms <= speedGoalMs(fact, d.settings.fastMs);
         const bonus = snackBonus(activeAbility(companionOf(d)));
         let next: SaveData = eat(
-          { ...d, progress: { ...d.progress, [fact.id]: recordAnswer(d.progress[fact.id], correct, ms, Date.now(), goalMs) } },
+          { ...d, progress: { ...d.progress, [fact.id]: recordAnswer(d.progress[fact.id], correct, ms, Date.now(), d.settings.fastMs) } },
           correct ? (fast ? SNACKS_FAST : SNACKS_RIGHT) + bonus : 0,
         );
         if (correct) next = count(next, 'right');
@@ -669,7 +670,7 @@ function Home({ data, onPlay, onMap, onHatchery, onShop, onWorld, onBadges, onSw
                 <option value={2000}>Speedy (up to 2 sec)</option>
               </select>
             </label>
-            <small className="options-note">Every game uses the same speed goals. The hardest facts get the full time, easier ones like 2 × 3 a bit less.</small>
+            <small className="options-note">Every game uses the same speed goals. The hardest facts get the full time, easier ones like 2 × 3 a bit less. The fact map counts any answer within the full time.</small>
           </div>
         </details>
       </div>
