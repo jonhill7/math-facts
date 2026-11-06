@@ -2189,3 +2189,123 @@ h1 {
 .course-line {
   opacity: 0.9;
 }
+
+/* Badges: a permanent case of accomplishments. */
+.home-badges {
+  grid-column: 1 / -1;
+}
+
+.badges-recent {
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+
+.badge-group h3 {
+  margin: 18px 0 8px;
+}
+
+.badge-group h3 small {
+  color: var(--muted);
+  font-weight: normal;
+  font-size: 0.8rem;
+  margin-left: 4px;
+}
+
+.badge-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
+  gap: 8px;
+}
+
+.badge-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 10px 6px;
+  border-radius: 14px;
+  background: var(--surface);
+  border: 2px solid var(--border);
+  text-align: center;
+  font-size: 0.9rem;
+}
+
+.badge-bronze { --tier: #c0803f; }
+.badge-silver { --tier: #9aa4b2; }
+.badge-gold { --tier: #e0a800; }
+.badge-diamond { --tier: #38bdf8; }
+
+.badge-card strong {
+  font-family: 'Fredoka', system-ui, sans-serif;
+  line-height: 1.15;
+}
+
+.badge-card small {
+  color: var(--muted);
+  font-size: 0.7rem;
+  line-height: 1.25;
+}
+
+.badge-medal {
+  display: grid;
+  place-items: center;
+  width: 2.8rem;
+  height: 2.8rem;
+  margin-bottom: 4px;
+  border-radius: 50%;
+  font-size: 1.5rem;
+  border: 3px solid var(--tier);
+  background: radial-gradient(circle at 35% 30%, #fff8, transparent 60%), color-mix(in srgb, var(--tier) 25%, var(--surface));
+}
+
+.badge-got {
+  border-color: var(--tier);
+}
+
+.badge-locked .badge-medal {
+  filter: grayscale(1);
+  opacity: 0.45;
+  border-style: dashed;
+}
+
+.badge-locked strong {
+  color: var(--muted);
+}
+
+.badge-card .badge-date {
+  margin-top: 4px;
+  font-weight: 600;
+}
+
+.badge-bar {
+  display: block;
+  width: 80%;
+  height: 6px;
+  margin-top: 6px;
+  border-radius: 3px;
+  background: var(--border);
+  overflow: hidden;
+}
+
+.badge-bar span {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+}
+.new-badges {
+  margin: 12px 0;
+  padding: 12px;
+  border-radius: 16px;
+  border: 2px solid var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, var(--bg));
+}
+
+.new-badges h3 {
+  margin: 0 0 10px;
+}
+
+.new-badges .badge-card {
+  animation: wiggle 0.5s ease-in-out 2;
+}

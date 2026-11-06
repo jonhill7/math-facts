@@ -30,6 +30,11 @@ Other things kids and parents can do:
 
 - Earn a **speed title**, from Egg Wobbler to Comet Wing, based on how
   fast they usually answer compared with each fact's fair time.
+- Collect **badges**, a permanent list of accomplishments: speed titles
+  reached, longest streaks, facts and tables mastered, perfect games, goals,
+  saves, monsters found, rivals and ghosts beaten in Sky Race, dragons
+  hatched and more. Once earned, a badge is kept forever, even if a streak
+  ends or a speed title slips.
 - Keep a **daily streak** going, with one free rest day a week.
 - **Name** their companion dragon.
 - Pick **focus practice** on one table (good for homework), a **game
