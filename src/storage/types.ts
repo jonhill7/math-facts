@@ -4,7 +4,7 @@ import { emptyLeague, League } from '../engine/league';
 import { emptyQuests, QuestState } from '../engine/quests';
 import { emptyShop, ShopState } from '../engine/shop';
 import { EGG_ORDER, Hoard } from '../engine/dragons';
-import { emptyRace, RaceState } from '../engine/race';
+import { CourseId, courseOfTable, emptyRace, RaceState } from '../engine/race';
 
 export interface Stats {
   sessions: number;
@@ -38,12 +38,12 @@ export interface SaveData {
 
 export interface Settings {
   muted: boolean;
-  focusTable: number; // 0 = all tables
+  course: CourseId; // which facts to practice: easy, medium, hard or mixed
   length: number; // questions per game
   fastMs: number; // answers faster than this count as fluent
 }
 
-export const defaultSettings = (): Settings => ({ muted: false, focusTable: 0, length: 20, fastMs: 3000 });
+export const defaultSettings = (): Settings => ({ muted: false, course: 'mixed', length: 20, fastMs: 3000 });
 
 export const emptyStats = (): Stats => ({
   sessions: 0,
@@ -61,6 +61,14 @@ export const emptyStats = (): Stats => ({
 
 export const emptySave = (name: string): SaveData => ({ name, progress: {}, stats: emptyStats(), settings: defaultSettings(), streak: emptyStreak(), dragonNames: {}, hoard: {}, league: emptyLeague(), quests: emptyQuests(), shop: emptyShop(), place: 'meadow', race: emptyRace() });
 
+// Older saves picked one times table ("just the 7s"). Those now pick the
+// course that table belongs to.
+function settingsFrom(base: Settings, raw: (Partial<Settings> & { focusTable?: number }) | undefined): Settings {
+  const { focusTable, ...rest } = raw ?? {};
+  const course = rest.course ?? (focusTable ? courseOfTable(focusTable) : base.course);
+  return { ...base, ...rest, course };
+}
+
 // Fill in anything an older save is missing, so new features never crash on old data.
 export function normalizeSave(name: string, raw: Partial<SaveData> | undefined): SaveData {
   const base = emptySave(name);
@@ -71,7 +79,7 @@ export function normalizeSave(name: string, raw: Partial<SaveData> | undefined):
     name,
     progress: raw.progress ?? {},
     stats: { ...base.stats, ...raw.stats },
-    settings: { ...base.settings, ...raw.settings },
+    settings: settingsFrom(base.settings, raw.settings),
     streak: { ...base.streak, ...raw.streak },
     dragonNames: raw.dragonNames ?? {},
     // Saves from before dragons had their own experience: the chosen dragon

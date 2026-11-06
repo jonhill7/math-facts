@@ -1241,6 +1241,8 @@ h1 {
 }
 
 .options-body select {
+  min-width: 0;
+  max-width: 65%;
   padding: 8px 10px;
   border-radius: 10px;
   border: 1px solid var(--border);
@@ -2188,4 +2190,9 @@ h1 {
 
 .course-line {
   opacity: 0.9;
+}
+
+.options-note {
+  margin-top: -6px;
+  color: var(--muted);
 }

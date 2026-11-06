@@ -186,7 +186,7 @@ export default function App() {
     // flies its own course: the ghost exactly as the kid did last time.
     let opponent: number[] | undefined;
     if (mode === 'race') {
-      const { course } = data.race;
+      const { course } = data.settings;
       const finish = data.settings.length;
       opponent =
         race === 'ghost'
@@ -224,7 +224,6 @@ export default function App() {
           muteButton={muteButton}
           hat={hat}
           onSettings={(change) => update((d) => ({ ...d, settings: { ...d.settings, ...change } }), true)}
-          onCourse={(course) => update((d) => ({ ...d, race: { ...d.race, course } }), true)}
         />
       )}
       {screen.name === 'map' && data && <MasteryMap progress={data.progress} onBack={() => setScreen({ name: 'home' })} />}
@@ -262,7 +261,7 @@ export default function App() {
       )}
       {screen.name === 'play' && data && (() => {
         const { mode, before, boss, race, opponent } = screen;
-        const course = before.race.course;
+        const course = before.settings.course;
         const raceRival = RIVALS[nextRival(before.race)];
         const level = before.league.level;
         const rival = rivalFor(before.league);
@@ -294,11 +293,7 @@ export default function App() {
               snackBonus={snackBonus(ability)}
               boss={boss}
               decor={mode === 'race' ? undefined : place.emoji}
-              options={
-                mode === 'race'
-                  ? { length: before.settings.length, only: course === 'mixed' ? undefined : (f) => courseOf(f) === course }
-                  : { focusTable: before.settings.focusTable || undefined, length: before.settings.length }
-              }
+              options={{ length: before.settings.length, only: course === 'mixed' ? undefined : (f) => courseOf(f) === course }}
               onQuit={() => {
                 update((d) => ({ ...d }), true); // save right away
                 setScreen({ name: 'home' });
@@ -447,10 +442,9 @@ interface HomeProps {
   muteButton: ReactNode;
   hat?: string;
   onSettings: (change: Partial<Settings>) => void;
-  onCourse: (course: CourseId) => void;
 }
 
-function Home({ data, onPlay, onMap, onHatchery, onShop, onWorld, onSwitch, muteButton, hat, onSettings, onCourse }: HomeProps) {
+function Home({ data, onPlay, onMap, onHatchery, onShop, onWorld, onSwitch, muteButton, hat, onSettings }: HomeProps) {
   const mastered = masteredCount(data.progress);
   const companion = companionOf(data);
   const ability = activeAbility(companion);
@@ -461,6 +455,7 @@ function Home({ data, onPlay, onMap, onHatchery, onShop, onWorld, onSwitch, mute
   const place = placeById(data.place);
   const title = speedTitle(data.progress, ALL_FACTS, data.settings.fastMs);
   const rival = RIVALS[nextRival(data.race)];
+  const course = COURSES.find((c) => c.id === data.settings.course) ?? COURSES[COURSES.length - 1];
   return (
     <div className="home">
       <div className="home-top">
@@ -587,21 +582,21 @@ function Home({ data, onPlay, onMap, onHatchery, onShop, onWorld, onSwitch, mute
                 key={c.id}
                 type="button"
                 role="radio"
-                aria-checked={data.race.course === c.id}
-                className={`course-pill ${data.race.course === c.id ? 'course-pill-on' : ''}`}
-                onClick={() => onCourse(c.id)}
+                aria-checked={course.id === c.id}
+                className={`course-pill ${course.id === c.id ? 'course-pill-on' : ''}`}
+                onClick={() => onSettings({ course: c.id })}
                 title={c.tables}
               >
                 {c.icon} {c.name}
               </button>
             ))}
           </span>
-          <small className="course-line">{COURSES.find((c) => c.id === data.race.course)?.tables}</small>
+          <small className="course-line">{course.tables}</small>
           <span className="mode-pills">
             <button type="button" className="mode-pill" onClick={() => onPlay('race', 'rival')}>
               🐉 Rival
             </button>
-            <button type="button" className="mode-pill" onClick={() => onPlay('race', 'ghost')} disabled={!data.race.ghosts[data.race.course]?.length} title={data.race.ghosts[data.race.course]?.length ? undefined : 'Race this course once to make a ghost'}>
+            <button type="button" className="mode-pill" onClick={() => onPlay('race', 'ghost')} disabled={!data.race.ghosts[course.id]?.length} title={data.race.ghosts[course.id]?.length ? undefined : 'Race this course once to make a ghost'}>
               👻 Ghost
             </button>
             <button type="button" className="mode-pill" onClick={() => onPlay('race', 'solo')}>
@@ -614,7 +609,7 @@ function Home({ data, onPlay, onMap, onHatchery, onShop, onWorld, onSwitch, mute
         <summary>
           <span aria-hidden="true">⚙️</span>
           <span className="options-summary">
-            {data.settings.focusTable ? `Just the ${data.settings.focusTable}s` : 'All facts'} · {data.settings.length} questions ·{' '}
+            {course.icon} {course.name} facts · {data.settings.length} questions ·{' '}
             {data.settings.fastMs / 1000}s speed
           </span>
           <span className="options-change">Change</span>
@@ -622,15 +617,16 @@ function Home({ data, onPlay, onMap, onHatchery, onShop, onWorld, onSwitch, mute
         <div className="options-body">
           <label>
             Practice
-            <select value={data.settings.focusTable} onChange={(e) => onSettings({ focusTable: Number(e.target.value) })} aria-label="Which facts to practice">
-              <option value={0}>All facts (recommended)</option>
-              {Array.from({ length: 12 }, (_, i) => (
-                <option key={i + 1} value={i + 1}>
-                  Just the {i + 1}s
+            <select value={course.id} onChange={(e) => onSettings({ course: e.target.value as CourseId })} aria-label="Which facts to practice">
+              {COURSES.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.icon} {c.name}
+                  {c.id === 'mixed' ? ' (recommended)' : ''}
                 </option>
               ))}
             </select>
           </label>
+          <small className="options-note">{course.id === 'mixed' ? 'Every fact, mixed together.' : `${course.name} is the ${course.tables}.`}</small>
           <label>
             Game
             <select value={data.settings.length} onChange={(e) => onSettings({ length: Number(e.target.value) })} aria-label="Game length">
