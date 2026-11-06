@@ -6,6 +6,7 @@ import { DEFAULT_FAST_MS, Progress } from '../engine/scheduler';
 import { buildSession, requeueMiss, SessionOptions } from '../engine/session';
 import { sounds } from '../sound';
 import { Keypad } from './Keypad';
+import { DotPicture } from './DotPicture';
 
 export interface AnswerEvent {
   id: number;
@@ -216,6 +217,12 @@ export function PracticeSession({
 
       <div className="stage">
         {stage({ last, waiting: phase === 'hold', resume: next, turn: index, fact })}
+        {phase === 'fix' && (
+          // After a miss the picture hint covers the game, right where the kid is looking.
+          <div className="stage-hint">
+            <DotPicture fact={fact} />
+          </div>
+        )}
         {decor && (
           <span className="stage-decor" aria-hidden="true">
             {decor}

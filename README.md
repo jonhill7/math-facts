@@ -50,8 +50,10 @@ The game sits on top of a small learning engine in `src/engine/`:
 - **A few new facts at a time.** At most 3 new facts per session, mixed in
   with known ones. The first game is a placement check so nobody grinds
   through facts they already know.
-- **Fix mistakes right away.** After a miss the kid sees the answer and a
-  strategy hint (like "times 9 is times 10 minus one"), types the right
+- **Fix mistakes right away.** After a miss the kid sees the answer, a
+  picture of it as rows of dots split the way the strategy works (6 × 8 is
+  5 rows of 8 plus 1 more row), and a strategy hint (like "times 9 is times
+  10 minus one"), types the right
   answer, and the fact comes back 3 questions later.
 - **Division follows multiplication.** 56 ÷ 7 unlocks once 7 × 8 is learned.
 
