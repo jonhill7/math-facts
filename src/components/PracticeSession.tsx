@@ -50,6 +50,7 @@ interface Props {
   topRight?: ReactNode;
   options?: SessionOptions;
   fastMs?: number;
+  facts?: Fact[]; // questions picked ahead of time (Sky Race), instead of building them here
   buddy?: ReactNode; // the kid's companion dragon, along for the game
   timeLimitFor?: (fact: Fact) => number; // games with a shot clock count right answers given in time
   pauseMs?: number; // how long to show a right answer before the next question
@@ -81,6 +82,7 @@ export function PracticeSession({
   topRight,
   options,
   fastMs = DEFAULT_FAST_MS,
+  facts,
   buddy,
   timeLimitFor,
   pauseMs = 900,
@@ -92,7 +94,7 @@ export function PracticeSession({
 }: Props) {
   // The boss round's facts go at the end of the game.
   const [queue, setQueue] = useState<Fact[]>(() => {
-    const main = buildSession(progress, Date.now(), options);
+    const main = facts ?? buildSession(progress, Date.now(), options);
     return boss ? [...main, ...boss.facts] : main;
   });
   const [bossStart, setBossStart] = useState(() => (boss ? queue.length - boss.facts.length : Infinity));

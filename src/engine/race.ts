@@ -7,11 +7,14 @@
 // Rivals and ghosts fly at a pace, so they slow down on hard facts too.
 
 import { Fact } from './facts';
-import { Progress } from './scheduler';
+import { DEFAULT_FAST_MS, Progress } from './scheduler';
 import { speedGoalMs, TIER } from './speed';
 
-// Fair times are the shared per-fact speed goals (see speed.ts).
-export const fairTimeMs = speedGoalMs;
+// Fair times are the per-fact speed goals (see speed.ts) at the 3-second
+// fluency standard. Races, medals, rivals and speed titles always use the
+// standard, whatever the speed goal setting, so switching to Relaxed can't make
+// rivals slower or hand out golds and permanent badges more easily.
+export const fairTimeMs = (fact: Fact) => speedGoalMs(fact);
 
 // Rival dragons, slowest first. Beat one to unlock the next.
 // pace = how many fair times they take per fact (1 = exactly the fair time).
@@ -58,14 +61,8 @@ export function courseOfTable(table: number): Exclude<CourseId, 'mixed'> {
 
 export const courseFacts = (course: CourseId, facts: Fact[]): Fact[] => (course === 'mixed' ? facts : facts.filter((f) => courseOf(f) === course));
 
-// The usual fair time on a course: what a rival flies each flap at pace 1.
-export function courseFairMs(course: CourseId, facts: Fact[], fastMs?: number): number {
-  const on = courseFacts(course, facts);
-  return on.reduce((t, f) => t + fairTimeMs(f, fastMs), 0) / on.length;
-}
-
 export interface RaceState {
-  ghosts: Partial<Record<CourseId, number[]>>; // ms for each flap of the last race on each course
+  ghosts: Record<string, number[]>; // ms for each flap of the last race, by course and length (see ghostKey)
   rivalsBeaten: number; // how far up the rival ladder they've got
   bestPace: number; // best (lowest) race pace so far; 0 = never raced
   races: number;
@@ -73,6 +70,24 @@ export interface RaceState {
 }
 
 export const emptyRace = (): RaceState => ({ ghosts: {}, rivalsBeaten: 0, bestPace: 0, races: 0, golds: 0 });
+
+// Ghosts are kept for each course and race length, so a ghost is always a
+// real race over the same distance on the same kind of facts.
+export const ghostKey = (course: CourseId, length: number) => `${course}:${length}`;
+
+// Saves from before ghosts were split by length kept one per course. Its
+// length is the number of flaps it has.
+export function migrateGhosts(ghosts: Record<string, number[]> | undefined): Record<string, number[]> {
+  const out: Record<string, number[]> = {};
+  for (const [key, times] of Object.entries(ghosts ?? {})) {
+    if (!Array.isArray(times) || times.length === 0) continue;
+    out[key.includes(':') ? key : ghostKey(key as CourseId, times.length)] = times;
+  }
+  return out;
+}
+
+// Snacks for a win: more for a longer race (5, 10 or 15).
+export const raceBonus = (length: number) => Math.round(length / 2);
 
 // The next rival to beat, or the fastest one once all are beaten.
 export const nextRival = (race: RaceState): number => Math.min(race.rivalsBeaten, RIVALS.length - 1);
@@ -91,16 +106,19 @@ const average = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / x
 const round2 = (n: number) => Math.round(n * 100) / 100;
 
 // The ghost flies exactly as the kid did last time: the same time for each
-// flap. If this race is longer, the extra flaps take its average time.
+// flap. (Ghosts are kept per length, so the fill-in is only a safety net.)
 export function ghostFlaps(ghost: number[], finish: number): number[] {
   const avg = average(ghost);
   return Array.from({ length: finish }, (_, i) => ghost[i] ?? avg);
 }
 
-// A rival flaps at its pace on the course's usual fair time, a little quicker
-// or slower each flap like a real flier (between 0.75 and 1.3 times).
-export function rivalFlaps(pace: number, courseMs: number, finish: number, random: () => number = Math.random): number[] {
-  return Array.from({ length: finish }, () => Math.round(courseMs * pace * (0.75 + random() * 0.55)));
+// A rival answers the same questions as the kid, picked before the race
+// starts. Each flap takes the rival its pace times that fact's fair time, a
+// little quicker or slower each flap like a real flier (0.75 to 1.3 times), so
+// an easy or hard draw of facts slows or speeds the rival too.
+export function rivalFlaps(pace: number, facts: Fact[], finish: number, random: () => number = Math.random): number[] {
+  const avg = facts.length ? facts.reduce((t, f) => t + fairTimeMs(f), 0) / facts.length : DEFAULT_FAST_MS;
+  return Array.from({ length: finish }, (_, i) => Math.round((facts[i] ? fairTimeMs(facts[i]) : avg) * pace * (0.75 + random() * 0.55)));
 }
 
 // How many flaps an opponent has finished by this point in the race.
@@ -114,8 +132,8 @@ export function flapsBy(times: number[], elapsedMs: number): number {
 }
 
 // Overall pace for a whole race: total time over total fair time.
-export function racePace(flaps: Flap[], fastMs?: number): number {
-  const fair = flaps.reduce((t, f) => t + fairTimeMs(f.fact, fastMs), 0);
+export function racePace(flaps: Flap[]): number {
+  const fair = flaps.reduce((t, f) => t + fairTimeMs(f.fact), 0);
   const took = flaps.reduce((t, f) => t + f.ms, 0);
   return fair ? round2(took / fair) : 0;
 }
@@ -133,10 +151,11 @@ export interface RaceResult {
   newBest: boolean;
   rival?: string;
   margin: number; // seconds ahead (positive) or behind (negative) at the finish
+  bonus: number; // snacks for the win (0 if not won)
 }
 
-export function finishRace(race: RaceState, kind: RaceKind, course: CourseId, flaps: Flap[], opponent: number[], fastMs?: number): { race: RaceState; result: RaceResult } {
-  const pace = racePace(flaps, fastMs);
+export function finishRace(race: RaceState, kind: RaceKind, course: CourseId, length: number, flaps: Flap[], opponent: number[]): { race: RaceState; result: RaceResult } {
+  const pace = racePace(flaps);
   const took = flaps.reduce((t, f) => t + f.ms, 0);
   const opponentMs = kind === 'solo' ? Infinity : opponent.reduce((a, b) => a + b, 0);
   const medal = medalFor(pace);
@@ -145,13 +164,13 @@ export function finishRace(race: RaceState, kind: RaceKind, course: CourseId, fl
   const rival = kind === 'rival' ? RIVALS[nextRival(race)].name : undefined;
   const next: RaceState = {
     ...race,
-    ghosts: flaps.length ? { ...race.ghosts, [course]: flaps.map((f) => Math.round(f.ms)) } : race.ghosts,
+    ghosts: flaps.length ? { ...race.ghosts, [ghostKey(course, length)]: flaps.map((f) => Math.round(f.ms)) } : race.ghosts,
     rivalsBeaten: kind === 'rival' && won ? Math.min(RIVALS.length, race.rivalsBeaten + 1) : race.rivalsBeaten,
     bestPace: newBest ? pace : race.bestPace,
     races: race.races + 1,
     golds: race.golds + (kind === 'solo' && won ? 1 : 0),
   };
-  return { race: next, result: { kind, course, pace, won, medal, newBest, rival, margin: kind === 'solo' ? 0 : round2((opponentMs - took) / 1000) } };
+  return { race: next, result: { kind, course, pace, won, medal, newBest, rival, margin: kind === 'solo' ? 0 : round2((opponentMs - took) / 1000), bonus: won ? raceBonus(length) : 0 } };
 }
 
 // Speed titles, earned from how fast the kid usually answers compared with the
@@ -168,30 +187,40 @@ export const SPEED_TITLES = [
 
 export const MIN_FACTS_FOR_TITLE = 10;
 
+// The top two titles also take Hard facts (6s, 7s, 8s and 12s), so a kid who
+// only knows quick easy facts can't earn the top badges too early.
+export const HARD_FACTS_FOR_TOP = 10;
+export const TOP_TITLE_FROM = 4; // Storm Rider and up
+
 export interface SpeedTitle {
   name: string;
   icon: string;
   pace: number;
   next?: string; // the title above this one
+  needsHard?: boolean; // fast enough for a higher title, but needs more Hard facts first
 }
 
 // The kid's usual pace across every fact they've answered right, weighted by
 // how often they've seen it. Null until they've got enough facts to judge.
-export function speedTitle(progress: Progress, facts: Fact[], fastMs?: number): SpeedTitle | null {
+export function speedTitle(progress: Progress, facts: Fact[]): SpeedTitle | null {
   let fair = 0;
   let took = 0;
   let count = 0;
+  let hard = 0;
   for (const f of facts) {
     const s = progress[f.id];
     if (!s || s.correct === 0 || !s.avgMs) continue;
-    fair += fairTimeMs(f, fastMs) * s.correct;
+    fair += fairTimeMs(f) * s.correct;
     took += s.avgMs * s.correct;
     count++;
+    if (courseOf(f) === 'hard') hard++;
   }
   if (count < MIN_FACTS_FOR_TITLE) return null;
   const pace = round2(took / fair);
   let i = 0;
   while (i + 1 < SPEED_TITLES.length && pace <= SPEED_TITLES[i + 1].pace) i++;
+  const needsHard = i >= TOP_TITLE_FROM && hard < HARD_FACTS_FOR_TOP;
+  if (needsHard) i = TOP_TITLE_FROM - 1;
   const title = SPEED_TITLES[i];
-  return { name: title.name, icon: title.icon, pace, next: SPEED_TITLES[i + 1]?.name };
+  return { name: title.name, icon: title.icon, pace, next: SPEED_TITLES[i + 1]?.name, needsHard };
 }

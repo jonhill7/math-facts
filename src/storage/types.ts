@@ -4,7 +4,7 @@ import { emptyLeague, League } from '../engine/league';
 import { emptyQuests, QuestState } from '../engine/quests';
 import { emptyShop, ShopState } from '../engine/shop';
 import { EGG_ORDER, Hoard } from '../engine/dragons';
-import { CourseId, courseOfTable, emptyRace, RaceState } from '../engine/race';
+import { CourseId, courseOfTable, emptyRace, migrateGhosts, RaceState } from '../engine/race';
 import { Earned } from '../engine/badges';
 
 export interface Stats {
@@ -99,7 +99,7 @@ export function normalizeSave(name: string, raw: Partial<SaveData> | undefined):
     quests: { ...base.quests, ...raw.quests },
     shop: { ...base.shop, ...raw.shop },
     place: raw.place ?? base.place,
-    race: { ...base.race, ...raw.race, ghosts: raw.race?.ghosts ?? {} },
+    race: { ...base.race, ...raw.race, ghosts: migrateGhosts(raw.race?.ghosts) },
     badges: raw.badges ?? {},
   };
 }

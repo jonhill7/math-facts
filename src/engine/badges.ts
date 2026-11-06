@@ -68,7 +68,7 @@ const tablesMastered = (p: Progress) =>
   ).length;
 
 const speedLevel = (d: BadgeInput) => {
-  const title = speedTitle(d.progress, ALL_FACTS, d.settings.fastMs);
+  const title = speedTitle(d.progress, ALL_FACTS);
   return title ? SPEED_TITLES.findIndex((t) => t.name === title.name) : 0;
 };
 
