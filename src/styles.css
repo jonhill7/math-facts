@@ -3114,3 +3114,52 @@ h1 {
   font-size: 0.78rem;
   line-height: 1.25;
 }
+
+/* The meadow is a window onto a wider world on narrow screens: swipe sideways. */
+.meadow-frame {
+  position: relative;
+}
+
+.meadow {
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+}
+
+.meadow::-webkit-scrollbar {
+  display: none;
+}
+
+.meadow-world {
+  position: relative;
+  height: 100%;
+  min-width: 780px;
+  overflow: hidden; /* drifting clouds mustn't make the meadow wider */
+}
+
+.meadow-more {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 22px;
+  height: 36px;
+  border-radius: 11px;
+  background: rgba(255, 255, 255, 0.55);
+  color: #14213d;
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 32px;
+  text-align: center;
+  pointer-events: none;
+  z-index: 200;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+.meadow-more-left {
+  left: 6px;
+}
+
+.meadow-more-right {
+  right: 6px;
+}

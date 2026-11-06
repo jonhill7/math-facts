@@ -38,7 +38,7 @@ export interface Critter {
   until: number; // when the current activity ends, in ms
   partner?: number; // who it's playing with
   play?: PlayKind;
-  then?: { activity: Activity; ms: number; partner?: number; play?: PlayKind; faceX?: number }; // what to do on arrival
+  then?: { activity: Activity; ms: number; partner?: number; play?: PlayKind; faceX?: number; party?: boolean }; // what to do on arrival
 }
 
 export interface Ball {
@@ -189,12 +189,14 @@ export function step(critters: Critter[], now: number, rand: Rand, night = false
   if (things.some((t) => t.id === 'meadow-drum') && rand() < 0.006) return danceParty(critters, now);
   const out = critters.map((c) => ({ ...c }));
   const byId = new Map(out.map((c) => [c.id, c]));
+  let party = false;
   for (let i = 0; i < out.length; i++) {
     const c = out[i];
     if (c.until > now) continue;
     // Arrived somewhere with a plan.
     if (c.then) {
       const { activity, ms, partner, play, faceX } = c.then;
+      if (c.then.party) party = true; // reached the drum: everybody dance!
       const friend = partner !== undefined ? byId.get(partner) : undefined;
       const lookAt = friend?.x ?? faceX;
       const facing = lookAt !== undefined && Math.abs(lookAt - c.x) > 0.5 ? (lookAt > c.x ? 1 : -1) : c.facing;
@@ -231,7 +233,7 @@ export function step(critters: Critter[], now: number, rand: Rand, night = false
     out[i] = nextAlone(c, now, rand, night, things, out);
     byId.set(c.id, out[i]);
   }
-  return out;
+  return party ? danceParty(out, now) : out;
 }
 
 // Everyone who's hatched and awake stops what they're doing and dances.
@@ -243,17 +245,24 @@ export function danceParty(critters: Critter[], now: number): Critter[] {
   );
 }
 
-// A tap on a thing in the meadow: the drum starts a dance party, and anything
-// else calls the nearest awake dragon over to use it.
-export function tapThing(critters: Critter[], id: string, now: number, rand: Rand): Critter[] {
+// A tap on a thing in the meadow sends the selected dragon over to use it
+// (waking it if it was asleep). With no hatched dragon selected, the nearest
+// awake one goes. A dragon sent to the drum starts a dance party when it
+// gets there.
+export function tapThing(critters: Critter[], id: string, now: number, rand: Rand, selected?: number): Critter[] {
   const t = thingById(id);
   if (!t) return critters;
-  if (t.id === 'meadow-drum') return danceParty(critters, now);
-  const awake = critters.filter((c) => c.stage !== 'egg' && c.activity !== 'fetch' && c.then?.activity !== 'fetch');
-  if (!awake.length) return critters;
+  const hatched = critters.filter((c) => c.stage !== 'egg');
+  const chosen = hatched.find((c) => c.id === selected);
+  const awake = hatched.filter((c) => c.activity !== 'fetch' && c.then?.activity !== 'fetch');
   const score = (c: Critter) => Math.hypot(c.x - t.x, c.y - t.y) + (c.activity === 'nap' ? 1000 : 0) + (c.activity === t.activity ? 2000 : 0);
-  const pick = awake.reduce((a, b) => (score(b) < score(a) ? b : a));
-  return tapDragon(critters, pick.id, now).map((c) => (c.id === pick.id ? goUse(c, t, now, rand) : c));
+  const pick = chosen ?? (awake.length ? awake.reduce((a, b) => (score(b) < score(a) ? b : a)) : undefined);
+  if (!pick) return critters;
+  return tapDragon(critters, pick.id, now).map((c) => {
+    if (c.id !== pick.id) return c;
+    const go = goUse(c, t, now, rand);
+    return t.id === 'meadow-drum' && go.then ? { ...go, then: { ...go.then, ms: 4500, party: true } } : go;
+  });
 }
 
 // A tap on a dragon: it wakes up (if it was asleep) and is very pleased to see you.

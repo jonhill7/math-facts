@@ -160,8 +160,11 @@ describe('meadow things', () => {
     expect(count(['meadow-campfire'])).toBeLessThan(count([]));
   });
 
-  it('starts a dance party when the drum is tapped', () => {
-    const cs = tapThing(herd(), 'meadow-drum', 1000, seeded());
+  it('starts a dance party when a dragon reaches the drum', () => {
+    let cs = tapThing(herd(), 'meadow-drum', 1000, seeded(), 5);
+    const drummer = cs.find((c) => c.id === 5)!;
+    expect(drummer.then?.party).toBe(true);
+    cs = step(cs, drummer.until, seeded(), false, ['meadow-drum']);
     expect(cs.filter((c) => c.stage !== 'egg').every((c) => c.activity === 'dance')).toBe(true);
     expect(cs.find((c) => c.stage === 'egg')!.activity).not.toBe('dance');
     const asleep = danceParty([{ ...herd()[0], activity: 'nap' }], 0);
@@ -176,6 +179,19 @@ describe('meadow things', () => {
     const cs = tapThing([near, far], 'meadow-pond', 0, seeded());
     expect(cs[0].then?.activity).toBe('splash');
     expect(cs[1]).toEqual(far);
+  });
+
+  it('sends the selected dragon, even a far away or sleepy one', () => {
+    const pond = thingById('meadow-pond')!;
+    const [a, b, , egg] = herd();
+    const near = { ...a, x: pond.x + 10, y: pond.y };
+    const far = { ...b, x: 20, y: 50, activity: 'nap' as const };
+    const cs = tapThing([near, far, egg], 'meadow-pond', 0, seeded(), far.id);
+    expect(cs[1].then?.activity).toBe('splash');
+    expect(cs[0]).toEqual(near);
+    // An egg can't walk, so the nearest dragon goes instead.
+    const fromEgg = tapThing([near, far, egg], 'meadow-pond', 0, seeded(), egg.id);
+    expect(fromEgg[0].then?.activity).toBe('splash');
   });
 });
 

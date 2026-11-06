@@ -14,7 +14,8 @@ grow a hatchery of dragons as they learn:
   Snacks buy things for the meadow in the shop, and each one changes what
   the dragons get up to: a berry bush, a splash pond, a cloud bed for group
   naps, a campfire that keeps them up at night, a trampoline, and a party
-  drum that starts a dance party when you tap it.
+  drum. Tap a thing to send your companion to it (to the drum, and everyone
+  dances). On phones the meadow is wider than the screen: swipe sideways.
 
 The practice happens inside two games:
 
