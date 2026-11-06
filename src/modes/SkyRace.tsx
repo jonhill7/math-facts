@@ -12,7 +12,6 @@ interface Props extends StageProps {
   kind: RaceKind;
   finish: number; // right answers to reach the finish line
   opponentTimes: number[]; // ms the opponent takes for each flap
-  fastMs: number;
   racer: ReactNode; // the kid's dragon
   opponent?: ReactNode; // the ghost or rival dragon
   opponentName: string;
@@ -23,7 +22,7 @@ interface Props extends StageProps {
 const START = 8;
 const FINISH = 88;
 
-export function SkyRace({ last, turn, kind, finish, opponentTimes, fastMs, racer, opponent, opponentName, onFlaps }: Props) {
+export function SkyRace({ last, turn, kind, finish, opponentTimes, racer, opponent, opponentName, onFlaps }: Props) {
   const [flaps, setFlaps] = useState<Flap[]>([]);
   const [stars, setStars] = useState(0); // flaps faster than the fair time
   const [message, setMessage] = useState<{ id: number; text: string; kind: 'good' | 'great' | 'oops' } | null>(null);
@@ -41,7 +40,7 @@ export function SkyRace({ last, turn, kind, finish, opponentTimes, fastMs, racer
   useEffect(() => {
     if (!last) return;
     frozen.current = true;
-    const fair = fairTimeMs(last.fact, fastMs);
+    const fair = fairTimeMs(last.fact);
     if (last.correct) {
       const flap = { fact: last.fact, ms: pending.current + last.ms };
       pending.current = 0;

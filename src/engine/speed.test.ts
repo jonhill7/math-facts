@@ -7,8 +7,8 @@ import { beatGoal, speedGoalMs } from './speed';
 const f = factById;
 
 describe('speed goals', () => {
-  it('are the same goals Sky Race races against', () => {
-    for (const fact of ALL_FACTS) expect(fairTimeMs(fact, 2000)).toBe(speedGoalMs(fact, 2000));
+  it('are the goals Sky Race races against, always at the 3-second standard', () => {
+    for (const fact of ALL_FACTS) expect(fairTimeMs(fact)).toBe(speedGoalMs(fact, 3000));
   });
   it('count an answer as fast only when it beats the fact goal', () => {
     const easy = f('mul:2:3');

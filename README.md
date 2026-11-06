@@ -27,16 +27,19 @@ The practice happens inside two games:
 
 - **Sky Race** 🏁: every right answer is a flap toward the finish line.
   Pick a course (Easy, Medium, Hard or Mixed facts), then race a ladder of
-  7 rival dragons, your own ghost from last time on that course, or fly solo
-  for a gold, silver or bronze medal. The ghost replays every flap at the
-  exact time the kid made it. Every fact has a fair time (1 × 1 is quicker
-  than 7 × 8, and none is over the speed goal), which sets solo medals and
-  rival speeds.
+  7 rival dragons, your own ghost from your last race of the same course and
+  length, or fly solo for a gold, silver or bronze medal. The ghost replays
+  every flap at the exact time the kid made it. A race's questions are picked
+  before it starts, and a rival answers those same facts. Every fact has a
+  fair time at the 3-second standard (1 × 1 is quicker than 7 × 8), which
+  sets solo medals and rival speeds whatever the speed goal setting. Longer
+  races pay a bigger win bonus.
 
 Other things kids and parents can do:
 
 - Earn a **speed title**, from Egg Wobbler to Comet Wing, based on how
-  fast they usually answer compared with each fact's fair time.
+  fast they usually answer compared with each fact's fair time. The top two
+  titles also need 10 Hard facts answered.
 - Collect **badges**, a permanent list of accomplishments: speed titles
   reached, longest streaks, facts and tables mastered, perfect games, goals,
   saves, monsters found, rivals and ghosts beaten in Sky Race, dragons

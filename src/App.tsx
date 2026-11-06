@@ -23,7 +23,8 @@ import { LanternHunt } from './modes/LanternHunt';
 import { MatchScore, PenaltyKicks, SoccerProps, StatKey } from './modes/PenaltyKicks';
 import { PenaltySaves } from './modes/PenaltySaves';
 import { SkyRace } from './modes/SkyRace';
-import { COURSES, courseFairMs, CourseId, courseOf, finishRace, Flap, ghostFlaps, nextRival, RaceKind, RaceResult, rivalFlaps, RIVALS, speedTitle } from './engine/race';
+import { COURSES, CourseId, courseOf, finishRace, Flap, ghostFlaps, ghostKey, nextRival, RaceKind, RaceResult, rivalFlaps, RIVALS, speedTitle } from './engine/race';
+import { buildSession, SessionOptions } from './engine/session';
 import { cloudEnabled, cloudStore, signInWithGoogle, signOutUser, User, watchUser } from './storage/firebase';
 import { listGuests, localStore } from './storage/localStore';
 import { ProgressStore, SaveData, Settings } from './storage/types';
@@ -32,7 +33,12 @@ import { setMuted, sounds } from './sound';
 type Mode = 'soccer' | 'keeper' | 'lantern' | 'race';
 const isSoccer = (m: Mode) => m === 'soccer' || m === 'keeper';
 
-export const RACE_WIN_BONUS = 10; // snacks for beating a ghost or rival, or a solo gold
+
+// Which questions a game asks: the chosen course, and how many.
+const sessionOptions = (settings: Settings): SessionOptions => ({
+  length: settings.length,
+  only: settings.course === 'mixed' ? undefined : (f) => courseOf(f) === settings.course,
+});
 
 // A rival dragon drawn fully grown.
 const rivalDragon = (species: number): DragonState => ({ species: speciesById(species), stage: 'grown', xp: 0, level: 10, into: 0, needed: 1 });
@@ -48,7 +54,7 @@ interface Boss {
 type Screen =
   | { name: 'who' }
   | { name: 'home' }
-  | { name: 'play'; mode: Mode; before: SaveData; boss?: Boss; race?: RaceKind; opponent?: number[] }
+  | { name: 'play'; mode: Mode; before: SaveData; boss?: Boss; race?: RaceKind; opponent?: number[]; facts?: Fact[] }
   | { name: 'done'; mode: Mode; boss?: Boss; summary: SessionSummary; grew: DragonState[]; rival: string; score: MatchScore; league?: { before: League; after: League }; quests: Quest[]; race?: RaceKind; raceResult?: RaceResult; badges: Badge[] }
   | { name: 'badges' }
   | { name: 'map' }
@@ -198,17 +204,20 @@ export default function App() {
     // Sky Race: the opponent's flap times are set before the race starts, so it
     // flies its own course: the ghost exactly as the kid did last time.
     let opponent: number[] | undefined;
+    let facts: Fact[] | undefined;
     if (mode === 'race') {
       const { course } = data.settings;
       const finish = data.settings.length;
+      // Pick the race's questions now, so a rival answers the same facts.
+      facts = buildSession(data.progress, Date.now(), sessionOptions(data.settings));
       opponent =
         race === 'ghost'
-          ? ghostFlaps(data.race.ghosts[course] ?? [], finish)
+          ? ghostFlaps(data.race.ghosts[ghostKey(course, finish)] ?? [], finish)
           : race === 'rival'
-            ? rivalFlaps(RIVALS[nextRival(data.race)].pace, courseFairMs(course, ALL_FACTS, data.settings.fastMs), finish)
+            ? rivalFlaps(RIVALS[nextRival(data.race)].pace, facts, finish)
             : [];
     }
-    setScreen({ name: 'play', mode, before: data, boss, race: mode === 'race' ? (race ?? 'solo') : undefined, opponent });
+    setScreen({ name: 'play', mode, before: data, boss, race: mode === 'race' ? (race ?? 'solo') : undefined, opponent, facts });
   };
 
   const companion = data ? companionOf(data) : undefined;
@@ -277,7 +286,7 @@ export default function App() {
         />
       )}
       {screen.name === 'play' && data && (() => {
-        const { mode, before, boss, race, opponent } = screen;
+        const { mode, before, boss, race, opponent, facts } = screen;
         const course = before.settings.course;
         const raceRival = RIVALS[nextRival(before.race)];
         const level = before.league.level;
@@ -310,7 +319,8 @@ export default function App() {
               snackBonus={snackBonus(ability)}
               boss={boss}
               decor={mode === 'race' ? undefined : place.emoji}
-              options={{ length: before.settings.length, only: course === 'mixed' ? undefined : (f) => courseOf(f) === course }}
+              options={sessionOptions(before.settings)}
+              facts={facts}
               onQuit={() => {
                 update((d) => ({ ...d }), true); // save right away
                 setScreen({ name: 'home' });
@@ -320,7 +330,7 @@ export default function App() {
                 const won = isSoccer(mode) && score.us > score.them;
                 const league = isSoccer(mode) ? { before: before.league, after: afterMatch(before.league, won) } : undefined;
                 // Sky Race: who got to the finish first.
-                const raced = race ? finishRace(before.race, race, course, raceFlaps.current, opponent ?? [], before.settings.fastMs) : undefined;
+                const raced = race ? finishRace(before.race, race, course, before.settings.length, raceFlaps.current, opponent ?? []) : undefined;
                 const finish = (d: SaveData): SaveData => {
                   let next: SaveData = {
                     ...d,
@@ -339,7 +349,7 @@ export default function App() {
                   };
                   next = { ...next, stats: { ...next.stats, bestStreak: Math.max(next.stats.bestStreak, next.streak.count) } };
                   next = eat(next, summary.boss === 'beaten' && boss ? boss.bonus : 0);
-                  if (raced?.result.won) next = eat(next, RACE_WIN_BONUS);
+                  if (raced?.result.won) next = eat(next, raced.result.bonus);
                   next = count(next, 'games');
                   if (won) next = count(next, 'matchesWon', 1, 'matchesWon');
                   return withBadges(next);
@@ -359,7 +369,6 @@ export default function App() {
                     kind={race ?? 'solo'}
                     finish={before.settings.length}
                     opponentTimes={opponent ?? []}
-                    fastMs={before.settings.fastMs}
                     racer={companion ? <Dragon dragon={companion} size={3} hat={hat} /> : <span>🐉</span>}
                     opponent={
                       race === 'ghost' && companion ? (
@@ -475,7 +484,7 @@ function Home({ data, onPlay, onMap, onHatchery, onShop, onWorld, onBadges, onSw
   const todays = questsFor(quests.day, data.name);
   const boss = data.stats.sessions > 0 && isBossGame(data.stats.sessions);
   const place = placeById(data.place);
-  const title = speedTitle(data.progress, ALL_FACTS, data.settings.fastMs);
+  const title = speedTitle(data.progress, ALL_FACTS);
   const rival = RIVALS[nextRival(data.race)];
   const course = COURSES.find((c) => c.id === data.settings.course) ?? COURSES[COURSES.length - 1];
   return (
@@ -517,7 +526,7 @@ function Home({ data, onPlay, onMap, onHatchery, onShop, onWorld, onBadges, onSw
             </span>
             <span>
               <strong>{title.name}</strong>
-              <small>{title.next ? `Answer faster to become a ${title.next}.` : 'The fastest title there is!'}</small>
+              <small>{title.needsHard ? `Fast enough for ${title.next}! Practice some Hard facts to earn it.` : title.next ? `Answer faster to become a ${title.next}.` : 'The fastest title there is!'}</small>
             </span>
           </div>
         )}
@@ -621,7 +630,7 @@ function Home({ data, onPlay, onMap, onHatchery, onShop, onWorld, onBadges, onSw
               <button type="button" className="mode-pill" onClick={() => onPlay('race', 'rival')}>
                 🐉 Rival
               </button>
-              <button type="button" className="mode-pill" onClick={() => onPlay('race', 'ghost')} disabled={!data.race.ghosts[course.id]?.length} title={data.race.ghosts[course.id]?.length ? undefined : 'Race this course once to make a ghost'}>
+              <button type="button" className="mode-pill" onClick={() => onPlay('race', 'ghost')} disabled={!data.race.ghosts[ghostKey(course.id, data.settings.length)]?.length} title={data.race.ghosts[ghostKey(course.id, data.settings.length)]?.length ? undefined : `Race a ${data.settings.length}-question ${course.name} race once to make a ghost`}>
                 👻 Ghost
               </button>
               <button type="button" className="mode-pill" onClick={() => onPlay('race', 'solo')}>
@@ -839,7 +848,7 @@ function RaceSummary({ result }: { result: RaceResult }) {
     <>
       <p className="match-result">{headline}</p>
       <p className="muted">{COURSES.find((c) => c.id === result.course)?.icon} {COURSES.find((c) => c.id === result.course)?.name} course</p>
-      {result.won && <p className="snack-total">🍖 +{RACE_WIN_BONUS} bonus snacks for the win!</p>}
+      {result.won && <p className="snack-total">🍖 +{result.bonus} bonus snacks for the win!</p>}
       {next && <p className="league-result">⬆️ New rival unlocked: {next.name}.</p>}
       {result.newBest && <p className="league-result">⭐ Your best race pace ever!</p>}
     </>

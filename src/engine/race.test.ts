@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { ALL_FACTS, factById } from './facts';
-import { courseFacts, courseOf, emptyRace, fairTimeMs, finishRace, flapsBy, ghostFlaps, medalFor, nextRival, racePace, rivalFlaps, RIVALS, speedTitle } from './race';
+import { courseFacts, courseOf, emptyRace, fairTimeMs, finishRace, flapsBy, ghostFlaps, ghostKey, medalFor, migrateGhosts, nextRival, raceBonus, racePace, rivalFlaps, RIVALS, speedTitle } from './race';
 import { Progress } from './scheduler';
 import { buildSession } from './session';
 
@@ -17,12 +17,8 @@ describe('fair times', () => {
   it('never gives more time than the speed goal', () => {
     for (const fact of ALL_FACTS) {
       expect(fairTimeMs(fact)).toBeLessThanOrEqual(3000);
-      expect(fairTimeMs(fact, 2000)).toBeLessThanOrEqual(2000);
     }
     expect(fairTimeMs(f('mul:7:8'))).toBe(3000);
-  });
-  it('scales with the speed goal', () => {
-    expect(fairTimeMs(f('mul:6:8'), 6000)).toBe(2 * fairTimeMs(f('mul:6:8'), 3000));
   });
 });
 
@@ -49,28 +45,48 @@ describe('racing', () => {
     expect(ghostFlaps([1000, 2000], 4)).toEqual([1000, 2000, 1500, 1500]);
   });
 
-  it('flaps rivals around their pace', () => {
-    const times = rivalFlaps(1, 2000, 50, () => 0.5);
-    expect(times).toHaveLength(50);
-    expect(times[0]).toBe(Math.round(2000 * (0.75 + 0.5 * 0.55)));
-    for (const t of rivalFlaps(1.5, 2000, 50)) {
-      expect(t).toBeGreaterThanOrEqual(2000 * 1.5 * 0.75 - 1);
-      expect(t).toBeLessThanOrEqual(2000 * 1.5 * 1.3 + 1);
+  it('flaps rivals at their pace on the very facts the kid gets', () => {
+    const times = rivalFlaps(1, [...easy, ...hard], 6, () => 0.5);
+    expect(times).toHaveLength(6);
+    expect(times[0]).toBe(Math.round(fairTimeMs(easy[0]) * (0.75 + 0.5 * 0.55)));
+    expect(times[3]).toBe(Math.round(fairTimeMs(hard[0]) * (0.75 + 0.5 * 0.55)));
+    for (const [i, t] of rivalFlaps(1.5, hard, 3).entries()) {
+      expect(t).toBeGreaterThanOrEqual(fairTimeMs(hard[i]) * 1.5 * 0.75 - 1);
+      expect(t).toBeLessThanOrEqual(fairTimeMs(hard[i]) * 1.5 * 1.3 + 1);
     }
+  });
+
+  it('is slower against a hard draw of facts than an easy one', () => {
+    const sum = (xs: number[]) => xs.reduce((a, b) => a + b, 0);
+    expect(sum(rivalFlaps(1, hard, 3, () => 0.5))).toBeGreaterThan(sum(rivalFlaps(1, easy, 3, () => 0.5)));
+  });
+
+  it('pays a bigger bonus for a longer race', () => {
+    expect([10, 20, 30].map(raceBonus)).toEqual([5, 10, 15]);
+    const flaps = (n: number) => Array.from({ length: n }, () => ({ fact: hard[0], ms: 100 }));
+    expect(finishRace(emptyRace(), 'solo', 'hard', 30, flaps(30), []).result.bonus).toBe(15);
+    expect(finishRace(emptyRace(), 'rival', 'hard', 10, flaps(10), [1]).result.bonus).toBe(0);
+  });
+
+  it('keeps a ghost for each course and length, and moves old ghosts by their length', () => {
+    expect(ghostKey('hard', 20)).toBe('hard:20');
+    expect(migrateGhosts({ hard: [1, 2, 3], 'easy:10': [4], mixed: [] })).toEqual({ 'hard:3': [1, 2, 3], 'easy:10': [4] });
+    expect(migrateGhosts(undefined)).toEqual({});
   });
 
   it('unlocks the next rival on a win, and saves a ghost for that course', () => {
     const flaps = hard.map((fact) => ({ fact, ms: 1000 }));
-    const { race, result } = finishRace(emptyRace(), 'rival', 'hard', flaps, [9000, 9000, 9000]);
+    const { race, result } = finishRace(emptyRace(), 'rival', 'hard', 3, flaps, [9000, 9000, 9000]);
     expect(result.won).toBe(true);
     expect(result.rival).toBe(RIVALS[0].name);
     expect(result.margin).toBe(24);
     expect(race.rivalsBeaten).toBe(1);
     expect(nextRival(race)).toBe(1);
-    expect(race.ghosts.hard).toEqual([1000, 1000, 1000]);
-    expect(race.ghosts.easy).toBeUndefined();
+    expect(race.ghosts['hard:3']).toEqual([1000, 1000, 1000]);
+    expect(race.ghosts['easy:3']).toBeUndefined();
+    expect(result.bonus).toBe(2);
     expect(result.newBest).toBe(true);
-    const lost = finishRace(race, 'rival', 'hard', flaps, [10]);
+    const lost = finishRace(race, 'rival', 'hard', 3, flaps, [10]);
     expect(lost.result.won).toBe(false);
     expect(lost.race.rivalsBeaten).toBe(1);
     expect(lost.result.newBest).toBe(false);
@@ -80,7 +96,7 @@ describe('racing', () => {
     expect(medalFor(0.9)).toBe('gold');
     expect(medalFor(1.2)).toBe('silver');
     expect(medalFor(2)).toBe('bronze');
-    const solo = finishRace(emptyRace(), 'solo', 'mixed', [{ fact: hard[0], ms: 100 }], []);
+    const solo = finishRace(emptyRace(), 'solo', 'mixed', 1, [{ fact: hard[0], ms: 100 }], []);
     expect(solo.result.won).toBe(true);
     expect(solo.race.golds).toBe(1);
   });
@@ -116,7 +132,7 @@ describe('speed title', () => {
   const at = (pace: number, ids: string[]): Progress =>
     Object.fromEntries(ids.map((id) => [id, { box: 3, due: 0, seen: 4, correct: 4, avgMs: fairTimeMs(f(id)) * pace, lastSeen: 0 }]));
   const easyIds = ALL_FACTS.filter((x) => x.op === 'mul' && (x.a === 1 || x.a === 2)).map((x) => x.id);
-  const hardIds = ALL_FACTS.filter((x) => x.op === 'mul' && (x.a === 7 || x.a === 8)).map((x) => x.id);
+  const hardIds = ALL_FACTS.filter((x) => x.op === 'mul' && courseOf(x) === 'hard').map((x) => x.id);
 
   it('waits until there are enough facts', () => {
     expect(speedTitle(at(1, easyIds.slice(0, 3)), ALL_FACTS)).toBeNull();
@@ -125,10 +141,20 @@ describe('speed title', () => {
     expect(speedTitle(at(1, easyIds), ALL_FACTS)?.name).toBe('Sky Dasher');
     expect(speedTitle(at(1, hardIds), ALL_FACTS)?.name).toBe('Sky Dasher');
   });
+  it('needs some Hard facts for the top two titles', () => {
+    const easyOnly = speedTitle(at(0.7, easyIds), ALL_FACTS);
+    expect(easyOnly?.name).toBe('Sky Dasher');
+    expect(easyOnly?.needsHard).toBe(true);
+    expect(easyOnly?.next).toBe('Storm Rider');
+    const someHard = speedTitle({ ...at(0.7, easyIds), ...at(0.7, hardIds.slice(0, 10)) }, ALL_FACTS);
+    expect(someHard?.name).toBe('Comet Wing');
+    expect(someHard?.needsHard).toBe(false);
+    expect(speedTitle({ ...at(0.7, easyIds), ...at(0.7, hardIds.slice(0, 9)) }, ALL_FACTS)?.needsHard).toBe(true);
+  });
   it('goes from slowest to fastest', () => {
     expect(speedTitle(at(3, easyIds), ALL_FACTS)?.name).toBe('Egg Wobbler');
-    expect(speedTitle(at(0.7, easyIds), ALL_FACTS)?.name).toBe('Comet Wing');
-    expect(speedTitle(at(0.7, easyIds), ALL_FACTS)?.next).toBeUndefined();
+    expect(speedTitle(at(0.7, hardIds), ALL_FACTS)?.name).toBe('Comet Wing');
+    expect(speedTitle(at(0.7, hardIds), ALL_FACTS)?.next).toBeUndefined();
     expect(speedTitle(at(1, easyIds), ALL_FACTS)?.next).toBe('Storm Rider');
   });
 });
