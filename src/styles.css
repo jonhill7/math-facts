@@ -2162,8 +2162,8 @@ h1 {
   position: absolute;
   top: 34px;
   bottom: 0;
-  right: 6%;
   width: 12px;
+  transform: translateX(-50%);
   background: repeating-conic-gradient(#14213d 0 25%, #fff 0 50%) 0 0 / 12px 12px;
   opacity: 0.85;
 }
