@@ -77,6 +77,12 @@ export const sounds = {
     const base = stage === 'grown' ? 330 : stage === 'young' ? 520 : 780;
     notes([base, base * 1.25, base * 1.5], 0.06, 0.1, 'triangle');
   },
+  drum: () => {
+    thump();
+    thump(0.2);
+    thump(0.3);
+    notes([523, 659, 784], 0.12, 0.12, 'square');
+  },
   wobble: () => notes([392, 349, 392], 0.08, 0.08, 'triangle'),
   hatch: () => notes([523, 784, 1047, 1319, 1568], 0.1, 0.35),
 };

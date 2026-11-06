@@ -34,9 +34,11 @@ interface Props {
   onName: (id: number, name: string) => void;
   onBack: () => void;
   hat?: string;
+  placed?: string[];
+  onShop?: () => void;
 }
 
-export function Hatchery({ hoard, snacksEarned, companion, names, onPick, onName, onBack, hat }: Props) {
+export function Hatchery({ hoard, snacksEarned, companion, names, onPick, onName, onBack, hat, placed, onShop }: Props) {
   const dragons = allDragons(hoard, snacksEarned);
   const nextEgg = nextEggIn(snacksEarned);
   const firstMissing = dragons.find((d) => d.stage === 'none');
@@ -48,7 +50,7 @@ export function Hatchery({ hoard, snacksEarned, companion, names, onPick, onName
         ← Back
       </button>
       <h2>Dragon hatchery</h2>
-      <Meadow dragons={dragons} names={names} companionId={companion.species.id} hat={hat} />
+      <Meadow dragons={dragons} names={names} companionId={companion.species.id} hat={hat} placed={placed} onShop={onShop} />
       <p className="muted">
         Your companion eats a snack for every right answer, and snacks level it up. Eggs hatch at level {STAGE_LEVEL.hatchling}, and a hatched dragon gives you
         its power in every game. Tap any egg or dragon to make it your companion.

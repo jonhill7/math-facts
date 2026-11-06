@@ -1,4 +1,4 @@
-import { balance, buy, Item, ITEMS, owns, ShopState, Slot, SLOT_NAMES, toggleEquip, GLOVE_FILTER, BALL_GLOW } from '../engine/shop';
+import { balance, buy, isOn, Item, ITEMS, owns, ShopState, Slot, SLOT_NAMES, toggleEquip, GLOVE_FILTER, BALL_GLOW } from '../engine/shop';
 import { DragonState } from '../engine/dragons';
 import { Dragon } from './Dragon';
 
@@ -11,7 +11,7 @@ interface Props {
   onBack: () => void;
 }
 
-const SLOTS: Slot[] = ['hat', 'gloves', 'ball', 'lantern'];
+const SLOTS: Slot[] = ['hat', 'meadow', 'gloves', 'ball', 'lantern'];
 
 // How an item looks on its button: gloves and balls show their tint or glow.
 function ItemIcon({ item }: { item: Item }) {
@@ -39,10 +39,11 @@ export function Shop({ shop, snacks, trophies, companion, onChange, onBack }: Pr
       {SLOTS.map((slot) => (
         <section key={slot} className="shop-section">
           <h3>{SLOT_NAMES[slot]}</h3>
+          {slot === 'meadow' && <p className="muted shop-note">Things for your dragons to play with in the hatchery. Put out as many as you like.</p>}
           <div className="shop-items">
             {ITEMS.filter((i) => i.slot === slot).map((item) => {
               const have = owns(shop, item, trophies);
-              const on = shop.equipped[slot] === item.id;
+              const on = isOn(shop, item);
               const canBuy = !have && !item.trophy && left >= item.price;
               return (
                 <button
@@ -62,8 +63,9 @@ export function Shop({ shop, snacks, trophies, companion, onChange, onBack }: Pr
                     <ItemIcon item={item} />
                   </span>
                   <strong>{item.name}</strong>
+                  {item.desc && <small className="shop-desc">{item.desc}</small>}
                   <small>
-                    {on ? 'Wearing ✓' : have ? 'Tap to use' : item.trophy ? 'Win the league to unlock' : `🍖 ${item.price}`}
+                    {on ? (slot === 'meadow' ? 'In the meadow ✓' : 'Wearing ✓') : have ? 'Tap to use' : item.trophy ? 'Win the league to unlock' : `🍖 ${item.price}`}
                   </small>
                 </button>
               );

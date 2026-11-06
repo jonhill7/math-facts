@@ -1,7 +1,7 @@
 // The snack shop. Snacks the dragon has eaten can also be spent on gear.
 // Spending never shrinks the dragon: levels count every snack ever eaten.
 
-export type Slot = 'gloves' | 'ball' | 'lantern' | 'hat';
+export type Slot = 'gloves' | 'ball' | 'lantern' | 'hat' | 'meadow';
 
 export interface Item {
   id: string;
@@ -10,6 +10,7 @@ export interface Item {
   icon: string;
   price: number;
   trophy?: boolean; // unlocked by winning the league instead of buying
+  desc?: string; // what it does, for things that change how dragons behave
 }
 
 export const SLOT_NAMES: Record<Slot, string> = {
@@ -17,6 +18,7 @@ export const SLOT_NAMES: Record<Slot, string> = {
   gloves: 'Keeper gloves',
   ball: 'Ball trails',
   lantern: 'Lantern colors',
+  meadow: 'Hatchery meadow',
 };
 
 export const ITEMS: Item[] = [
@@ -33,15 +35,26 @@ export const ITEMS: Item[] = [
   { id: 'lantern-blue', slot: 'lantern', name: 'Blue beam', icon: '🔵', price: 60 },
   { id: 'lantern-green', slot: 'lantern', name: 'Green beam', icon: '🟢', price: 60 },
   { id: 'lantern-pink', slot: 'lantern', name: 'Pink beam', icon: '🩷', price: 60 },
+  // Things for the hatchery meadow. Unlike gear, you can have all of them out at once.
+  { id: 'meadow-berries', slot: 'meadow', name: 'Berry bush', icon: '🫐', price: 50, desc: 'Hungry dragons stop by for a munch.' },
+  { id: 'meadow-pond', slot: 'meadow', name: 'Splash pond', icon: '💦', price: 80, desc: 'Dragons splash about. Octofrost makes ice!' },
+  { id: 'meadow-cloud', slot: 'meadow', name: 'Cloud bed', icon: '☁️', price: 70, desc: 'Sleepy dragons curl up on it for long naps together.' },
+  { id: 'meadow-campfire', slot: 'meadow', name: 'Campfire', icon: '🔥', price: 90, desc: 'Lights up the night. Dragons stay up to gather round it.' },
+  { id: 'meadow-trampoline', slot: 'meadow', name: 'Trampoline', icon: '🤸', price: 110, desc: 'One dragon at a time bounces sky high.' },
+  { id: 'meadow-drum', slot: 'meadow', name: 'Party drum', icon: '🥁', price: 130, desc: 'Tap it and every awake dragon starts dancing.' },
 ];
 
 export interface ShopState {
   owned: string[];
   equipped: Partial<Record<Slot, string>>;
+  placed: string[]; // meadow things out in the hatchery (any number at once)
   spent: number;
 }
 
-export const emptyShop = (): ShopState => ({ owned: [], equipped: {}, spent: 0 });
+export const emptyShop = (): ShopState => ({ owned: [], equipped: {}, placed: [], spent: 0 });
+
+// Whether an item is in use: worn gear, or a meadow thing that's out.
+export const isOn = (shop: ShopState, item: Item) => (item.slot === 'meadow' ? shop.placed.includes(item.id) : shop.equipped[item.slot] === item.id);
 
 export const balance = (snacks: number, shop: ShopState) => snacks - shop.spent;
 
@@ -55,12 +68,15 @@ export function owns(shop: ShopState, item: Item, trophies: number): boolean {
 
 export function buy(shop: ShopState, item: Item, snacks: number): ShopState | null {
   if (item.trophy || shop.owned.includes(item.id) || balance(snacks, shop) < item.price) return null;
-  return { owned: [...shop.owned, item.id], equipped: { ...shop.equipped, [item.slot]: item.id }, spent: shop.spent + item.price };
+  const owned = [...shop.owned, item.id];
+  if (item.slot === 'meadow') return { ...shop, owned, placed: [...shop.placed, item.id], spent: shop.spent + item.price };
+  return { ...shop, owned, equipped: { ...shop.equipped, [item.slot]: item.id }, spent: shop.spent + item.price };
 }
 
-// Tap an equipped item to take it off again.
+// Tap an equipped item to take it off again (or put a meadow thing away).
 export function toggleEquip(shop: ShopState, item: Item): ShopState {
-  const on = shop.equipped[item.slot] === item.id;
+  const on = isOn(shop, item);
+  if (item.slot === 'meadow') return { ...shop, placed: on ? shop.placed.filter((id) => id !== item.id) : [...shop.placed, item.id] };
   return { ...shop, equipped: { ...shop.equipped, [item.slot]: on ? undefined : item.id } };
 }
 
