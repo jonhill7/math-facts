@@ -1963,15 +1963,15 @@ h1 {
   transform: translate(-50%, -50%);
   font-size: 1rem;
   filter: drop-shadow(0 3px 3px rgba(0, 0, 0, 0.3));
+  transition: left 0.45s cubic-bezier(0.3, 1.4, 0.6, 1);
 }
 
 .sky-racer-me {
   z-index: 2;
-  transition: left 0.45s cubic-bezier(0.3, 1.4, 0.6, 1);
 }
 
-.sky-racer-them {
-  transition: left 0.12s linear;
+.sky-body {
+  display: block;
 }
 
 .sky-lane-ghost .sky-racer {
@@ -1979,16 +1979,17 @@ h1 {
   filter: grayscale(0.6) drop-shadow(0 0 6px #fff);
 }
 
+/* Every racer hops up and forward on each flap. */
 .sky-flap {
   animation: sky-flap 0.45s ease-out;
 }
 
 @keyframes sky-flap {
   30% {
-    transform: translate(-50%, -80%) rotate(-8deg);
+    transform: translateY(-30%) rotate(-8deg);
   }
   100% {
-    transform: translate(-50%, -50%);
+    transform: none;
   }
 }
 
@@ -2029,4 +2030,34 @@ h1 {
 
 .speed-title-icon {
   font-size: 1.8rem;
+}
+
+/* Sky Race courses: pick how hard the facts are before racing. */
+.course-pills {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.course-pill {
+  padding: 5px 10px;
+  border: 2px solid rgba(255, 255, 255, 0.7);
+  border-radius: 999px;
+  background: transparent;
+  color: #fff;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.course-pill-on {
+  background: #fff;
+  color: #312e81;
+}
+
+.course-line {
+  opacity: 0.9;
 }

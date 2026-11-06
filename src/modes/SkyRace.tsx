@@ -1,16 +1,17 @@
 import { ReactNode, useEffect, useRef, useState } from 'react';
 import { StageProps } from '../components/PracticeSession';
 import { Confetti } from '../components/Confetti';
-import { fairTimeMs, Flap, opponentProgress, opponentTimes, RaceKind, STUMBLE } from '../engine/race';
+import { fairTimeMs, Flap, flapsBy, RaceKind, STUMBLE } from '../engine/race';
 import { sounds } from '../sound';
 
 // Sky Race: every right answer is a flap toward the finish line. A miss is a
-// stumble that costs time. The opponent (your ghost or a rival dragon) flies
-// at a steady pace, slowing down on hard facts just like a kid would.
+// stumble that costs time. The opponent (your ghost or a rival dragon) flaps
+// on its own timeline: the ghost exactly as the kid flapped last time, a rival
+// at its pace. Both hop forward one flap at a time, like the kid.
 interface Props extends StageProps {
   kind: RaceKind;
   finish: number; // right answers to reach the finish line
-  paces: number | number[]; // the opponent's pace, or the ghost's pace on each flap
+  opponentTimes: number[]; // ms the opponent takes for each flap
   fastMs: number;
   racer: ReactNode; // the kid's dragon
   opponent?: ReactNode; // the ghost or rival dragon
@@ -18,7 +19,7 @@ interface Props extends StageProps {
   onFlaps: (flaps: Flap[]) => void;
 }
 
-export function SkyRace({ last, fact, turn, kind, finish, paces, fastMs, racer, opponent, opponentName, onFlaps }: Props) {
+export function SkyRace({ last, turn, kind, finish, opponentTimes, fastMs, racer, opponent, opponentName, onFlaps }: Props) {
   const [flaps, setFlaps] = useState<Flap[]>([]);
   const [stars, setStars] = useState(0); // flaps faster than the fair time
   const [message, setMessage] = useState<{ id: number; text: string; kind: 'good' | 'great' | 'oops' } | null>(null);
@@ -63,14 +64,7 @@ export function SkyRace({ last, fact, turn, kind, finish, paces, fastMs, racer, 
 
   const kidMs = flaps.reduce((t, f) => t + f.ms, 0) + pending.current;
   const elapsed = kidMs + (frozen.current ? 0 : Date.now() - shownAt.current);
-  const done = opponentTimes(
-    flaps.map((f) => f.fact),
-    paces,
-    fastMs,
-  );
-  const nextPace = Array.isArray(paces) ? (paces[flaps.length] ?? (paces.length ? paces.reduce((a, b) => a + b, 0) / paces.length : 1)) : paces;
-  const upcoming = fact ? fairTimeMs(fact, fastMs) * nextPace : 2000;
-  const them = opponent ? opponentProgress(done, upcoming, elapsed, finish) : 0;
+  const them = opponent ? flapsBy(opponentTimes, elapsed) : 0;
   const finished = flaps.length >= finish;
   const pos = (n: number) => `${6 + (Math.min(n, finish) / finish) * 80}%`;
   const lead = flaps.length - them;
@@ -82,7 +76,7 @@ export function SkyRace({ last, fact, turn, kind, finish, paces, fastMs, racer, 
           🏁 {Math.min(flaps.length, finish)} / {finish}
         </span>
         <span>⭐ {stars}</span>
-        {opponent && <span>{lead >= 0.5 ? 'You lead!' : lead <= -0.5 ? `${opponentName} leads` : 'Neck and neck!'}</span>}
+        {opponent && <span>{lead > 0 ? 'You lead!' : lead < 0 ? `${opponentName} leads` : 'Neck and neck!'}</span>}
       </div>
       <span className="sky-cloud sky-cloud-1" aria-hidden="true">
         ☁️
@@ -93,14 +87,18 @@ export function SkyRace({ last, fact, turn, kind, finish, paces, fastMs, racer, 
       <div className="sky-finish" aria-hidden="true" />
       {opponent && (
         <div className={`sky-lane sky-lane-them ${kind === 'ghost' ? 'sky-lane-ghost' : ''}`} aria-hidden="true">
-          <div className="sky-racer sky-racer-them" style={{ left: pos(them) }}>
-            {opponent}
+          <div className="sky-racer" style={{ left: pos(them) }}>
+            <span key={`t${them}`} className={`sky-body ${them ? 'sky-flap' : ''}`}>
+              {opponent}
+            </span>
           </div>
         </div>
       )}
       <div className={`sky-lane sky-lane-me ${opponent ? '' : 'sky-lane-solo'}`}>
-        <div key={`r${flaps.length}`} className={`sky-racer sky-racer-me ${flaps.length ? 'sky-flap' : ''}`} style={{ left: pos(flaps.length) }} aria-label={`${flaps.length} of ${finish} flaps`}>
-          {racer}
+        <div className="sky-racer sky-racer-me" style={{ left: pos(flaps.length) }} aria-label={`${flaps.length} of ${finish} flaps`}>
+          <span key={`r${flaps.length}`} className={`sky-body ${flaps.length ? 'sky-flap' : ''}`}>
+            {racer}
+          </span>
         </div>
       </div>
       {finished && <Confetti count={40} />}

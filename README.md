@@ -19,10 +19,12 @@ The practice happens inside two games:
   monster creep closer until... tickle attack!
 
 - **Sky Race** 🏁: every right answer is a flap toward the finish line.
-  Race a ladder of 7 rival dragons, your own ghost from last time, or fly
-  solo for a gold, silver or bronze medal. Races are fair across easy and
-  hard facts: every fact has a fair time (1 × 1 is quicker than 7 × 8), and
-  rivals and ghosts slow down on hard facts too.
+  Pick a course (Easy, Medium, Hard or Mixed facts), then race a ladder of
+  7 rival dragons, your own ghost from last time on that course, or fly solo
+  for a gold, silver or bronze medal. The ghost replays every flap at the
+  exact time the kid made it. Every fact has a fair time (1 × 1 is quicker
+  than 7 × 8, and none is over the speed goal), which sets solo medals and
+  rival speeds.
 
 Other things kids and parents can do:
 

@@ -81,7 +81,7 @@ export function normalizeSave(name: string, raw: Partial<SaveData> | undefined):
     quests: { ...base.quests, ...raw.quests },
     shop: { ...base.shop, ...raw.shop },
     place: raw.place ?? base.place,
-    race: { ...base.race, ...raw.race },
+    race: { ...base.race, ...raw.race, ghosts: raw.race?.ghosts ?? {} },
   };
 }
 
