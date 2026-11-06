@@ -428,6 +428,17 @@ function WhoIsPlaying({ onGuest, onError }: { onGuest: (name: string) => void; o
 
   return (
     <div className="who">
+      <div className="who-hero" aria-hidden="true">
+        <span className="who-hero-egg">
+          <Dragon dragon={{ ...rivalDragon(8), stage: 'egg' }} size={3.6} />
+        </span>
+        <span className="who-hero-big">
+          <Dragon dragon={rivalDragon(7)} size={6.4} />
+        </span>
+        <span className="who-hero-small">
+          <Dragon dragon={{ ...rivalDragon(2), stage: 'hatchling' }} size={4.2} />
+        </span>
+      </div>
       <h1>
         Math Facts <span aria-hidden="true">⚽🔦</span>
       </h1>

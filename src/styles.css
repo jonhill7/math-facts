@@ -3963,3 +3963,454 @@ h1 {
   from { transform: translateX(-4%); }
   to { transform: translateX(4%); }
 }
+
+/* ---------- Art pass ----------
+   A layer of polish over everything above: softer light and depth, smoother
+   bars, a friendly hover lift, clearer keyboard focus, and richer scenery
+   in the games. Layouts and sizes stay the same. */
+
+:root {
+  --shine: rgba(255, 255, 255, 0.55); /* light along the top of buttons and cards */
+  --focus: #fca311;
+  --bar: linear-gradient(90deg, #fbbf24, #f97316);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --shine: rgba(255, 255, 255, 0.06);
+  }
+}
+
+/* A clear ring for keyboard players, on everything they can press. */
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+summary:focus-visible,
+a:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+
+/* Each screen fades in. Opacity only, so fixed confetti stays put. */
+.app > * {
+  animation: screen-in 0.25s ease-out;
+}
+
+@keyframes screen-in {
+  from {
+    opacity: 0;
+  }
+}
+
+/* Headings: a touch more weight and a tighter fit. */
+h1,
+h2,
+h3 {
+  letter-spacing: 0.005em;
+  line-height: 1.2;
+}
+
+h2 {
+  font-weight: 700;
+}
+
+/* Light along the top edge of buttons and cards, for a soft rounded feel. */
+.big-button,
+.key,
+.chip,
+.shop-item,
+.dragon-card,
+.stat-tile,
+.quests,
+.note,
+.streak,
+.companion,
+.mode-pill,
+.badge-card,
+.mute-button {
+  background-image: linear-gradient(180deg, var(--shine), transparent 55%);
+}
+
+.big-button:not(.secondary):not(.google),
+.key-go {
+  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.22), transparent 60%);
+}
+
+/* A friendly lift under the mouse, on computers only. */
+@media (hover: hover) {
+  .big-button:hover:not(:disabled),
+  .chip:hover:not(:disabled),
+  .mode-card:hover,
+  .mode-pill:hover:not(:disabled),
+  .companion:hover,
+  .shop-item:hover:not(:disabled),
+  .dragon-card:hover:not(:disabled),
+  .place:hover:not(:disabled),
+  .mute-button:hover {
+    transform: translateY(-2px);
+    filter: brightness(1.04);
+  }
+
+  .key:hover:not(:disabled) {
+    filter: brightness(1.03);
+  }
+
+  .mode-card:hover .mode-emoji,
+  .shop-item:hover:not(:disabled) .shop-icon {
+    animation: art-bob 0.6s ease-in-out;
+  }
+}
+
+.big-button,
+.chip,
+.mode-card,
+.mode-pill,
+.shop-item,
+.dragon-card,
+.place,
+.mute-button {
+  transition: transform 0.12s ease-out, box-shadow 0.08s, filter 0.12s;
+}
+
+.mode-emoji,
+.shop-icon {
+  display: inline-block;
+}
+
+@keyframes art-bob {
+  40% {
+    transform: translateY(-5px) rotate(-6deg);
+  }
+  70% {
+    transform: translateY(1px) rotate(3deg);
+  }
+}
+
+/* Game cards: a soft light from the top left, a second smaller bubble, and a
+   little texture for each game: mown grass, night stars, and sky. */
+.mode-card::before {
+  content: '';
+  position: absolute;
+  left: -18px;
+  bottom: -26px;
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.06);
+  pointer-events: none;
+}
+
+.mode-card.soccer {
+  background:
+    radial-gradient(120% 90% at 0% 0%, rgba(255, 255, 255, 0.16), transparent 60%),
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.05) 0 26px, transparent 26px 52px),
+    linear-gradient(160deg, var(--pitch), #1f6b29);
+}
+
+.mode-card.lantern {
+  background:
+    radial-gradient(80% 70% at 18% 18%, rgba(253, 224, 71, 0.22), transparent 60%),
+    radial-gradient(1.5px 1.5px at 70% 30%, rgba(255, 255, 255, 0.85), transparent),
+    radial-gradient(1px 1px at 85% 60%, rgba(255, 255, 255, 0.7), transparent),
+    radial-gradient(1.5px 1.5px at 55% 82%, rgba(255, 255, 255, 0.55), transparent),
+    radial-gradient(1px 1px at 38% 62%, rgba(255, 255, 255, 0.5), transparent),
+    linear-gradient(160deg, #312e81, var(--night));
+}
+
+.mode-card.race {
+  background:
+    radial-gradient(120% 90% at 0% 0%, rgba(255, 255, 255, 0.2), transparent 55%),
+    radial-gradient(30% 22% at 78% 78%, rgba(255, 255, 255, 0.14), transparent 70%),
+    linear-gradient(160deg, #38bdf8, #4338ca);
+}
+
+/* Bars fill with a warm gradient and a shiny top. */
+.progress-fill,
+.dragon-meter > span,
+.quest-bar span {
+  background: var(--bar);
+  border-radius: 999px;
+  box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.35);
+}
+
+.dragon-meter > span,
+.quest-bar span {
+  transition: width 0.4s ease-out;
+}
+
+.progress-bar,
+.dragon-meter,
+.quest-bar {
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.12);
+}
+
+/* Dragons: drawn shapes get a crisp soft edge wherever they appear. */
+.dragon {
+  overflow: visible;
+}
+
+.companion .dragon,
+.dragon-card .dragon,
+.shop-top .dragon {
+  filter: drop-shadow(0 2px 1px rgba(0, 0, 0, 0.12));
+}
+
+.dragon-card-companion {
+  background-image: radial-gradient(90% 60% at 50% 0%, rgba(252, 163, 17, 0.16), transparent 70%);
+}
+
+/* Undiscovered eggs: a calmer card so the dragons you have stand out. */
+.dragon-card:disabled {
+  background: transparent;
+  border-style: dashed;
+}
+
+/* Shop: owned and worn things glow a little. */
+.shop-item-on {
+  background-image: radial-gradient(90% 70% at 50% 0%, rgba(252, 163, 17, 0.22), transparent 70%);
+}
+
+.shop-icon {
+  filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.18));
+}
+
+/* World tour: open places get a soft light, locked ones look misty. */
+.place:not(:disabled) {
+  background-image: radial-gradient(100% 120% at 0% 0%, rgba(255, 255, 255, 0.14), transparent 60%);
+}
+
+.place:disabled {
+  background-image: repeating-linear-gradient(135deg, rgba(255, 255, 255, 0.16) 0 10px, transparent 10px 20px);
+}
+
+.place:disabled .place-emoji {
+  opacity: 0.6;
+  filter: grayscale(0.4);
+}
+
+.place-emoji {
+  filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.25));
+}
+
+/* Stat tiles: icons sit a little higher off the card. */
+.stat-icon {
+  display: inline-block;
+  filter: drop-shadow(0 2px 1px rgba(0, 0, 0, 0.15));
+}
+
+/* ---------- Start screen ---------- */
+.who-hero {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 4px;
+  height: 120px;
+  margin: 8px 0 4px;
+  border-radius: 24px;
+  background:
+    radial-gradient(60% 40% at 50% 100%, rgba(122, 186, 90, 0.45), transparent 70%),
+    radial-gradient(70% 90% at 50% 0%, rgba(252, 163, 17, 0.14), transparent 70%);
+}
+
+.who-hero > span {
+  display: inline-block;
+  line-height: 0;
+  animation: art-float 3.2s ease-in-out infinite;
+}
+
+.who-hero-egg {
+  animation-delay: -1.2s !important;
+  transform-origin: 50% 100%;
+  animation-name: art-wobble !important;
+}
+
+.who-hero-small {
+  animation-delay: -2s !important;
+}
+
+@keyframes art-float {
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+@keyframes art-wobble {
+  0%,
+  70%,
+  100% {
+    transform: none;
+  }
+  78% {
+    transform: rotate(-8deg);
+  }
+  86% {
+    transform: rotate(7deg);
+  }
+  93% {
+    transform: rotate(-3deg);
+  }
+}
+
+.who h1 {
+  text-align: center;
+}
+
+.who > .muted {
+  text-align: center;
+}
+
+.guest-form input {
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.guest-form input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(252, 163, 17, 0.25);
+  outline: none;
+}
+
+/* ---------- Penalty pitch ---------- */
+/* Stands with a crowd behind the goal, a penalty spot on the
+   grass, and soft light toward the middle. Colors follow the place's pitch. */
+.pitch {
+  isolation: isolate;
+  box-shadow: inset 0 0 60px rgba(0, 0, 0, 0.28);
+}
+
+.pitch .scoreboard {
+  position: relative;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+}
+
+.pitch::before {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 36px;
+  background-color: #12301b;
+  background:
+    radial-gradient(circle, rgba(255, 255, 255, 0.2) 1.4px, transparent 1.9px) 0 2px / 9px 7px,
+    radial-gradient(circle, rgba(252, 163, 17, 0.28) 1.4px, transparent 1.9px) 4px 5px / 13px 9px,
+    linear-gradient(180deg, color-mix(in srgb, var(--pitch-dark) 35%, #0b1020), color-mix(in srgb, var(--pitch-dark) 60%, #0b1020));
+  box-shadow: 0 3px 0 rgba(255, 255, 255, 0.12);
+}
+
+.pitch::after {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  top: 36px;
+  background:
+    radial-gradient(ellipse 7px 3px at 50% calc(82% + 8px), rgba(255, 255, 255, 0.7) 90%, transparent),
+    radial-gradient(ellipse 60% 70% at 50% 45%, rgba(255, 255, 255, 0.1), transparent 70%);
+}
+
+.pitch .goal {
+  filter: drop-shadow(0 4px 2px rgba(0, 0, 0, 0.25));
+}
+
+.pitch .ball,
+.pitch .keeper,
+.pitch .my-keeper,
+.pitch .shooter {
+  filter: drop-shadow(0 3px 2px rgba(0, 0, 0, 0.3));
+}
+
+/* ---------- Sky Race ---------- */
+/* Faraway hills along the bottom and a warm haze, so the sky has depth. */
+.sky {
+  isolation: isolate;
+  box-shadow: inset 0 0 40px rgba(20, 60, 120, 0.25);
+}
+
+.sky .scoreboard {
+  position: relative;
+  text-shadow: 0 1px 2px rgba(20, 40, 80, 0.45);
+}
+
+.sky::before {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  left: -10%;
+  right: -10%;
+  bottom: 0;
+  height: 30%;
+  background:
+    radial-gradient(40% 90% at 20% 100%, #9fd6a0 98%, transparent 100%),
+    radial-gradient(35% 75% at 62% 100%, #b6e3b2 98%, transparent 100%),
+    radial-gradient(30% 60% at 92% 100%, #a7dba8 98%, transparent 100%);
+  opacity: 0.85;
+}
+
+.sky::after {
+  content: '';
+  position: absolute;
+  z-index: -2;
+  left: 6%;
+  top: 30%;
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 249, 196, 0.95) 0 30%, rgba(255, 236, 140, 0.4) 45%, transparent 70%);
+}
+
+.sky-finish {
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.5);
+  border-radius: 2px;
+}
+
+/* ---------- Lantern Hunt ---------- */
+.house {
+  box-shadow: inset 0 0 50px rgba(0, 0, 0, 0.5);
+}
+
+/* ---------- Hatchery meadow ---------- */
+/* A soft frame of light and shade, gentle highlights on the hills, and a
+   little texture in the grass. Works with every world tour place. */
+.meadow-frame::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 20px;
+  box-shadow: inset 0 0 50px rgba(0, 0, 0, 0.16), inset 0 2px 0 rgba(255, 255, 255, 0.25);
+  pointer-events: none;
+  z-index: 150;
+}
+
+.meadow-hill {
+  box-shadow: inset 0 8px 0 rgba(255, 255, 255, 0.12);
+}
+
+.meadow-grass::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 2px 5px at 20% 30%, rgba(0, 0, 0, 0.045) 90%, transparent) 0 0 / 71px 43px,
+    radial-gradient(ellipse 2px 5px at 60% 75%, rgba(0, 0, 0, 0.035) 90%, transparent) 0 0 / 97px 59px,
+    radial-gradient(ellipse 2px 5px at 70% 40%, rgba(255, 255, 255, 0.07) 90%, transparent) 0 0 / 83px 51px;
+}
+
+.meadow-sun {
+  box-shadow: 0 0 30px 10px rgba(253, 224, 71, 0.35);
+}
+
+.meadow-night .meadow-sun {
+  box-shadow: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app > *,
+  .who-hero > span,
+  .mode-card:hover .mode-emoji,
+  .shop-item:hover .shop-icon {
+    animation: none !important;
+  }
+}
