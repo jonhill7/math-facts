@@ -9,7 +9,7 @@ import { WorldTour } from './components/WorldTour';
 import { ABILITY_INFO, activeAbility, bossForgives, bossMultiplier, chargeNeeded, extraClockMs, powerSize, questMultiplier, snackBonus, startCharge } from './engine/abilities';
 import { bossFor, isBossGame, knownCount } from './engine/boss';
 import { ALL_FACTS, Fact } from './engine/facts';
-import { allDragons, companionFor, DragonState, feed, grewBetween, SNACKS_FAST, SNACKS_RIGHT, STAGE_LEVEL } from './engine/dragons';
+import { allDragons, companionFor, DragonState, feed, grewBetween, SNACKS_FAST, SNACKS_RIGHT, speciesById, STAGE_LEVEL } from './engine/dragons';
 import { afterMatch, League, LEAGUE, rivalFor, shotClockMs, slowSaveChance } from './engine/league';
 import { placeById } from './engine/places';
 import { bumpQuest, Quest, QUEST_REWARD, QuestKey, questsFor, today } from './engine/quests';
@@ -19,13 +19,20 @@ import { practiced, streakStatus } from './engine/streak';
 import { LanternHunt } from './modes/LanternHunt';
 import { MatchScore, PenaltyKicks, SoccerProps, StatKey } from './modes/PenaltyKicks';
 import { PenaltySaves } from './modes/PenaltySaves';
+import { SkyRace } from './modes/SkyRace';
+import { finishRace, Flap, nextRival, opponentTimes, RaceKind, RaceResult, RIVALS, speedTitle } from './engine/race';
 import { cloudEnabled, cloudStore, signInWithGoogle, signOutUser, User, watchUser } from './storage/firebase';
 import { listGuests, localStore } from './storage/localStore';
 import { ProgressStore, SaveData, Settings } from './storage/types';
 import { setMuted, sounds } from './sound';
 
-type Mode = 'soccer' | 'keeper' | 'lantern';
-const isSoccer = (m: Mode) => m !== 'lantern';
+type Mode = 'soccer' | 'keeper' | 'lantern' | 'race';
+const isSoccer = (m: Mode) => m === 'soccer' || m === 'keeper';
+
+export const RACE_WIN_BONUS = 10; // snacks for beating a ghost or rival, or a solo gold
+
+// A rival dragon drawn fully grown.
+const rivalDragon = (species: number): DragonState => ({ species: speciesById(species), stage: 'grown', xp: 0, level: 10, into: 0, needed: 1 });
 
 interface Boss {
   name: string;
@@ -38,8 +45,8 @@ interface Boss {
 type Screen =
   | { name: 'who' }
   | { name: 'home' }
-  | { name: 'play'; mode: Mode; before: SaveData; boss?: Boss }
-  | { name: 'done'; mode: Mode; boss?: Boss; summary: SessionSummary; grew: DragonState[]; rival: string; score: MatchScore; league?: { before: League; after: League }; quests: Quest[] }
+  | { name: 'play'; mode: Mode; before: SaveData; boss?: Boss; race?: RaceKind }
+  | { name: 'done'; mode: Mode; boss?: Boss; summary: SessionSummary; grew: DragonState[]; rival: string; score: MatchScore; league?: { before: League; after: League }; quests: Quest[]; race?: RaceKind; raceResult?: RaceResult }
   | { name: 'map' }
   | { name: 'hatchery' }
   | { name: 'shop' }
@@ -72,6 +79,10 @@ export default function App() {
   const latest = useRef<SaveData | null>(null);
   latest.current = data;
   const matchScore = useRef<MatchScore>({ us: 0, them: 0 });
+  const raceFlaps = useRef<Flap[]>([]);
+  const onFlaps = useCallback((flaps: Flap[]) => {
+    raceFlaps.current = flaps;
+  }, []);
   setMuted(data?.settings.muted ?? false);
 
   // Signed in with Google: load that kid's progress from the cloud.
@@ -162,14 +173,16 @@ export default function App() {
     setScreen({ name: 'who' });
   };
 
-  const play = (mode: Mode) => {
+  const play = (mode: Mode, race?: RaceKind) => {
     if (!data) return;
     matchScore.current = { us: 0, them: 0 };
-    const found = isBossGame(data.stats.sessions) ? bossFor(data.progress, mode === 'lantern') : undefined;
+    raceFlaps.current = [];
+    // No boss in a race: the boss waits for the next soccer or lantern game.
+    const found = mode !== 'race' && isBossGame(data.stats.sessions) ? bossFor(data.progress, mode === 'lantern') : undefined;
     const power = activeAbility(companionOf(data));
     const boss = found && { ...found, forgive: bossForgives(power), bonus: BOSS_BONUS * bossMultiplier(power) };
     if (boss) sounds.boss();
-    setScreen({ name: 'play', mode, before: data, boss });
+    setScreen({ name: 'play', mode, before: data, boss, race: mode === 'race' ? (race ?? 'solo') : undefined });
   };
 
   const companion = data ? companionOf(data) : undefined;
@@ -234,7 +247,8 @@ export default function App() {
         />
       )}
       {screen.name === 'play' && data && (() => {
-        const { mode, before, boss } = screen;
+        const { mode, before, boss, race } = screen;
+        const raceRival = RIVALS[nextRival(before.race)];
         const level = before.league.level;
         const rival = rivalFor(before.league);
         const clock = shotClockMs(before.settings.fastMs, level) + extraClockMs(ability);
@@ -256,15 +270,15 @@ export default function App() {
               onAnswer={onAnswer}
               holdAfterCorrect={mode === 'lantern'}
               topRight={muteButton}
-              buddy={companion && companion.stage !== 'none' ? <Dragon dragon={companion} size={3.4} hat={hat} /> : undefined}
+              buddy={mode !== 'race' && companion && companion.stage !== 'none' ? <Dragon dragon={companion} size={3.4} hat={hat} /> : undefined}
               fastMs={before.settings.fastMs}
               timeLimitMs={mode === 'keeper' ? clock : undefined}
-              pauseMs={mode === 'keeper' ? 1500 : undefined}
+              pauseMs={mode === 'keeper' ? 1500 : mode === 'race' ? 700 : undefined}
               chargeNeeded={chargeNeeded(ability)}
               startCharge={startCharge(ability)}
               snackBonus={snackBonus(ability)}
               boss={boss}
-              decor={place.emoji}
+              decor={mode === 'race' ? undefined : place.emoji}
               options={{ focusTable: before.settings.focusTable || undefined, length: before.settings.length }}
               onQuit={() => {
                 update((d) => ({ ...d }), true); // save right away
@@ -274,10 +288,18 @@ export default function App() {
                 const score = matchScore.current;
                 const won = isSoccer(mode) && score.us > score.them;
                 const league = isSoccer(mode) ? { before: before.league, after: afterMatch(before.league, won) } : undefined;
+                // Sky Race: who got to the finish first, against the same facts.
+                const flaps = raceFlaps.current;
+                const facts = flaps.map((f) => f.fact);
+                const fastMs = before.settings.fastMs;
+                const opponentMs =
+                  race === 'ghost' ? sum(opponentTimes(facts, before.race.ghost, fastMs)) : race === 'rival' ? sum(opponentTimes(facts, raceRival.pace, fastMs)) : Infinity;
+                const raced = race ? finishRace(before.race, race, flaps, opponentMs, fastMs) : undefined;
                 const finish = (d: SaveData): SaveData => {
                   let next: SaveData = {
                     ...d,
                     league: league ? league.after : d.league,
+                    race: raced ? raced.race : d.race,
                     stats: {
                       ...d.stats,
                       sessions: d.stats.sessions + 1,
@@ -287,6 +309,7 @@ export default function App() {
                     streak: practiced(d.streak, Date.now()),
                   };
                   next = eat(next, summary.boss === 'beaten' && boss ? boss.bonus : 0);
+                  if (raced?.result.won) next = eat(next, RACE_WIN_BONUS);
                   next = count(next, 'games');
                   if (won) next = count(next, 'matchesWon', 1, 'matchesWon');
                   return next;
@@ -297,10 +320,28 @@ export default function App() {
                 update(finish, true);
                 const doneBefore = today(before.quests, Date.now()).done;
                 const quests = questsFor(after.quests.day, after.name).filter((q) => after.quests.done.includes(q.id) && !doneBefore.includes(q.id));
-                setScreen({ name: 'done', mode, boss, summary, rival, score, league, quests, grew: grewBetween(allDragons(before.hoard, before.stats.snacks), allDragons(after.hoard, after.stats.snacks)) });
+                setScreen({ name: 'done', mode, boss, summary, rival, score, league, quests, race, raceResult: raced?.result, grew: grewBetween(allDragons(before.hoard, before.stats.snacks), allDragons(after.hoard, after.stats.snacks)) });
               }}
               stage={(props) =>
-                mode === 'soccer' ? (
+                mode === 'race' ? (
+                  <SkyRace
+                    {...props}
+                    kind={race ?? 'solo'}
+                    finish={before.settings.length}
+                    paces={race === 'ghost' ? before.race.ghost : raceRival.pace}
+                    fastMs={before.settings.fastMs}
+                    racer={companion ? <Dragon dragon={companion} size={3} hat={hat} /> : <span>🐉</span>}
+                    opponent={
+                      race === 'ghost' && companion ? (
+                        <Dragon dragon={companion} size={3} />
+                      ) : race === 'rival' ? (
+                        <Dragon dragon={rivalDragon(raceRival.species)} size={3} />
+                      ) : undefined
+                    }
+                    opponentName={race === 'ghost' ? 'Your ghost' : raceRival.name.split(' ')[0]}
+                    onFlaps={onFlaps}
+                  />
+                ) : mode === 'soccer' ? (
                   <PenaltyKicks {...props} {...soccer} slowSaveChance={ability === 'spiky' ? 0 : slowSaveChance(level)} />
                 ) : mode === 'keeper' ? (
                   <PenaltySaves {...props} {...soccer} timeLimitMs={clock} />
@@ -324,7 +365,7 @@ export default function App() {
         <Done
           screen={screen}
           names={data?.dragonNames ?? {}}
-          onAgain={() => play(screen.mode)}
+          onAgain={() => play(screen.mode, screen.race)}
           onHome={() => setScreen({ name: 'home' })}
         />
       )}
@@ -383,7 +424,7 @@ function WhoIsPlaying({ onGuest, onError }: { onGuest: (name: string) => void; o
 
 interface HomeProps {
   data: SaveData;
-  onPlay: (m: Mode) => void;
+  onPlay: (m: Mode, race?: RaceKind) => void;
   onMap: () => void;
   onHatchery: () => void;
   onShop: () => void;
@@ -403,6 +444,8 @@ function Home({ data, onPlay, onMap, onHatchery, onShop, onWorld, onSwitch, mute
   const todays = questsFor(quests.day, data.name);
   const boss = data.stats.sessions > 0 && isBossGame(data.stats.sessions);
   const place = placeById(data.place);
+  const title = speedTitle(data.progress, ALL_FACTS, data.settings.fastMs);
+  const rival = RIVALS[nextRival(data.race)];
   return (
     <div className="home">
       <div className="home-top">
@@ -431,6 +474,17 @@ function Home({ data, onPlay, onMap, onHatchery, onShop, onWorld, onSwitch, mute
                   ? 'Rest day used. Play today to keep it!'
                   : 'Play one game today. One rest day a week is free.'}
             </small>
+          </span>
+        </div>
+      )}
+      {title && (
+        <div className="speed-title" aria-label={`Speed title: ${title.name}`}>
+          <span className="speed-title-icon" aria-hidden="true">
+            {title.icon}
+          </span>
+          <span>
+            <strong>{title.name}</strong>
+            <small>{title.next ? `Answer faster to become a ${title.next}.` : 'The fastest title there is!'}</small>
           </span>
         </div>
       )}
@@ -506,6 +560,24 @@ function Home({ data, onPlay, onMap, onHatchery, onShop, onWorld, onSwitch, mute
           <strong>Lantern Hunt</strong>
           <span>Find the Tickle Monster before it finds you.</span>
         </button>
+        <div className="mode-card race race-card">
+          <span className="mode-emoji">🏁</span>
+          <strong>Sky Race</strong>
+          <span className="league-line">
+            {data.race.rivalsBeaten >= RIVALS.length ? `Champion flier! Race ${rival.name} again.` : `Next rival: ${rival.name} (${nextRival(data.race) + 1} of ${RIVALS.length})`}
+          </span>
+          <span className="mode-pills">
+            <button type="button" className="mode-pill" onClick={() => onPlay('race', 'rival')}>
+              🐉 Rival
+            </button>
+            <button type="button" className="mode-pill" onClick={() => onPlay('race', 'ghost')} disabled={data.race.ghost.length === 0} title={data.race.ghost.length ? undefined : 'Race once to make a ghost'}>
+              👻 Ghost
+            </button>
+            <button type="button" className="mode-pill" onClick={() => onPlay('race', 'solo')}>
+              ☀️ Solo
+            </button>
+          </span>
+        </div>
       </div>
       <details className="game-options">
         <summary>
@@ -598,13 +670,13 @@ interface DoneProps {
 }
 
 function Done({ screen, names, onAgain, onHome }: DoneProps) {
-  const { summary, mode, rival, score, league, quests, grew } = screen;
+  const { summary, mode, rival, score, league, quests, grew, raceResult } = screen;
   useEffect(() => {
     if (grew.length) sounds.hatch();
   }, [grew]);
   const pct = summary.answered ? Math.round((summary.correct / summary.answered) * 100) : 0;
   const won = isSoccer(mode) && score.us > score.them;
-  const party = won || grew.length > 0 || pct === 100 || summary.boss === 'beaten';
+  const party = won || raceResult?.won || grew.length > 0 || pct === 100 || summary.boss === 'beaten';
   const trophy = league && league.after.trophies > league.before.trophies;
   return (
     <div className="done">
@@ -619,6 +691,7 @@ function Done({ screen, names, onAgain, onHome }: DoneProps) {
           </p>
         </>
       )}
+      {raceResult && <RaceSummary result={raceResult} />}
       {league && (
         <p className="league-result">
           {trophy
@@ -668,6 +741,33 @@ function Done({ screen, names, onAgain, onHome }: DoneProps) {
         Done for today
       </button>
     </div>
+  );
+}
+
+const sum = (xs: number[]) => xs.reduce((a, b) => a + b, 0);
+
+const MEDALS = { gold: '🥇 Gold', silver: '🥈 Silver', bronze: '🥉 Bronze' };
+
+function RaceSummary({ result }: { result: RaceResult }) {
+  const by = Math.abs(result.margin).toFixed(1);
+  const headline =
+    result.kind === 'solo'
+      ? `${MEDALS[result.medal]}! ${result.medal === 'gold' ? 'You beat the fair time.' : 'Answer a little faster for gold.'}`
+      : result.kind === 'ghost'
+        ? result.won
+          ? `👻 You beat your ghost by ${by} seconds!`
+          : `Your ghost won by ${by} seconds. Race it again!`
+        : result.won
+          ? `🏁 You beat ${result.rival} by ${by} seconds!`
+          : `${result.rival} won by ${by} seconds. You'll catch them next time!`;
+  const next = result.kind === 'rival' && result.won && result.rival !== RIVALS[RIVALS.length - 1].name ? RIVALS[RIVALS.findIndex((r) => r.name === result.rival) + 1] : undefined;
+  return (
+    <>
+      <p className="match-result">{headline}</p>
+      {result.won && <p className="snack-total">🍖 +{RACE_WIN_BONUS} bonus snacks for the win!</p>}
+      {next && <p className="league-result">⬆️ New rival unlocked: {next.name}.</p>}
+      {result.newBest && <p className="league-result">⭐ Your best race pace ever!</p>}
+    </>
   );
 }
 

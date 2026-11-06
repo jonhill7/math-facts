@@ -1,0 +1,114 @@
+import { ReactNode, useEffect, useRef, useState } from 'react';
+import { StageProps } from '../components/PracticeSession';
+import { Confetti } from '../components/Confetti';
+import { fairTimeMs, Flap, opponentProgress, opponentTimes, RaceKind, STUMBLE } from '../engine/race';
+import { sounds } from '../sound';
+
+// Sky Race: every right answer is a flap toward the finish line. A miss is a
+// stumble that costs time. The opponent (your ghost or a rival dragon) flies
+// at a steady pace, slowing down on hard facts just like a kid would.
+interface Props extends StageProps {
+  kind: RaceKind;
+  finish: number; // right answers to reach the finish line
+  paces: number | number[]; // the opponent's pace, or the ghost's pace on each flap
+  fastMs: number;
+  racer: ReactNode; // the kid's dragon
+  opponent?: ReactNode; // the ghost or rival dragon
+  opponentName: string;
+  onFlaps: (flaps: Flap[]) => void;
+}
+
+export function SkyRace({ last, fact, turn, kind, finish, paces, fastMs, racer, opponent, opponentName, onFlaps }: Props) {
+  const [flaps, setFlaps] = useState<Flap[]>([]);
+  const [stars, setStars] = useState(0); // flaps faster than the fair time
+  const [message, setMessage] = useState<{ id: number; text: string; kind: 'good' | 'great' | 'oops' } | null>(null);
+  const pending = useRef(0); // time spent on the current flap so far, including stumbles
+  const shownAt = useRef(Date.now());
+  const frozen = useRef(false); // the clock stops while an answer is shown
+  const [, tick] = useState(0);
+
+  // A new question: the clock runs again.
+  useEffect(() => {
+    shownAt.current = Date.now();
+    frozen.current = false;
+  }, [turn]);
+
+  useEffect(() => {
+    if (!last) return;
+    frozen.current = true;
+    const fair = fairTimeMs(last.fact, fastMs);
+    if (last.correct) {
+      const flap = { fact: last.fact, ms: pending.current + last.ms };
+      pending.current = 0;
+      const next = [...flaps, flap];
+      setFlaps(next);
+      onFlaps(next);
+      const quick = last.ms <= fair;
+      if (quick) setStars((s) => s + 1);
+      setMessage({ id: last.id, text: next.length >= finish ? 'FINISH!' : quick ? 'Super flap! ⭐' : 'Flap!', kind: quick ? 'great' : 'good' });
+      if (next.length >= finish) window.setTimeout(sounds.found, 200);
+    } else {
+      pending.current += last.ms + fair * STUMBLE;
+      setMessage({ id: last.id, text: 'Stumble! Shake it off.', kind: 'oops' });
+    }
+    // onFlaps is stable for the race; only react to new answers.
+  }, [last?.id]);
+
+  // Keep the opponent moving while the kid thinks.
+  useEffect(() => {
+    if (!opponent) return;
+    const timer = window.setInterval(() => tick((n) => n + 1), 120);
+    return () => window.clearInterval(timer);
+  }, [opponent]);
+
+  const kidMs = flaps.reduce((t, f) => t + f.ms, 0) + pending.current;
+  const elapsed = kidMs + (frozen.current ? 0 : Date.now() - shownAt.current);
+  const done = opponentTimes(
+    flaps.map((f) => f.fact),
+    paces,
+    fastMs,
+  );
+  const nextPace = Array.isArray(paces) ? (paces[flaps.length] ?? (paces.length ? paces.reduce((a, b) => a + b, 0) / paces.length : 1)) : paces;
+  const upcoming = fact ? fairTimeMs(fact, fastMs) * nextPace : 2000;
+  const them = opponent ? opponentProgress(done, upcoming, elapsed, finish) : 0;
+  const finished = flaps.length >= finish;
+  const pos = (n: number) => `${6 + (Math.min(n, finish) / finish) * 80}%`;
+  const lead = flaps.length - them;
+
+  return (
+    <div className={`sky sky-${kind}`}>
+      <div className="scoreboard">
+        <span>
+          🏁 {Math.min(flaps.length, finish)} / {finish}
+        </span>
+        <span>⭐ {stars}</span>
+        {opponent && <span>{lead >= 0.5 ? 'You lead!' : lead <= -0.5 ? `${opponentName} leads` : 'Neck and neck!'}</span>}
+      </div>
+      <span className="sky-cloud sky-cloud-1" aria-hidden="true">
+        ☁️
+      </span>
+      <span className="sky-cloud sky-cloud-2" aria-hidden="true">
+        ☁️
+      </span>
+      <div className="sky-finish" aria-hidden="true" />
+      {opponent && (
+        <div className={`sky-lane sky-lane-them ${kind === 'ghost' ? 'sky-lane-ghost' : ''}`} aria-hidden="true">
+          <div className="sky-racer sky-racer-them" style={{ left: pos(them) }}>
+            {opponent}
+          </div>
+        </div>
+      )}
+      <div className={`sky-lane sky-lane-me ${opponent ? '' : 'sky-lane-solo'}`}>
+        <div key={`r${flaps.length}`} className={`sky-racer sky-racer-me ${flaps.length ? 'sky-flap' : ''}`} style={{ left: pos(flaps.length) }} aria-label={`${flaps.length} of ${finish} flaps`}>
+          {racer}
+        </div>
+      </div>
+      {finished && <Confetti count={40} />}
+      {message && (
+        <div key={`m${message.id}`} className={`shot-message sky-message sky-message-${message.kind}`} role="status">
+          {message.text}
+        </div>
+      )}
+    </div>
+  );
+}

@@ -18,8 +18,16 @@ The practice happens inside two games:
   answers light your lantern so you can search; wrong answers let the
   monster creep closer until... tickle attack!
 
+- **Sky Race** 🏁: every right answer is a flap toward the finish line.
+  Race a ladder of 7 rival dragons, your own ghost from last time, or fly
+  solo for a gold, silver or bronze medal. Races are fair across easy and
+  hard facts: every fact has a fair time (1 × 1 is quicker than 7 × 8), and
+  rivals and ghosts slow down on hard facts too.
+
 Other things kids and parents can do:
 
+- Earn a **speed title**, from Egg Wobbler to Comet Wing, based on how
+  fast they usually answer compared with each fact's fair time.
 - Keep a **daily streak** going, with one free rest day a week.
 - **Name** their companion dragon.
 - Pick **focus practice** on one table (good for homework), a **game

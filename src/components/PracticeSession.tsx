@@ -22,6 +22,7 @@ export interface StageProps {
   waiting: boolean; // true while the game wants the kid to do something
   resume: () => void; // the game calls this to move on to the next question
   turn: number; // goes up each time a new question appears
+  fact?: Fact; // the question on screen now
 }
 
 export interface SessionSummary {
@@ -214,7 +215,7 @@ export function PracticeSession({
       )}
 
       <div className="stage">
-        {stage({ last, waiting: phase === 'hold', resume: next, turn: index })}
+        {stage({ last, waiting: phase === 'hold', resume: next, turn: index, fact })}
         {decor && (
           <span className="stage-decor" aria-hidden="true">
             {decor}

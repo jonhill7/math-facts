@@ -1862,3 +1862,171 @@ h1 {
 .house .lantern-message {
   padding: 0 84px 0 60px;
 }
+
+/* Sky Race: dragons fly lanes across the sky toward a checkered finish. */
+.mode-card.race {
+  grid-column: 1 / -1;
+  min-height: 0;
+  cursor: default;
+  background: linear-gradient(160deg, #38bdf8, #4338ca);
+  box-shadow: 0 6px 0 #312e81;
+}
+
+.mode-card.race:active {
+  transform: none;
+  box-shadow: 0 6px 0 #312e81;
+}
+
+.mode-card.race .mode-pills {
+  position: relative;
+  z-index: 1;
+  flex-wrap: wrap;
+}
+
+.mode-pill:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.sky {
+  position: relative;
+  height: clamp(170px, 28dvh, 230px);
+  border-radius: 18px;
+  overflow: hidden;
+  background: linear-gradient(180deg, #4f9be8 0%, #8fd0f7 70%, #c9ecff 100%);
+}
+
+.sky-cloud {
+  position: absolute;
+  font-size: 2.4rem;
+  opacity: 0.8;
+  pointer-events: none;
+  z-index: 0;
+  animation: sky-drift 14s linear infinite;
+}
+
+.sky-cloud-1 {
+  top: 26%;
+  left: 70%;
+}
+
+.sky-cloud-2 {
+  top: 64%;
+  left: 30%;
+  font-size: 1.8rem;
+  animation-duration: 20s;
+  animation-delay: -8s;
+}
+
+@keyframes sky-drift {
+  from {
+    transform: translateX(40vw);
+  }
+  to {
+    transform: translateX(-90vw);
+  }
+}
+
+.sky-finish {
+  position: absolute;
+  top: 34px;
+  bottom: 0;
+  right: 6%;
+  width: 12px;
+  background: repeating-conic-gradient(#14213d 0 25%, #fff 0 50%) 0 0 / 12px 12px;
+  opacity: 0.85;
+}
+
+.sky-lane {
+  position: absolute;
+  z-index: 1;
+  left: 0;
+  right: 0;
+  height: 32%;
+}
+
+.sky-lane-them {
+  top: 26%;
+}
+
+.sky-lane-me {
+  top: 62%;
+}
+
+.sky-lane-solo {
+  top: 44%;
+}
+
+.sky-racer {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 1rem;
+  filter: drop-shadow(0 3px 3px rgba(0, 0, 0, 0.3));
+}
+
+.sky-racer-me {
+  z-index: 2;
+  transition: left 0.45s cubic-bezier(0.3, 1.4, 0.6, 1);
+}
+
+.sky-racer-them {
+  transition: left 0.12s linear;
+}
+
+.sky-lane-ghost .sky-racer {
+  opacity: 0.45;
+  filter: grayscale(0.6) drop-shadow(0 0 6px #fff);
+}
+
+.sky-flap {
+  animation: sky-flap 0.45s ease-out;
+}
+
+@keyframes sky-flap {
+  30% {
+    transform: translate(-50%, -80%) rotate(-8deg);
+  }
+  100% {
+    transform: translate(-50%, -50%);
+  }
+}
+
+.sky-message {
+  top: 30%;
+}
+
+.sky-message-great {
+  color: var(--accent);
+}
+
+.sky-message-oops {
+  color: #fecaca;
+  font-size: 1.3rem;
+}
+
+/* Speed title on the home screen. */
+.speed-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 10px;
+  padding: 10px 14px;
+  border-radius: 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: 0 3px 0 var(--press);
+}
+
+.speed-title span:last-child {
+  display: flex;
+  flex-direction: column;
+}
+
+.speed-title small {
+  color: var(--muted);
+}
+
+.speed-title-icon {
+  font-size: 1.8rem;
+}
