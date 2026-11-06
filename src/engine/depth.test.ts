@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { ABILITY_INFO, abilityOf, activeAbility, chargeNeeded, powerSize, startCharge } from './abilities';
+import { Ability, ABILITY_INFO, abilityOf, activeAbility, activePower, chargeNeeded, freeClues, keepsCharge, Power, PowerLevel, powerLevelFor, powerSize, shieldsFor, slowSaveFactor, snackBonus, startCharge } from './abilities';
 import { bossFor, isBossGame } from './boss';
-import { companionFor, feed, SPECIES } from './dragons';
+import { companionFor, dragonState, feed, snacksForLevel, SPECIES, speciesById } from './dragons';
 import { afterMatch, emptyLeague, LEAGUE, shotClockMs, slowSaveChance } from './league';
 import { bumpQuest, emptyQuests, questsFor, QUESTS_PER_DAY } from './quests';
 import { buy, emptyShop, hatOf, ITEMS, owns, splitHats, toggleEquip, balance } from './shop';
@@ -99,11 +99,31 @@ describe('dragon powers', () => {
     expect(Object.keys(ABILITY_INFO)).toHaveLength(SPECIES.length);
   });
   it('change the game numbers', () => {
-    expect(chargeNeeded('tailwind')).toBe(2);
+    const at = (ability: Ability, level: PowerLevel): Power => ({ ability, level });
     expect(chargeNeeded(undefined)).toBe(3);
-    expect(startCharge('headStart')).toBe(2);
-    expect(powerSize('blaze')).toBe(3);
+    expect([1, 2, 3].map((l) => chargeNeeded(at('tailwind', l as PowerLevel)))).toEqual([3, 2, 2]);
+    expect([1, 2, 3].map((l) => startCharge(at('headStart', l as PowerLevel)))).toEqual([1, 2, 2]);
+    expect([1, 2, 3].map((l) => powerSize(at('blaze', l as PowerLevel)))).toEqual([3, 3, 4]);
     expect(powerSize(undefined)).toBe(2);
+    expect([1, 2, 3].map((l) => snackBonus(at('feast', l as PowerLevel), false))).toEqual([0, 1, 2]);
+    expect(snackBonus(at('feast', 1), true)).toBe(1);
+    expect([1, 2, 3].map((l) => shieldsFor(at('shield', l as PowerLevel), false))).toEqual([1, 2, 3]);
+    expect(shieldsFor(at('spiky', 3), true)).toBe(1);
+    expect(shieldsFor(at('spiky', 3), false)).toBe(0);
+    expect([1, 2, 3].map((l) => slowSaveFactor(at('spiky', l as PowerLevel)))).toEqual([0.5, 0, 0]);
+    expect(keepsCharge(at('tailwind', 1), true)).toBe(true);
+    expect(keepsCharge(at('tailwind', 2), true)).toBe(false);
+    expect(keepsCharge(at('tailwind', 3), false)).toBe(true);
+    expect(freeClues(at('nightVision', 1), 0)).toBe(1);
+    expect(freeClues(at('nightVision', 1), 1)).toBe(0);
+    expect(freeClues(at('nightVision', 3), 4)).toBe(2);
+  });
+  it('get stronger as the dragon ranks up, and level II matches the old powers', () => {
+    expect([1, 3, 19, 20, 29, 30].map(powerLevelFor)).toEqual([0, 1, 1, 2, 2, 3]);
+    const id = 7; // Ember Drake: Blaze
+    expect(activePower(dragonState(speciesById(id), { [id]: snacksForLevel(20) }, true))).toEqual({ ability: 'blaze', level: 2 });
+    expect(activePower(dragonState(speciesById(id), { [id]: snacksForLevel(30) }, true))?.level).toBe(3);
+    for (const a of Object.keys(ABILITY_INFO) as Ability[]) expect(new Set(ABILITY_INFO[a].levels).size).toBe(3);
   });
 });
 

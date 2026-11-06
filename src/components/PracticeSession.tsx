@@ -55,8 +55,10 @@ interface Props {
   timeLimitFor?: (fact: Fact) => number; // games with a shot clock count right answers given in time
   pauseMs?: number; // how long to show a right answer before the next question
   chargeNeeded?: number; // fast answers in a row that fill the power meter
-  snackBonus?: number; // extra snacks per right answer (the Feast power)
+  snackBonus?: (fast: boolean) => number; // extra snacks per right answer (the Feast power)
   startCharge?: number; // the Head Start power: the meter begins part full
+  chargeAfterPower?: number; // Head Start II and III: the meter refills partway after a power move
+  keepsCharge?: (correct: boolean) => boolean; // Tailwind II and III: answers that don't empty the meter
   boss?: { name: string; icon: string; facts: Fact[]; forgive: number; bonus: number }; // a boss round at the end, from trouble facts
   decor?: string; // a picture of the place on the world tour
 }
@@ -71,6 +73,8 @@ function buddyLine(last: AnswerEvent, timeLimitMs?: number): string {
 }
 
 type Phase = 'ask' | 'fix' | 'pause' | 'hold';
+
+const noBonus = () => 0;
 
 export function PracticeSession({
   progress,
@@ -87,10 +91,12 @@ export function PracticeSession({
   timeLimitFor,
   pauseMs = 900,
   chargeNeeded = 3,
-  snackBonus = 0,
+  snackBonus = noBonus,
   boss,
   decor,
   startCharge = 0,
+  chargeAfterPower = 0,
+  keepsCharge,
 }: Props) {
   // The boss round's facts go at the end of the game.
   const [queue, setQueue] = useState<Fact[]>(() => {
@@ -140,16 +146,17 @@ export function PracticeSession({
     const goalMs = speedGoalMs(fact, fastMs);
     const fast = correct && ms <= goalMs;
     const timeLimitMs = timeLimitFor?.(fact);
-    // Fast answers in a row charge the power meter. Anything else empties it.
-    const newCharge = fast ? charge + 1 : 0;
+    // Fast answers in a row charge the power meter. Anything else empties it
+    // (unless a Tailwind keeps it).
+    const newCharge = fast ? charge + 1 : keepsCharge?.(correct) ? charge : 0;
     const power = newCharge >= chargeNeeded;
-    setCharge(power ? 0 : newCharge);
+    setCharge(power ? chargeAfterPower : newCharge);
     summary.current.answered++;
     if (correct) summary.current.correct++;
     if (fast) summary.current.fast++;
     if (power) summary.current.powers++;
     if (correct && timeLimitMs !== undefined && ms <= timeLimitMs) summary.current.inTime++;
-    if (correct) summary.current.snacks += (fast ? SNACKS_FAST : SNACKS_RIGHT) + snackBonus;
+    if (correct) summary.current.snacks += (fast ? SNACKS_FAST : SNACKS_RIGHT) + snackBonus(fast);
     if (inBoss) {
       if (correct) bossHits.current++;
       else bossMisses.current++;
@@ -178,7 +185,7 @@ export function PracticeSession({
         setQueue(requeued);
       }
     }
-  }, [fact, input, phase, next, onAnswer, last, holdAfterCorrect, queue, index, fastMs, timeLimitFor, pauseMs, charge, chargeNeeded, snackBonus, inBoss, bossStart]);
+  }, [fact, input, phase, next, onAnswer, last, holdAfterCorrect, queue, index, fastMs, timeLimitFor, pauseMs, charge, chargeNeeded, snackBonus, inBoss, bossStart, chargeAfterPower, keepsCharge]);
 
   if (!fact) return null;
   const progressPct = Math.round((index / queue.length) * 100);
@@ -196,7 +203,7 @@ export function PracticeSession({
           🍖 {summary.current.snacks}
           {last?.correct && (
             <span key={last.id} className="snack-pop">
-              +{(last.fast ? SNACKS_FAST : SNACKS_RIGHT) + snackBonus}
+              +{(last.fast ? SNACKS_FAST : SNACKS_RIGHT) + snackBonus(last.fast)}
             </span>
           )}
         </span>

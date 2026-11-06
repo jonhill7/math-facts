@@ -1,7 +1,7 @@
 import { allDragons, DragonState, Hoard, nextEggIn, nextRank, STAGE_LEVEL } from '../engine/dragons';
 import { useState } from 'react';
 import { Dragon } from './Dragon';
-import { abilityOf, ABILITY_INFO } from '../engine/abilities';
+import { abilityOf, ABILITY_INFO, powerLevelFor, ROMAN } from '../engine/abilities';
 import { Meadow } from './Meadow';
 import { placeById } from '../engine/places';
 
@@ -16,7 +16,7 @@ export function stageText(d: DragonState): string {
     case 'grown': {
       const next = nextRank(d.level);
       const now = d.rank ? `${d.rank.icon} ${d.rank.name} dragon` : 'Fully grown';
-      return next ? `${now} · level ${d.level}. ${next.name} at level ${next.level}.` : `${now} · level ${d.level}!`;
+      return next ? `${now} · level ${d.level}. ${next.name} at level ${next.level}.` : `${now} · top level ${d.level}!`;
     }
     default:
       return 'Not found yet.';
@@ -63,7 +63,7 @@ export function Hatchery({ hoard, snacksEarned, companion, names, onPick, onName
       <Meadow dragons={dragons} names={names} companionId={companion.species.id} hatFor={hatFor} placed={placed} onShop={onShop} place={place} />
       <p className="muted">
         Your companion eats a snack for every right answer, and snacks level it up. Eggs hatch at level {STAGE_LEVEL.hatchling}, and a hatched dragon gives you
-        its power in every game. Tap any egg or dragon to make it your companion.
+        its power in every game. Its power gets stronger at level 20 (Elder) and level 30 (Ancient), the top level. Tap any egg or dragon to make it your companion.
         {nextEgg !== null && ` You'll find a new egg in ${nextEgg} snacks.`}
       </p>
       <form
@@ -128,7 +128,7 @@ export function Hatchery({ hoard, snacksEarned, companion, names, onPick, onName
               {found && (
                 <small className="ability">
                   {ability.icon} {ability.name}
-                  {d.stage === 'egg' ? ' (once hatched)' : ''}
+                  {d.stage === 'egg' ? ' (once hatched)' : ` ${ROMAN[powerLevelFor(d.level) || 1]}`}
                 </small>
               )}
             </button>

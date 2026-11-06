@@ -161,11 +161,16 @@ describe('dragons', () => {
     expect(snacksForLevel(10)).toBe(540);
   });
 
+  it('stops at level 30 with a full meter', () => {
+    expect(levelFor(snacksForLevel(30) - 1).level).toBe(29);
+    expect(levelFor(snacksForLevel(30))).toEqual({ level: 30, into: 360, needed: 360 });
+    expect(levelFor(1_000_000).level).toBe(30);
+  });
+
   it('gives grown dragons ranks as they keep leveling', () => {
     expect(rankFor(19)).toBeUndefined();
     expect(rankFor(20)?.name).toBe('Elder');
-    expect(rankFor(35)?.name).toBe('Ancient');
-    expect(rankFor(40)?.name).toBe('Legendary');
+    expect(rankFor(30)?.name).toBe('Ancient');
     const id = EGG_ORDER[0];
     const before = allDragons(feed({}, id, snacksForLevel(20) - 1), 0);
     const after = allDragons(feed({}, id, snacksForLevel(20)), 0);

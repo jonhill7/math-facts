@@ -14,6 +14,17 @@ export const clueAt = (size: number, spot: number, monster: number): Clue => {
 // Night Vision: a free clue at the start of each hunt. It is always warm or
 // cold, never hot, so it narrows the search without pointing right at the
 // monster. The kid still has to answer fast to get the clues that find it.
+// Several free clues at different spots, for Night Vision II and III.
+export function freeClues(size: number, monster: number, count: number, random = Math.random): { spot: number; clue: Clue }[] {
+  const far = Array.from({ length: size * size }, (_, i) => i).filter((i) => spotDistance(size, i, monster) >= 2);
+  const out: { spot: number; clue: Clue }[] = [];
+  while (out.length < count && far.length) {
+    const spot = far.splice(Math.floor(random() * far.length), 1)[0];
+    out.push({ spot, clue: clueAt(size, spot, monster) });
+  }
+  return out;
+}
+
 export function nightVisionClue(size: number, monster: number, random = Math.random): { spot: number; clue: Clue } {
   const far = Array.from({ length: size * size }, (_, i) => i).filter((i) => spotDistance(size, i, monster) >= 2);
   const spot = far[Math.floor(random() * far.length)];

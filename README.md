@@ -8,7 +8,9 @@ grow a hatchery of dragons as they learn:
   Drake. The kid starts with one egg and finds a new one every so often, with
   a slightly longer wait each time (all 12 take about 3,000 snacks). An egg
   hatches at level 3 and is fully grown at level 10, then keeps going: Elder
-  at level 20, Ancient at 30 and Legendary at 40, each with its own glow.
+  at level 20 and Ancient at level 30, the top, each with its own glow.
+  Every hatched dragon has a power (like Blaze or Stone Shield) with three
+  levels: I when it hatches, II as an Elder and III as an Ancient.
   Right answers in any game are snacks for the kid's companion dragon
   (fast answers are triple snacks), which levels up.
   Every dragon found lives in an animated meadow where they wander, nap and

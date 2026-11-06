@@ -7,7 +7,7 @@ import { Badges } from './components/Badges';
 import { BOSS_BONUS, PracticeSession, SessionSummary } from './components/PracticeSession';
 import { Shop } from './components/Shop';
 import { WorldTour } from './components/WorldTour';
-import { ABILITY_INFO, activeAbility, bossForgives, bossMultiplier, chargeNeeded, extraClockMs, powerSize, questMultiplier, snackBonus, startCharge } from './engine/abilities';
+import { ABILITY_INFO, activePower, bossForgives, bossMultiplier, chargeAfterPower, chargeNeeded, extraClockMs, keepsCharge, nextPowerAt, Power, powerName, powerText, powerSize, questMultiplier, shieldsFor, slowSaveFactor, snackBonus, startCharge } from './engine/abilities';
 import { Badge, BADGES, checkBadges } from './engine/badges';
 import { bossFor, isBossGame, knownCount } from './engine/boss';
 import { ALL_FACTS, Fact } from './engine/facts';
@@ -81,7 +81,7 @@ function count(d: SaveData, key: QuestKey, n = 1, stat?: keyof SaveData['stats']
   const { state, finished } = bumpQuest(d.quests, d.name, key, n, Date.now());
   const stats = { ...d.stats };
   if (stat) stats[stat] += n;
-  return eat({ ...d, stats, quests: state }, finished.length * QUEST_REWARD * questMultiplier(activeAbility(companionOf(d))));
+  return eat({ ...d, stats, quests: state }, Math.round(finished.length * QUEST_REWARD * questMultiplier(activePower(companionOf(d)))));
 }
 
 const QUEST_STATS: Partial<Record<StatKey, QuestKey>> = { saves: 'saves', topCorners: 'topCorners', monstersFound: 'monstersFound', powers: 'powers' };
@@ -149,7 +149,7 @@ export default function App() {
         // Games reward beating the fact's own speed goal. The fact map stays on
         // the flat speed-goal setting (3s by default), the fluency standard.
         const fast = correct && ms <= speedGoalMs(fact, d.settings.fastMs);
-        const bonus = snackBonus(activeAbility(companionOf(d)));
+        const bonus = snackBonus(activePower(companionOf(d)), fast);
         let next: SaveData = eat(
           { ...d, progress: { ...d.progress, [fact.id]: recordAnswer(d.progress[fact.id], correct, ms, Date.now(), d.settings.fastMs) } },
           correct ? (fast ? SNACKS_FAST : SNACKS_RIGHT) + bonus : 0,
@@ -198,8 +198,8 @@ export default function App() {
     raceFlaps.current = [];
     // No boss in a race: the boss waits for the next soccer or lantern game.
     const found = mode !== 'race' && isBossGame(data.stats.sessions) ? bossFor(data.progress, mode === 'lantern') : undefined;
-    const power = activeAbility(companionOf(data));
-    const boss = found && { ...found, forgive: bossForgives(power), bonus: BOSS_BONUS * bossMultiplier(power) };
+    const power = activePower(companionOf(data));
+    const boss = found && { ...found, forgive: bossForgives(power), bonus: Math.round(BOSS_BONUS * bossMultiplier(power)) };
     if (boss) sounds.boss();
     // Sky Race: the opponent's flap times are set before the race starts, so it
     // flies its own course: the ghost exactly as the kid did last time.
@@ -221,7 +221,7 @@ export default function App() {
   };
 
   const companion = data ? companionOf(data) : undefined;
-  const ability = activeAbility(companion);
+  const power = activePower(companion);
   const hat = data && companion ? hatOf(data.shop, companion.species.id) : undefined;
   const hatFor = (id: number) => (data ? hatOf(data.shop, id) : undefined);
   const place = placeById(data?.place);
@@ -295,14 +295,14 @@ export default function App() {
         const raceRival = RIVALS[nextRival(before.race)];
         const level = before.league.level;
         const rival = rivalFor(before.league);
-        const clockFor = (fact: Fact) => shotClockMs(speedGoalMs(fact, before.settings.fastMs), level) + extraClockMs(ability);
+        const clockFor = (fact: Fact) => shotClockMs(speedGoalMs(fact, before.settings.fastMs), level) + extraClockMs(power);
         const soccer: SoccerProps = {
           onStat,
           onScore,
           rival,
-          shield: ability === 'shield',
+          shields: shieldsFor(power, mode === 'soccer'),
           shieldName: companionName,
-          powerSize: powerSize(ability),
+          powerSize: powerSize(power),
           gloveStyle: { filter: GLOVE_FILTER[data.shop.equipped.gloves ?? ''] },
           ballStyle: { filter: BALL_GLOW[data.shop.equipped.ball ?? ''] },
         };
@@ -318,9 +318,11 @@ export default function App() {
               fastMs={before.settings.fastMs}
               timeLimitFor={mode === 'keeper' ? clockFor : undefined}
               pauseMs={mode === 'keeper' ? 1500 : mode === 'race' ? 700 : undefined}
-              chargeNeeded={chargeNeeded(ability)}
-              startCharge={startCharge(ability)}
-              snackBonus={snackBonus(ability)}
+              chargeNeeded={chargeNeeded(power)}
+              startCharge={startCharge(power)}
+              chargeAfterPower={chargeAfterPower(power)}
+              keepsCharge={(correct) => keepsCharge(power, correct)}
+              snackBonus={(fast) => snackBonus(power, fast)}
               boss={boss}
               decor={mode === 'race' ? undefined : place.emoji}
               options={sessionOptions(before.settings)}
@@ -385,7 +387,7 @@ export default function App() {
                     onFlaps={onFlaps}
                   />
                 ) : mode === 'soccer' ? (
-                  <PenaltyKicks {...props} {...soccer} slowSaveChance={ability === 'spiky' ? 0 : slowSaveChance(level)} />
+                  <PenaltyKicks {...props} {...soccer} slowSaveChance={slowSaveChance(level) * slowSaveFactor(power)} />
                 ) : mode === 'keeper' ? (
                   <PenaltySaves {...props} {...soccer} clockFor={clockFor} />
                 ) : (
@@ -393,9 +395,9 @@ export default function App() {
                     {...props}
                     onStat={onStat}
                     monstersFoundTotal={before.stats.monstersFound}
-                    shield={ability === 'shield'}
+                    shields={shieldsFor(power, false)}
                     shieldName={companionName}
-                    ability={ability}
+                    power={power}
                     beamRgb={BEAM_RGB[data.shop.equipped.lantern ?? '']}
                   />
                 )
@@ -482,7 +484,7 @@ interface HomeProps {
 function Home({ data, onPlay, onMap, onHatchery, onShop, onWorld, onBadges, onSwitch, muteButton, hat, onSettings }: HomeProps) {
   const mastered = masteredCount(data.progress);
   const companion = companionOf(data);
-  const ability = activeAbility(companion);
+  const power = activePower(companion);
   const streak = streakStatus(data.streak, Date.now());
   const quests = today(data.quests, Date.now());
   const todays = questsFor(quests.day, data.name);
@@ -543,9 +545,9 @@ function Home({ data, onPlay, onMap, onHatchery, onShop, onWorld, onBadges, onSw
             <span className="dragon-meter" aria-label={`${companion.into} of ${companion.needed} snacks to the next level`}>
               <span style={{ width: `${(companion.into / companion.needed) * 100}%` }} />
             </span>
-            {ability ? (
+            {power ? (
               <small className="ability">
-                {ABILITY_INFO[ability].icon} <b>{ABILITY_INFO[ability].name}:</b> {ABILITY_INFO[ability].text}
+                <PowerLine power={power} level={companion.level} />
               </small>
             ) : (
               <small>
@@ -723,6 +725,17 @@ function Home({ data, onPlay, onMap, onHatchery, onShop, onWorld, onBadges, onSw
   );
 }
 
+// A power, its level, what it does, and when it next gets stronger.
+function PowerLine({ power, level }: { power: Power; level: number }) {
+  const next = nextPowerAt(level);
+  return (
+    <>
+      {ABILITY_INFO[power.ability].icon} <b>{powerName(power)}:</b> {powerText(power)}
+      {next && ` Level ${next.level === 2 ? 'II' : 'III'} at dragon level ${next.at}.`}
+    </>
+  );
+}
+
 function Stat({ icon, value, label }: { icon: string; value: number; label: string }) {
   return (
     <div className="stat-tile">
@@ -820,7 +833,7 @@ function Done({ screen, names, onAgain, onHome }: DoneProps) {
                     : `${dragonName(d, names)} grew!`}
             </strong>
             <small>
-              {d.stage === 'hatchling' ? `${ABILITY_INFO[activeAbility(d)!].icon} New power: ${ABILITY_INFO[activeAbility(d)!].text}` : d.species.power}
+              {d.stage === 'hatchling' || d.rank ? <PowerLine power={activePower(d)!} level={d.level} /> : d.species.power}
             </small>
           </span>
         </div>
