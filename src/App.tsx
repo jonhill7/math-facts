@@ -20,7 +20,7 @@ import { LanternHunt } from './modes/LanternHunt';
 import { MatchScore, PenaltyKicks, SoccerProps, StatKey } from './modes/PenaltyKicks';
 import { PenaltySaves } from './modes/PenaltySaves';
 import { SkyRace } from './modes/SkyRace';
-import { finishRace, Flap, nextRival, opponentTimes, RaceKind, RaceResult, RIVALS, speedTitle } from './engine/race';
+import { COURSES, courseFairMs, CourseId, courseOf, finishRace, Flap, ghostFlaps, nextRival, RaceKind, RaceResult, rivalFlaps, RIVALS, speedTitle } from './engine/race';
 import { cloudEnabled, cloudStore, signInWithGoogle, signOutUser, User, watchUser } from './storage/firebase';
 import { listGuests, localStore } from './storage/localStore';
 import { ProgressStore, SaveData, Settings } from './storage/types';
@@ -45,7 +45,7 @@ interface Boss {
 type Screen =
   | { name: 'who' }
   | { name: 'home' }
-  | { name: 'play'; mode: Mode; before: SaveData; boss?: Boss; race?: RaceKind }
+  | { name: 'play'; mode: Mode; before: SaveData; boss?: Boss; race?: RaceKind; opponent?: number[] }
   | { name: 'done'; mode: Mode; boss?: Boss; summary: SessionSummary; grew: DragonState[]; rival: string; score: MatchScore; league?: { before: League; after: League }; quests: Quest[]; race?: RaceKind; raceResult?: RaceResult }
   | { name: 'map' }
   | { name: 'hatchery' }
@@ -182,7 +182,20 @@ export default function App() {
     const power = activeAbility(companionOf(data));
     const boss = found && { ...found, forgive: bossForgives(power), bonus: BOSS_BONUS * bossMultiplier(power) };
     if (boss) sounds.boss();
-    setScreen({ name: 'play', mode, before: data, boss, race: mode === 'race' ? (race ?? 'solo') : undefined });
+    // Sky Race: the opponent's flap times are set before the race starts, so it
+    // flies its own course: the ghost exactly as the kid did last time.
+    let opponent: number[] | undefined;
+    if (mode === 'race') {
+      const { course } = data.race;
+      const finish = data.settings.length;
+      opponent =
+        race === 'ghost'
+          ? ghostFlaps(data.race.ghosts[course] ?? [], finish)
+          : race === 'rival'
+            ? rivalFlaps(RIVALS[nextRival(data.race)].pace, courseFairMs(course, ALL_FACTS, data.settings.fastMs), finish)
+            : [];
+    }
+    setScreen({ name: 'play', mode, before: data, boss, race: mode === 'race' ? (race ?? 'solo') : undefined, opponent });
   };
 
   const companion = data ? companionOf(data) : undefined;
@@ -211,6 +224,7 @@ export default function App() {
           muteButton={muteButton}
           hat={hat}
           onSettings={(change) => update((d) => ({ ...d, settings: { ...d.settings, ...change } }), true)}
+          onCourse={(course) => update((d) => ({ ...d, race: { ...d.race, course } }), true)}
         />
       )}
       {screen.name === 'map' && data && <MasteryMap progress={data.progress} onBack={() => setScreen({ name: 'home' })} />}
@@ -247,7 +261,8 @@ export default function App() {
         />
       )}
       {screen.name === 'play' && data && (() => {
-        const { mode, before, boss, race } = screen;
+        const { mode, before, boss, race, opponent } = screen;
+        const course = before.race.course;
         const raceRival = RIVALS[nextRival(before.race)];
         const level = before.league.level;
         const rival = rivalFor(before.league);
@@ -279,7 +294,11 @@ export default function App() {
               snackBonus={snackBonus(ability)}
               boss={boss}
               decor={mode === 'race' ? undefined : place.emoji}
-              options={{ focusTable: before.settings.focusTable || undefined, length: before.settings.length }}
+              options={
+                mode === 'race'
+                  ? { length: before.settings.length, only: course === 'mixed' ? undefined : (f) => courseOf(f) === course }
+                  : { focusTable: before.settings.focusTable || undefined, length: before.settings.length }
+              }
               onQuit={() => {
                 update((d) => ({ ...d }), true); // save right away
                 setScreen({ name: 'home' });
@@ -288,13 +307,8 @@ export default function App() {
                 const score = matchScore.current;
                 const won = isSoccer(mode) && score.us > score.them;
                 const league = isSoccer(mode) ? { before: before.league, after: afterMatch(before.league, won) } : undefined;
-                // Sky Race: who got to the finish first, against the same facts.
-                const flaps = raceFlaps.current;
-                const facts = flaps.map((f) => f.fact);
-                const fastMs = before.settings.fastMs;
-                const opponentMs =
-                  race === 'ghost' ? sum(opponentTimes(facts, before.race.ghost, fastMs)) : race === 'rival' ? sum(opponentTimes(facts, raceRival.pace, fastMs)) : Infinity;
-                const raced = race ? finishRace(before.race, race, flaps, opponentMs, fastMs) : undefined;
+                // Sky Race: who got to the finish first.
+                const raced = race ? finishRace(before.race, race, course, raceFlaps.current, opponent ?? [], before.settings.fastMs) : undefined;
                 const finish = (d: SaveData): SaveData => {
                   let next: SaveData = {
                     ...d,
@@ -328,7 +342,7 @@ export default function App() {
                     {...props}
                     kind={race ?? 'solo'}
                     finish={before.settings.length}
-                    paces={race === 'ghost' ? before.race.ghost : raceRival.pace}
+                    opponentTimes={opponent ?? []}
                     fastMs={before.settings.fastMs}
                     racer={companion ? <Dragon dragon={companion} size={3} hat={hat} /> : <span>🐉</span>}
                     opponent={
@@ -433,9 +447,10 @@ interface HomeProps {
   muteButton: ReactNode;
   hat?: string;
   onSettings: (change: Partial<Settings>) => void;
+  onCourse: (course: CourseId) => void;
 }
 
-function Home({ data, onPlay, onMap, onHatchery, onShop, onWorld, onSwitch, muteButton, hat, onSettings }: HomeProps) {
+function Home({ data, onPlay, onMap, onHatchery, onShop, onWorld, onSwitch, muteButton, hat, onSettings, onCourse }: HomeProps) {
   const mastered = masteredCount(data.progress);
   const companion = companionOf(data);
   const ability = activeAbility(companion);
@@ -566,11 +581,27 @@ function Home({ data, onPlay, onMap, onHatchery, onShop, onWorld, onSwitch, mute
           <span className="league-line">
             {data.race.rivalsBeaten >= RIVALS.length ? `Champion flier! Race ${rival.name} again.` : `Next rival: ${rival.name} (${nextRival(data.race) + 1} of ${RIVALS.length})`}
           </span>
+          <span className="course-pills" role="radiogroup" aria-label="Course">
+            {COURSES.map((c) => (
+              <button
+                key={c.id}
+                type="button"
+                role="radio"
+                aria-checked={data.race.course === c.id}
+                className={`course-pill ${data.race.course === c.id ? 'course-pill-on' : ''}`}
+                onClick={() => onCourse(c.id)}
+                title={c.tables}
+              >
+                {c.icon} {c.name}
+              </button>
+            ))}
+          </span>
+          <small className="course-line">{COURSES.find((c) => c.id === data.race.course)?.tables}</small>
           <span className="mode-pills">
             <button type="button" className="mode-pill" onClick={() => onPlay('race', 'rival')}>
               🐉 Rival
             </button>
-            <button type="button" className="mode-pill" onClick={() => onPlay('race', 'ghost')} disabled={data.race.ghost.length === 0} title={data.race.ghost.length ? undefined : 'Race once to make a ghost'}>
+            <button type="button" className="mode-pill" onClick={() => onPlay('race', 'ghost')} disabled={!data.race.ghosts[data.race.course]?.length} title={data.race.ghosts[data.race.course]?.length ? undefined : 'Race this course once to make a ghost'}>
               👻 Ghost
             </button>
             <button type="button" className="mode-pill" onClick={() => onPlay('race', 'solo')}>
@@ -744,8 +775,6 @@ function Done({ screen, names, onAgain, onHome }: DoneProps) {
   );
 }
 
-const sum = (xs: number[]) => xs.reduce((a, b) => a + b, 0);
-
 const MEDALS = { gold: '🥇 Gold', silver: '🥈 Silver', bronze: '🥉 Bronze' };
 
 function RaceSummary({ result }: { result: RaceResult }) {
@@ -764,6 +793,7 @@ function RaceSummary({ result }: { result: RaceResult }) {
   return (
     <>
       <p className="match-result">{headline}</p>
+      <p className="muted">{COURSES.find((c) => c.id === result.course)?.icon} {COURSES.find((c) => c.id === result.course)?.name} course</p>
       {result.won && <p className="snack-total">🍖 +{RACE_WIN_BONUS} bonus snacks for the win!</p>}
       {next && <p className="league-result">⬆️ New rival unlocked: {next.name}.</p>}
       {result.newBest && <p className="league-result">⭐ Your best race pace ever!</p>}

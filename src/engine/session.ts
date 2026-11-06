@@ -7,6 +7,7 @@ export interface SessionOptions {
   maxNew?: number; // new facts per session once the kid has some history
   maxLearning?: number; // stop adding new facts if this many are still in box 1
   focusTable?: number; // practice only this times table (and its division facts)
+  only?: (fact: Fact) => boolean; // practice only facts that pass this (a Sky Race course)
   random?: () => number;
 }
 
@@ -37,9 +38,10 @@ export function newFactCandidates(progress: Progress): Fact[] {
 export function buildSession(progress: Progress, now: number, opts: SessionOptions = {}): Fact[] {
   const { length = 20, maxLearning = 8, focusTable, random = Math.random } = opts;
   // Focus practice (say, for homework on the 7s) allows more new facts at once.
-  const maxNew = opts.maxNew ?? (focusTable ? 6 : 3);
-  const focus = focusTable ? new Set(tableFactIds(focusTable)) : null;
-  const inPool = (f: Fact) => !focus || focus.has(f.id);
+  const table = focusTable ? new Set(tableFactIds(focusTable)) : null;
+  const focus = table || opts.only ? true : null;
+  const maxNew = opts.maxNew ?? (focus ? 6 : 3);
+  const inPool = (f: Fact) => (!table || table.has(f.id)) && (!opts.only || opts.only(f));
   const seen = ALL_FACTS.filter((f) => progress[f.id] && inPool(f));
 
   const due = seen
