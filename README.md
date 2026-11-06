@@ -32,9 +32,11 @@ Other things kids and parents can do:
   fast they usually answer compared with each fact's fair time.
 - Keep a **daily streak** going, with one free rest day a week.
 - **Name** their companion dragon.
-- Pick **focus practice** on one table (good for homework), a **game
+- Pick which **facts** to practice (Easy, Medium, Hard or Mixed), a **game
   length** (10, 20 or 30 questions) and a **speed goal** (5, 3 or 2
-  seconds) on the home screen.
+  seconds) on the home screen. Easy is any fact with 1, 2, 5, 10 or 11;
+  Medium is the 3s, 4s and 9s; Hard is facts made only of 6s, 7s, 8s and
+  12s.
 - See **trouble facts** on the fact map, the facts a kid is most stuck on.
 - Turn **sound** on or off with the speaker button.
 - Use it **offline** and add it to a phone's home screen like an app.
