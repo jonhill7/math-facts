@@ -7,8 +7,9 @@ import { ALL_FACTS } from './facts';
 //   hatchling -> levels 3-5
 //   young     -> levels 6-9
 //   grown     -> level 10 and up
-// A grown dragon keeps going and earns ranks: Elder at level 20, Ancient at
-// 30 and Legendary at 40, each with its own glow.
+// A grown dragon keeps going and earns ranks: Elder at level 20 and Ancient at
+// level 30, the top level. Each rank has its own glow and makes the dragon's
+// power stronger (see abilities.ts).
 // The kid starts with one egg and finds another every so often as they
 // practice, with a longer wait for each egg than the last.
 
@@ -63,13 +64,18 @@ export const LEVEL_STEP = 12;
 // Saves from before the longer levels used 10, 20, 30... (see migrateHoard).
 export const OLD_LEVEL_STEP = 10;
 
-export function levelFor(snacks: number, step = LEVEL_STEP): { level: number; into: number; needed: number } {
+// The top level. A dragon there keeps eating (snacks still find eggs and fill
+// the shop), but its level and meter stay full.
+export const MAX_LEVEL = 30;
+
+export function levelFor(snacks: number, step = LEVEL_STEP, max = MAX_LEVEL): { level: number; into: number; needed: number } {
   let level = 1;
   let left = snacks;
-  while (left >= level * step) {
+  while (level < max && left >= level * step) {
     left -= level * step;
     level++;
   }
+  if (level >= max) return { level, into: level * step, needed: level * step };
   return { level, into: left, needed: level * step };
 }
 
@@ -78,7 +84,7 @@ export const snacksForLevel = (level: number, step = LEVEL_STEP) => (step * leve
 
 // Ranks a grown dragon earns as it keeps leveling up.
 export interface Rank {
-  id: 'elder' | 'ancient' | 'legendary';
+  id: 'elder' | 'ancient';
   name: string;
   icon: string;
   level: number;
@@ -86,8 +92,7 @@ export interface Rank {
 
 export const RANKS: Rank[] = [
   { id: 'elder', name: 'Elder', icon: '🌟', level: 20 },
-  { id: 'ancient', name: 'Ancient', icon: '💎', level: 30 },
-  { id: 'legendary', name: 'Legendary', icon: '🔱', level: 40 },
+  { id: 'ancient', name: 'Ancient', icon: '💎', level: MAX_LEVEL },
 ];
 
 // The highest rank a level has reached, or undefined below Elder.
@@ -166,7 +171,7 @@ export function grewBetween(before: DragonState[], after: DragonState[]): Dragon
 export function migrateHoard(hoard: Hoard, snacksEarned: number): Hoard {
   const out: Hoard = {};
   for (const [id, xp] of Object.entries(hoard)) {
-    const { level, into, needed } = levelFor(xp, OLD_LEVEL_STEP);
+    const { level, into, needed } = levelFor(xp, OLD_LEVEL_STEP, Infinity);
     out[id] = snacksForLevel(level) + Math.floor((into / needed) * level * LEVEL_STEP);
   }
   const oldEggs = Math.min(EGG_ORDER.length, 1 + Math.floor(snacksEarned / 150));

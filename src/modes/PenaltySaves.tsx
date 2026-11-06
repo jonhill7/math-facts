@@ -22,12 +22,12 @@ interface Props extends StageProps, SoccerProps {
   clockFor: (fact: Fact) => number; // the shot clock for a fact, from its speed goal
 }
 
-export function PenaltySaves({ last, turn, fact, onStat, onScore, rival, clockFor, shield, shieldName, gloveStyle, ballStyle, powerSize }: Props) {
+export function PenaltySaves({ last, turn, fact, onStat, onScore, rival, clockFor, shields, shieldName, gloveStyle, ballStyle, powerSize }: Props) {
   const [shot, setShot] = useState<Shot | null>(null);
   const [score, setScore] = useState({ saves: 0, rival: 0 });
   const timer = useRef<number | undefined>(undefined);
   const decided = useRef(-1); // the turn whose shot has already been taken
-  const shieldUsed = useRef(false);
+  const shieldsUsed = useRef(0);
   // The clock for the question on screen. Harder facts get a longer run-up.
   const timeLimitMs = fact ? clockFor(fact) : 5000;
 
@@ -35,8 +35,8 @@ export function PenaltySaves({ last, turn, fact, onStat, onScore, rival, clockFo
 
   // The companion's Shield stops the first goal against, once per game.
   const tryShield = (side: -1 | 1): boolean => {
-    if (!shield || shieldUsed.current) return false;
-    shieldUsed.current = true;
+    if (shieldsUsed.current >= shields) return false;
+    shieldsUsed.current++;
     setShot({ id: turn, result: 'blocked', side, message: `🛡️ ${shieldName} blocked the shot!` });
     window.setTimeout(sounds.save, 250);
     return true;

@@ -4,9 +4,9 @@ import type { StatKey } from './PenaltyKicks';
 import { sounds } from '../sound';
 import { Confetti } from '../components/Confetti';
 import { DEFAULT_BEAM_RGB } from '../engine/shop';
-import type { Ability } from '../engine/abilities';
+import { anySlowClue, freeClues as freeClueCount, gustBlocks, lanternReach, Power, slowClue, sneakBlocks, ticklesToAttack } from '../engine/abilities';
 import { seconds } from '../engine/speed';
-import { nightVisionClue } from '../engine/lantern';
+import { freeClues } from '../engine/lantern';
 
 const ALL_SPOTS = ['🛏️', '🛋️', '🚪', '🧺', '🌵', '📦', '🧥', '🪑', '🛁', '🧸', '🗄️', '🎹', '🧳', '🖼️', '🕰️', '🛒'];
 const ATTIC_SPOTS = ['🕯️', '📚', '🧩', '🧶', '🎻', '🏺', '⏰', '🎲', '🧳', '📦', '🪑', '🖼️', '🧸', '🛏️', '🗄️', '🧥', '🕰️', '🎹', '🧺', '🌵', '🚪', '🛋️', '🛁', '🛒', '🎩'];
@@ -36,20 +36,22 @@ const CLUE: Record<string, string> = {
 interface Props extends StageProps {
   onStat: (key: StatKey) => void;
   monstersFoundTotal: number;
-  shield: boolean; // the companion's Shield power: the first miss doesn't count
+  shields: number; // the companion's Shield power: misses that don't count
   shieldName: string;
   beamRgb?: string;
-  ability?: Ability; // the companion's power
+  power?: Power; // the companion's power and its level
 }
 
-export function LanternHunt({ last, waiting, resume, onStat, monstersFoundTotal, shield, shieldName, beamRgb = DEFAULT_BEAM_RGB, ability }: Props) {
-  const TICKLES_TO_ATTACK = ability === 'frost' ? 4 : 3;
+export function LanternHunt({ last, waiting, resume, onStat, monstersFoundTotal, shields, shieldName, beamRgb = DEFAULT_BEAM_RGB, power }: Props) {
+  const TICKLES_TO_ATTACK = ticklesToAttack(power);
   const [hunt, setHunt] = useState(0); // goes up each time the monster hides somewhere new
   const [floor, setFloor] = useState(0);
   const [startSize] = useState(() => houseSize(monstersFoundTotal));
   const size = Math.min(startSize + floor, MAX_SIZE);
   const spots = (floor === 0 ? ALL_SPOTS : ATTIC_SPOTS).slice(0, size * size);
-  const shieldUsed = useRef(false);
+  const shieldsUsed = useRef(0);
+  const gustsUsed = useRef(0); // Gust III: misses blown back this hunt
+  const sneaksStopped = useRef(0); // Gust: misses this hunt the monster couldn't sneak away on
   const randomSpot = (avoid = -1) => {
     let s = avoid;
     while (s === avoid) s = Math.floor(Math.random() * spots.length);
@@ -67,7 +69,7 @@ export function LanternHunt({ last, waiting, resume, onStat, monstersFoundTotal,
   const [celebrate, setCelebrate] = useState(false);
 
   // Second Look makes every right answer bright enough for a clue.
-  const bright = Boolean(last?.correct && (last.fast || ability === 'secondLook'));
+  const bright = Boolean(last?.correct && (last.fast || slowClue(power, last.ms, last.goalMs)));
 
   // One search per right answer. A ref (not state) so that a second tap
   // landing before React re-renders is still blocked.
@@ -100,9 +102,14 @@ export function LanternHunt({ last, waiting, resume, onStat, monstersFoundTotal,
       );
       return;
     }
-    if (shield && !shieldUsed.current) {
-      shieldUsed.current = true;
+    if (shieldsUsed.current < shields) {
+      shieldsUsed.current++;
       setMessage(`🛡️ ${shieldName} scared the monster back! It didn't move.`);
+      return;
+    }
+    if (gustsUsed.current < gustBlocks(power)) {
+      gustsUsed.current++;
+      setMessage("Whoosh! The Gust blew the monster back. It didn't move.");
       return;
     }
     const nextCreep = creep + 1;
@@ -117,7 +124,8 @@ export function LanternHunt({ last, waiting, resume, onStat, monstersFoundTotal,
       setHunt((h) => h + 1);
     } else {
       setCreep(nextCreep);
-      if (ability === 'gust') {
+      if (sneaksStopped.current < sneakBlocks(power)) {
+        sneaksStopped.current++;
         setMessage('Creak... it crept closer, but the Gust kept it from sneaking away!');
         return;
       }
@@ -132,11 +140,14 @@ export function LanternHunt({ last, waiting, resume, onStat, monstersFoundTotal,
     // React only to new answers.
   }, [last?.id]);
 
-  // Night Vision: each new hunt starts with one free warm or cold clue (never hot).
+  // Night Vision (and Second Look II and III): each new hunt starts with free
+  // warm or cold clues (never hot).
   useEffect(() => {
-    if (ability !== 'nightVision') return;
-    const { spot, clue } = nightVisionClue(size, monster);
-    setMarks({ [spot]: clue });
+    gustsUsed.current = 0;
+    sneaksStopped.current = 0;
+    const n = freeClueCount(power, hunt);
+    if (!n) return;
+    setMarks(Object.fromEntries(freeClues(size, monster, n).map(({ spot, clue }) => [spot, clue])));
   }, [hunt]);
 
   const clueFor = (spot: number): Mark => {
@@ -150,7 +161,7 @@ export function LanternHunt({ last, waiting, resume, onStat, monstersFoundTotal,
     setSearched(last.id);
     aimAtSpot(spot);
     // A super lantern searches the spot and every spot touching it (two rings out with Blaze).
-    const reach = ability === 'blaze' ? 2 : 1;
+    const reach = lanternReach(power);
     const area = last.power
       ? spots.map((_, i) => i).filter((i) => Math.abs((i % size) - (spot % size)) <= reach && Math.abs(Math.floor(i / size) - Math.floor(spot / size)) <= reach)
       : [spot];
@@ -249,7 +260,7 @@ export function LanternHunt({ last, waiting, resume, onStat, monstersFoundTotal,
             </>
           ) : (
             <span>
-              🐢 {seconds(last.ms)}s · goal {seconds(last.goalMs)}s{ability === 'secondLook' ? '' : ' for a clue'}
+              🐢 {seconds(last.ms)}s · goal {seconds(last.goalMs)}s{anySlowClue(power) ? '' : ' for a clue'}
             </span>
           )}
         </div>

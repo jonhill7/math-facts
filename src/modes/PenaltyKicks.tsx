@@ -15,7 +15,7 @@ export interface SoccerProps {
   onStat: (key: StatKey) => void;
   onScore: (score: MatchScore) => void;
   rival: string;
-  shield: boolean; // the companion's Shield power: the first miss doesn't count
+  shields: number; // the companion's Shield power: misses that don't count
   shieldName: string; // who blocks it
   powerSize: number; // goals or saves a power move is worth
   gloveStyle?: CSSProperties;
@@ -38,10 +38,10 @@ interface Props extends StageProps, SoccerProps {
   slowSaveChance: number;
 }
 
-export function PenaltyKicks({ last, turn, onStat, onScore, rival, shield, shieldName, slowSaveChance, ballStyle, powerSize }: Props) {
+export function PenaltyKicks({ last, turn, onStat, onScore, rival, shields, shieldName, slowSaveChance, ballStyle, powerSize }: Props) {
   const [shot, setShot] = useState<Shot | null>(null);
   const [score, setScore] = useState({ goals: 0, rival: 0, top: 0 });
-  const shieldUsed = useRef(false);
+  const shieldsUsed = useRef(0);
 
   useEffect(() => onScore({ us: score.goals, them: score.rival }), [score]);
 
@@ -69,8 +69,8 @@ export function PenaltyKicks({ last, turn, onStat, onScore, rival, shield, shiel
       next = { id: last.id, ball: { x: 50 + side * 28, y: 40 }, keeper: side * 16, message: 'Goal!', kind: 'goal' };
       onStat('goals');
       setScore((s) => ({ ...s, goals: s.goals + 1 }));
-    } else if (shield && !shieldUsed.current) {
-      shieldUsed.current = true;
+    } else if (shieldsUsed.current < shields) {
+      shieldsUsed.current++;
       next = { id: last.id, ball: { x: 50 + side * 6, y: 36 }, keeper: side * 6, message: `🛡️ ${shieldName} blocked their counter-attack!`, kind: 'blocked' };
     } else {
       next = { id: last.id, ball: { x: 50 + side * 6, y: 36 }, keeper: side * 6, message: `Saved! ${rival} score!`, kind: 'save' };

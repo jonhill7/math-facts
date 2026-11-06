@@ -215,7 +215,7 @@ export const BADGES: Badge[] = [
   ...counts('eggs', 'eggs', [[2, 'Egg Finder'], [6, 'Nest Builder'], [12, 'Full Nest']], (g) => (g === '12' ? 'Find every dragon egg.' : `Find ${g} dragon eggs.`)),
   ...counts('hatched', 'dragons', [[1, 'It Hatched!'], [4, 'Dragon Family'], [12, 'Dragon Keeper']], (g) => (g === '1' ? 'Hatch a dragon.' : `Hatch ${g} dragons.`)),
   ...counts('grown', 'dragons', [[1, 'All Grown Up'], [3, 'Dragon Rider'], [6, 'Dragon Tamer'], [12, 'Dragon Lord']], (g) => (g === '1' ? 'Grow a dragon all the way up.' : `Grow ${g} dragons all the way up.`)),
-  ...counts('level', 'level', [[10, 'Level 10'], [20, 'Level 20'], [30, 'Level 30'], [40, 'Level 40'], [50, 'Level 50']], (g) => `Get a dragon to level ${g}.`),
+  ...counts('level', 'level', [[10, 'Level 10'], [20, 'Level 20'], [30, 'Top Level']], (g) => `Get a dragon to level ${g}.`),
   // One badge for each rank a grown dragon can reach, using the rank's own icon.
   ...RANKS.map((r, i): Badge => ({
     id: `rank-${i + 1}`,
@@ -224,7 +224,7 @@ export const BADGES: Badge[] = [
     icon: r.icon,
     text: `Get a dragon to level ${r.level} to make it ${r.name === 'Elder' ? 'an' : 'a'} ${r.name} dragon.`,
     goal: i + 1,
-    tier: (['silver', 'gold', 'diamond'] as Tier[])[i],
+    tier: (['gold', 'diamond'] as Tier[])[i],
   })),
   ...counts('elders', 'dragons', [[3, 'Council of Elders'], [12, 'Elder Hatchery']], (g) => `Make ${g} dragons Elders (level 20).`),
   ...counts('places', 'places', [[4, 'Explorer'], [8, 'Globetrotter'], [PLACES.length, 'Over the Moon']], (g) =>
