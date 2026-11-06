@@ -31,7 +31,7 @@ export const ITEMS: Item[] = [
   { id: 'hat-cap', slot: 'hat', name: 'Cap', icon: '🧢', price: 80 },
   { id: 'hat-bow', slot: 'hat', name: 'Bow', icon: '🎀', price: 80 },
   { id: 'hat-sunflower', slot: 'hat', name: 'Sunflower', icon: '🌻', price: 80 },
-  { id: 'hat-feather', slot: 'hat', name: 'Feather', icon: '🪶', price: 100 },
+  { id: 'hat-feather', slot: 'hat', name: 'Peacock buddy', icon: '🦚', price: 100 },
   { id: 'hat-tophat', slot: 'hat', name: 'Top hat', icon: '🎩', price: 120 },
   { id: 'hat-chick', slot: 'hat', name: 'Chick buddy', icon: '🐣', price: 180 },
   { id: 'hat-pumpkin', slot: 'hat', name: 'Pumpkin', icon: '🎃', price: 200 },
@@ -51,12 +51,12 @@ export const ITEMS: Item[] = [
   { id: 'ball-rainbow', slot: 'ball', name: 'Rainbow trail', icon: '🌈', price: 900 },
   { id: 'lantern-blue', slot: 'lantern', name: 'Blue beam', icon: '🔵', price: 120 },
   { id: 'lantern-green', slot: 'lantern', name: 'Green beam', icon: '🟢', price: 120 },
-  { id: 'lantern-pink', slot: 'lantern', name: 'Pink beam', icon: '🩷', price: 120 },
+  { id: 'lantern-pink', slot: 'lantern', name: 'Pink beam', icon: '💗', price: 120 },
   { id: 'lantern-purple', slot: 'lantern', name: 'Purple beam', icon: '🟣', price: 250 },
   { id: 'lantern-red', slot: 'lantern', name: 'Red beam', icon: '🔴', price: 250 },
   { id: 'lantern-gold', slot: 'lantern', name: 'Gold beam', icon: '🟡', price: 400 },
   // Things for the hatchery meadow. Unlike gear, you can have all of them out at once.
-  { id: 'meadow-berries', slot: 'meadow', name: 'Berry bush', icon: '🫐', price: 100, desc: 'Hungry dragons stop by for a munch.' },
+  { id: 'meadow-berries', slot: 'meadow', name: 'Berry bush', icon: '🍓', price: 100, desc: 'Hungry dragons stop by for a munch.' },
   { id: 'meadow-cloud', slot: 'meadow', name: 'Cloud bed', icon: '☁️', price: 140, desc: 'Sleepy dragons curl up on it for long naps together.' },
   { id: 'meadow-pond', slot: 'meadow', name: 'Splash pond', icon: '💦', price: 160, desc: 'Dragons splash about. Octofrost makes ice!' },
   { id: 'meadow-campfire', slot: 'meadow', name: 'Campfire', icon: '🔥', price: 180, desc: 'Lights up the night. Dragons stay up to gather round it.' },
@@ -136,13 +136,31 @@ export function splitHats(shop: ShopState, found: number[], companion: number): 
 }
 
 // How the gear looks in the games.
-export const GLOVE_FILTER: Record<string, string> = {
-  'gloves-red': 'hue-rotate(150deg) saturate(2.2)',
-  'gloves-purple': 'hue-rotate(60deg) saturate(1.8)',
-  'gloves-gold': 'sepia(1) saturate(4) hue-rotate(-10deg) brightness(1.15)',
-  'gloves-shadow': 'grayscale(1) brightness(0.45) contrast(1.3)',
-  'gloves-ice': 'hue-rotate(-60deg) saturate(0.6) brightness(1.35)',
+// Gloves are recolored from the 🧤 emoji, which is a different color on every
+// device (blue on Android, green on Apple, and so on). So instead of shifting
+// its hue, each glove color maps the emoji's light and dark onto a fixed pair of
+// colors (see GearFilters), and red gloves come out red everywhere.
+export const GLOVE_TONES: Record<string, { dark: [number, number, number]; light: [number, number, number] }> = {
+  'gloves-red': { dark: [70, 0, 0], light: [255, 60, 60] },
+  'gloves-purple': { dark: [35, 0, 70], light: [185, 110, 255] },
+  'gloves-ice': { dark: [40, 130, 200], light: [230, 250, 255] },
+  'gloves-gold': { dark: [140, 85, 0], light: [255, 235, 80] },
 };
+
+export const GLOVE_FILTER: Record<string, string> = {
+  ...Object.fromEntries(Object.keys(GLOVE_TONES).map((id) => [id, `url(#${id})`])),
+  'gloves-shadow': 'grayscale(1) brightness(0.45) contrast(1.3)',
+};
+
+// The color matrix for one glove color: grayscale, then stretch dark..light.
+export function gloveMatrix(id: string): string {
+  const { dark, light } = GLOVE_TONES[id];
+  const rows = [0, 1, 2].map((c) => {
+    const a = (light[c] - dark[c]) / 255;
+    return [a * 0.2126, a * 0.7152, a * 0.0722, 0, dark[c] / 255].map((v) => +v.toFixed(4)).join(' ');
+  });
+  return [...rows, '0 0 0 1 0'].join(' ');
+}
 
 export const BALL_GLOW: Record<string, string> = {
   'ball-fire': 'drop-shadow(0 0 6px #f97316) drop-shadow(0 0 12px #ef4444)',

@@ -2705,8 +2705,12 @@ h1 {
 
 .meadow-rock {
   left: 40%;
-  top: 44%;
-  font-size: 22px;
+  top: 46%;
+  width: 26px;
+  height: 15px;
+  border-radius: 55% 45% 30% 30% / 70% 65% 35% 35%;
+  background: linear-gradient(160deg, #b8bec7 0%, #8a929e 55%, #6b7280 100%);
+  box-shadow: inset -3px -2px 0 rgba(0, 0, 0, 0.12);
 }
 
 .meadow-flower {
@@ -3054,10 +3058,28 @@ h1 {
 .thing-fire-logs {
   position: absolute;
   left: 50%;
-  bottom: 0;
+  bottom: 0.15em;
+  width: 1.7em;
+  height: 0.6em;
   transform: translateX(-50%);
-  font-size: 1.6em;
 }
+
+/* Two crossed logs, drawn so they look the same on every device. */
+.thing-fire-logs::before,
+.thing-fire-logs::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.15em;
+  width: 100%;
+  height: 0.32em;
+  border-radius: 0.16em;
+  background: linear-gradient(180deg, #a16207, #78350f);
+  box-shadow: inset 0.12em 0 0 #d6a15a;
+}
+
+.thing-fire-logs::before { transform: rotate(14deg); }
+.thing-fire-logs::after { transform: rotate(-14deg); }
 
 .thing-fire-flame {
   position: absolute;

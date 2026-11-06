@@ -8,8 +8,8 @@ import type { Ability } from '../engine/abilities';
 import { seconds } from '../engine/speed';
 import { nightVisionClue } from '../engine/lantern';
 
-const ALL_SPOTS = ['🛏️', '🛋️', '🚪', '🧺', '🪴', '📦', '🧥', '🪑', '🛁', '🧸', '🗄️', '🎹', '🧳', '🖼️', '🪟', '🛒'];
-const ATTIC_SPOTS = ['🕯️', '📚', '🪆', '🧶', '🎻', '🪞', '⏰', '🎲', '🧳', '📦', '🪑', '🖼️', '🧸', '🛏️', '🗄️', '🧥', '🪟', '🎹', '🧺', '🪴', '🚪', '🛋️', '🛁', '🛒', '🎩'];
+const ALL_SPOTS = ['🛏️', '🛋️', '🚪', '🧺', '🌵', '📦', '🧥', '🪑', '🛁', '🧸', '🗄️', '🎹', '🧳', '🖼️', '🕰️', '🛒'];
+const ATTIC_SPOTS = ['🕯️', '📚', '🧩', '🧶', '🎻', '🏺', '⏰', '🎲', '🧳', '📦', '🪑', '🖼️', '🧸', '🛏️', '🗄️', '🧥', '🕰️', '🎹', '🧺', '🌵', '🚪', '🛋️', '🛁', '🛒', '🎩'];
 const FLOORS = ['Downstairs', 'Upstairs', 'The attic'];
 const MAX_SIZE = 5;
 
