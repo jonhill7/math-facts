@@ -46,8 +46,8 @@ export const RIVALS: Rival[] = [
 
 export type RaceKind = 'ghost' | 'rival' | 'solo';
 
-// Courses: kids race on facts of one difficulty, so a race on the 2s is never
-// compared with a race on the 7s. A fact's course comes from its easier factor,
+// Courses: kids practice (and race) on facts of one difficulty, so a race on
+// the 2s is never compared with a race on the 7s. A fact's course comes from its easier factor,
 // the one kids use as the strategy (2 × 7 is a double, so it's easy).
 export type CourseId = 'easy' | 'medium' | 'hard' | 'mixed';
 
@@ -63,6 +63,12 @@ export function courseOf(fact: Fact): Exclude<CourseId, 'mixed'> {
   return lo <= 1 ? 'easy' : lo === 2 ? 'medium' : 'hard';
 }
 
+// The course a whole times table belongs to, for saves from before courses.
+export function courseOfTable(table: number): Exclude<CourseId, 'mixed'> {
+  const tier = TIER[table] ?? 0;
+  return tier <= 1 ? 'easy' : tier === 2 ? 'medium' : 'hard';
+}
+
 export const courseFacts = (course: CourseId, facts: Fact[]): Fact[] => (course === 'mixed' ? facts : facts.filter((f) => courseOf(f) === course));
 
 // The usual fair time on a course: what a rival flies each flap at pace 1.
@@ -73,14 +79,13 @@ export function courseFairMs(course: CourseId, facts: Fact[], fastMs?: number): 
 
 export interface RaceState {
   ghosts: Partial<Record<CourseId, number[]>>; // ms for each flap of the last race on each course
-  course: CourseId; // the course picked last
   rivalsBeaten: number; // how far up the rival ladder they've got
   bestPace: number; // best (lowest) race pace so far; 0 = never raced
   races: number;
   golds: number; // solo flights that beat the fair time
 }
 
-export const emptyRace = (): RaceState => ({ ghosts: {}, course: 'mixed', rivalsBeaten: 0, bestPace: 0, races: 0, golds: 0 });
+export const emptyRace = (): RaceState => ({ ghosts: {}, rivalsBeaten: 0, bestPace: 0, races: 0, golds: 0 });
 
 // The next rival to beat, or the fastest one once all are beaten.
 export const nextRival = (race: RaceState): number => Math.min(race.rivalsBeaten, RIVALS.length - 1);
@@ -153,7 +158,6 @@ export function finishRace(race: RaceState, kind: RaceKind, course: CourseId, fl
   const rival = kind === 'rival' ? RIVALS[nextRival(race)].name : undefined;
   const next: RaceState = {
     ...race,
-    course,
     ghosts: flaps.length ? { ...race.ghosts, [course]: flaps.map((f) => Math.round(f.ms)) } : race.ghosts,
     rivalsBeaten: kind === 'rival' && won ? Math.min(RIVALS.length, race.rivalsBeaten + 1) : race.rivalsBeaten,
     bestPace: newBest ? pace : race.bestPace,

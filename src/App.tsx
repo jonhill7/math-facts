@@ -3,10 +3,12 @@ import { Confetti } from './components/Confetti';
 import { Dragon } from './components/Dragon';
 import { dragonName, Hatchery, stageText } from './components/Hatchery';
 import { MasteryMap, masteredCount } from './components/MasteryMap';
+import { Badges } from './components/Badges';
 import { BOSS_BONUS, PracticeSession, SessionSummary } from './components/PracticeSession';
 import { Shop } from './components/Shop';
 import { WorldTour } from './components/WorldTour';
 import { ABILITY_INFO, activeAbility, bossForgives, bossMultiplier, chargeNeeded, extraClockMs, powerSize, questMultiplier, snackBonus, startCharge } from './engine/abilities';
+import { Badge, BADGES, checkBadges } from './engine/badges';
 import { bossFor, isBossGame, knownCount } from './engine/boss';
 import { ALL_FACTS, Fact } from './engine/facts';
 import { allDragons, companionFor, DragonState, feed, grewBetween, SNACKS_FAST, SNACKS_RIGHT, speciesById, STAGE_LEVEL } from './engine/dragons';
@@ -46,13 +48,20 @@ type Screen =
   | { name: 'who' }
   | { name: 'home' }
   | { name: 'play'; mode: Mode; before: SaveData; boss?: Boss; race?: RaceKind; opponent?: number[] }
-  | { name: 'done'; mode: Mode; boss?: Boss; summary: SessionSummary; grew: DragonState[]; rival: string; score: MatchScore; league?: { before: League; after: League }; quests: Quest[]; race?: RaceKind; raceResult?: RaceResult }
+  | { name: 'done'; mode: Mode; boss?: Boss; summary: SessionSummary; grew: DragonState[]; rival: string; score: MatchScore; league?: { before: League; after: League }; quests: Quest[]; race?: RaceKind; raceResult?: RaceResult; badges: Badge[] }
+  | { name: 'badges' }
   | { name: 'map' }
   | { name: 'hatchery' }
   | { name: 'shop' }
   | { name: 'world' };
 
 const companionOf = (d: SaveData) => companionFor(d.hoard, d.stats.snacks, d.companion);
+
+// Add any badges the kid has reached. Badges once earned are kept forever.
+function withBadges(d: SaveData): SaveData {
+  const { earned } = checkBadges(d.badges, d, Date.now());
+  return earned === d.badges ? d : { ...d, badges: earned };
+}
 
 // Snacks go to the companion as experience, and count toward the total that finds new eggs.
 function eat(d: SaveData, snacks: number): SaveData {
@@ -100,7 +109,8 @@ export default function App() {
     s.load()
       .then((d) => {
         loaded.current = d;
-        setData(d);
+        // Saves from before badges get every badge they've already reached.
+        setData(withBadges(d));
         setScreen({ name: 'home' });
       })
       .catch(() => setError('Could not load your progress. Check the internet connection and try again.'));
@@ -186,7 +196,7 @@ export default function App() {
     // flies its own course: the ghost exactly as the kid did last time.
     let opponent: number[] | undefined;
     if (mode === 'race') {
-      const { course } = data.race;
+      const { course } = data.settings;
       const finish = data.settings.length;
       opponent =
         race === 'ghost'
@@ -220,13 +230,14 @@ export default function App() {
           onHatchery={() => setScreen({ name: 'hatchery' })}
           onShop={() => setScreen({ name: 'shop' })}
           onWorld={() => setScreen({ name: 'world' })}
+          onBadges={() => setScreen({ name: 'badges' })}
           onSwitch={switchPlayer}
           muteButton={muteButton}
           hat={hat}
           onSettings={(change) => update((d) => ({ ...d, settings: { ...d.settings, ...change } }), true)}
-          onCourse={(course) => update((d) => ({ ...d, race: { ...d.race, course } }), true)}
         />
       )}
+      {screen.name === 'badges' && data && <Badges data={data} onBack={() => setScreen({ name: 'home' })} />}
       {screen.name === 'map' && data && <MasteryMap progress={data.progress} onBack={() => setScreen({ name: 'home' })} />}
       {screen.name === 'hatchery' && data && (
         <Hatchery
@@ -262,7 +273,7 @@ export default function App() {
       )}
       {screen.name === 'play' && data && (() => {
         const { mode, before, boss, race, opponent } = screen;
-        const course = before.race.course;
+        const course = before.settings.course;
         const raceRival = RIVALS[nextRival(before.race)];
         const level = before.league.level;
         const rival = rivalFor(before.league);
@@ -294,11 +305,7 @@ export default function App() {
               snackBonus={snackBonus(ability)}
               boss={boss}
               decor={mode === 'race' ? undefined : place.emoji}
-              options={
-                mode === 'race'
-                  ? { length: before.settings.length, only: course === 'mixed' ? undefined : (f) => courseOf(f) === course }
-                  : { focusTable: before.settings.focusTable || undefined, length: before.settings.length }
-              }
+              options={{ length: before.settings.length, only: course === 'mixed' ? undefined : (f) => courseOf(f) === course }}
               onQuit={() => {
                 update((d) => ({ ...d }), true); // save right away
                 setScreen({ name: 'home' });
@@ -319,14 +326,18 @@ export default function App() {
                       sessions: d.stats.sessions + 1,
                       lastPlayed: Date.now(),
                       bossesBeaten: d.stats.bossesBeaten + (summary.boss === 'beaten' ? 1 : 0),
+                      perfectGames: d.stats.perfectGames + (summary.answered >= 10 && summary.correct === summary.answered ? 1 : 0),
+                      bestFastGame: Math.max(d.stats.bestFastGame, summary.fast),
+                      ghostWins: d.stats.ghostWins + (raced?.result.kind === 'ghost' && raced.result.won ? 1 : 0),
                     },
                     streak: practiced(d.streak, Date.now()),
                   };
+                  next = { ...next, stats: { ...next.stats, bestStreak: Math.max(next.stats.bestStreak, next.streak.count) } };
                   next = eat(next, summary.boss === 'beaten' && boss ? boss.bonus : 0);
                   if (raced?.result.won) next = eat(next, RACE_WIN_BONUS);
                   next = count(next, 'games');
                   if (won) next = count(next, 'matchesWon', 1, 'matchesWon');
-                  return next;
+                  return withBadges(next);
                 };
                 // Work out the results from the latest save, which has every answer in it.
                 const current = latest.current ?? data;
@@ -334,7 +345,7 @@ export default function App() {
                 update(finish, true);
                 const doneBefore = today(before.quests, Date.now()).done;
                 const quests = questsFor(after.quests.day, after.name).filter((q) => after.quests.done.includes(q.id) && !doneBefore.includes(q.id));
-                setScreen({ name: 'done', mode, boss, summary, rival, score, league, quests, race, raceResult: raced?.result, grew: grewBetween(allDragons(before.hoard, before.stats.snacks), allDragons(after.hoard, after.stats.snacks)) });
+                setScreen({ name: 'done', mode, boss, summary, rival, score, league, quests, race, raceResult: raced?.result, badges: BADGES.filter((b) => b.id in after.badges && !(b.id in current.badges)), grew: grewBetween(allDragons(before.hoard, before.stats.snacks), allDragons(after.hoard, after.stats.snacks)) });
               }}
               stage={(props) =>
                 mode === 'race' ? (
@@ -443,14 +454,14 @@ interface HomeProps {
   onHatchery: () => void;
   onShop: () => void;
   onWorld: () => void;
+  onBadges: () => void;
   onSwitch: () => void;
   muteButton: ReactNode;
   hat?: string;
   onSettings: (change: Partial<Settings>) => void;
-  onCourse: (course: CourseId) => void;
 }
 
-function Home({ data, onPlay, onMap, onHatchery, onShop, onWorld, onSwitch, muteButton, hat, onSettings, onCourse }: HomeProps) {
+function Home({ data, onPlay, onMap, onHatchery, onShop, onWorld, onBadges, onSwitch, muteButton, hat, onSettings }: HomeProps) {
   const mastered = masteredCount(data.progress);
   const companion = companionOf(data);
   const ability = activeAbility(companion);
@@ -461,6 +472,7 @@ function Home({ data, onPlay, onMap, onHatchery, onShop, onWorld, onSwitch, mute
   const place = placeById(data.place);
   const title = speedTitle(data.progress, ALL_FACTS, data.settings.fastMs);
   const rival = RIVALS[nextRival(data.race)];
+  const course = COURSES.find((c) => c.id === data.settings.course) ?? COURSES[COURSES.length - 1];
   return (
     <div className="home">
       <div className="home-top">
@@ -590,21 +602,21 @@ function Home({ data, onPlay, onMap, onHatchery, onShop, onWorld, onSwitch, mute
                   key={c.id}
                   type="button"
                   role="radio"
-                  aria-checked={data.race.course === c.id}
-                  className={`course-pill ${data.race.course === c.id ? 'course-pill-on' : ''}`}
-                  onClick={() => onCourse(c.id)}
+                  aria-checked={course.id === c.id}
+                  className={`course-pill ${course.id === c.id ? 'course-pill-on' : ''}`}
+                  onClick={() => onSettings({ course: c.id })}
                   title={c.tables}
                 >
                   {c.icon} {c.name}
                 </button>
               ))}
             </span>
-            <small className="course-line">{COURSES.find((c) => c.id === data.race.course)?.tables}</small>
+            <small className="course-line">{course.tables}</small>
             <span className="mode-pills">
               <button type="button" className="mode-pill" onClick={() => onPlay('race', 'rival')}>
                 🐉 Rival
               </button>
-              <button type="button" className="mode-pill" onClick={() => onPlay('race', 'ghost')} disabled={!data.race.ghosts[data.race.course]?.length} title={data.race.ghosts[data.race.course]?.length ? undefined : 'Race this course once to make a ghost'}>
+              <button type="button" className="mode-pill" onClick={() => onPlay('race', 'ghost')} disabled={!data.race.ghosts[course.id]?.length} title={data.race.ghosts[course.id]?.length ? undefined : 'Race this course once to make a ghost'}>
                 👻 Ghost
               </button>
               <button type="button" className="mode-pill" onClick={() => onPlay('race', 'solo')}>
@@ -617,7 +629,7 @@ function Home({ data, onPlay, onMap, onHatchery, onShop, onWorld, onSwitch, mute
           <summary>
             <span aria-hidden="true">⚙️</span>
             <span className="options-summary">
-              {data.settings.focusTable ? `Just the ${data.settings.focusTable}s` : 'All facts'} · {data.settings.length} questions ·{' '}
+              {course.icon} {course.name} facts · {data.settings.length} questions ·{' '}
               {data.settings.fastMs / 1000}s speed
             </span>
             <span className="options-change">Change</span>
@@ -625,15 +637,16 @@ function Home({ data, onPlay, onMap, onHatchery, onShop, onWorld, onSwitch, mute
           <div className="options-body">
             <label>
               Practice
-              <select value={data.settings.focusTable} onChange={(e) => onSettings({ focusTable: Number(e.target.value) })} aria-label="Which facts to practice">
-                <option value={0}>All facts (recommended)</option>
-                {Array.from({ length: 12 }, (_, i) => (
-                  <option key={i + 1} value={i + 1}>
-                    Just the {i + 1}s
+              <select value={course.id} onChange={(e) => onSettings({ course: e.target.value as CourseId })} aria-label="Which facts to practice">
+                {COURSES.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.icon} {c.name}
+                    {c.id === 'mixed' ? ' (recommended)' : ''}
                   </option>
                 ))}
               </select>
             </label>
+            <small className="options-note">{course.id === 'mixed' ? 'Every fact, mixed together.' : `${course.name} is the ${course.tables}.`}</small>
             <label>
               Game
               <select value={data.settings.length} onChange={(e) => onSettings({ length: Number(e.target.value) })} aria-label="Game length">
@@ -670,6 +683,12 @@ function Home({ data, onPlay, onMap, onHatchery, onShop, onWorld, onSwitch, mute
         <button type="button" className="big-button secondary" onClick={onMap}>
           🗺️ Fact map
         </button>
+        <button type="button" className="big-button secondary home-badges" onClick={onBadges}>
+          🏅 Badges{' '}
+          <small>
+            {Object.keys(data.badges).filter((id) => BADGES.some((b) => b.id === id)).length} of {BADGES.length}
+          </small>
+        </button>
       </div>
       <div className="stat-tiles">
         <Stat icon="⚽" value={data.stats.goals} label="goals" />
@@ -705,13 +724,13 @@ interface DoneProps {
 }
 
 function Done({ screen, names, onAgain, onHome }: DoneProps) {
-  const { summary, mode, rival, score, league, quests, grew, raceResult } = screen;
+  const { summary, mode, rival, score, league, quests, grew, raceResult, badges } = screen;
   useEffect(() => {
     if (grew.length) sounds.hatch();
   }, [grew]);
   const pct = summary.answered ? Math.round((summary.correct / summary.answered) * 100) : 0;
   const won = isSoccer(mode) && score.us > score.them;
-  const party = won || raceResult?.won || grew.length > 0 || pct === 100 || summary.boss === 'beaten';
+  const party = won || raceResult?.won || grew.length > 0 || badges.length > 0 || pct === 100 || summary.boss === 'beaten';
   const trophy = league && league.after.trophies > league.before.trophies;
   return (
     <div className="done">
@@ -752,6 +771,22 @@ function Done({ screen, names, onAgain, onHome }: DoneProps) {
           ✅ Quest done: {q.text}. +{QUEST_REWARD} snacks!
         </p>
       ))}
+      {badges.length > 0 && (
+        <div className="new-badges">
+          <h3>🏅 {badges.length === 1 ? 'New badge!' : `${badges.length} new badges!`}</h3>
+          <div className="badge-grid">
+            {badges.map((b) => (
+              <div key={b.id} className={`badge-card badge-got badge-${b.tier}`}>
+                <span className="badge-medal" aria-hidden="true">
+                  {b.icon}
+                </span>
+                <strong>{b.name}</strong>
+                <small>{b.text}</small>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
       {grew.map((d) => (
         <div key={d.species.id} className="grew">
           <Dragon dragon={d} size={4} />
