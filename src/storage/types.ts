@@ -4,6 +4,7 @@ import { emptyLeague, League } from '../engine/league';
 import { emptyQuests, QuestState } from '../engine/quests';
 import { emptyShop, ShopState } from '../engine/shop';
 import { EGG_ORDER, Hoard } from '../engine/dragons';
+import { emptyRace, RaceState } from '../engine/race';
 
 export interface Stats {
   sessions: number;
@@ -32,6 +33,7 @@ export interface SaveData {
   quests: QuestState;
   shop: ShopState;
   place: string; // where on the world tour the kid is playing
+  race: RaceState; // Sky Race: the ghost, rivals beaten and best pace
 }
 
 export interface Settings {
@@ -57,7 +59,7 @@ export const emptyStats = (): Stats => ({
   lastPlayed: 0,
 });
 
-export const emptySave = (name: string): SaveData => ({ name, progress: {}, stats: emptyStats(), settings: defaultSettings(), streak: emptyStreak(), dragonNames: {}, hoard: {}, league: emptyLeague(), quests: emptyQuests(), shop: emptyShop(), place: 'meadow' });
+export const emptySave = (name: string): SaveData => ({ name, progress: {}, stats: emptyStats(), settings: defaultSettings(), streak: emptyStreak(), dragonNames: {}, hoard: {}, league: emptyLeague(), quests: emptyQuests(), shop: emptyShop(), place: 'meadow', race: emptyRace() });
 
 // Fill in anything an older save is missing, so new features never crash on old data.
 export function normalizeSave(name: string, raw: Partial<SaveData> | undefined): SaveData {
@@ -79,6 +81,7 @@ export function normalizeSave(name: string, raw: Partial<SaveData> | undefined):
     quests: { ...base.quests, ...raw.quests },
     shop: { ...base.shop, ...raw.shop },
     place: raw.place ?? base.place,
+    race: { ...base.race, ...raw.race },
   };
 }
 
