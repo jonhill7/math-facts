@@ -2,7 +2,9 @@
 // time its goal is reached and is kept forever, even if the thing it measures
 // later goes down (a streak that ends, or a speed title that slips).
 
-import { allDragons, Hoard } from './dragons';
+import { allDragons, Hoard, rankIndex, RANKS } from './dragons';
+import { knownCount } from './boss';
+import { PLACES, unlocked } from './places';
 import { ALL_FACTS } from './facts';
 import { League } from './league';
 import { RaceState, RIVALS, SPEED_TITLES, speedTitle } from './race';
@@ -76,6 +78,13 @@ const dragons = (d: BadgeInput) => allDragons(d.hoard, d.stats.snacks);
 const hatched = (d: BadgeInput) => dragons(d).filter((x) => x.stage !== 'none' && x.stage !== 'egg').length;
 const grown = (d: BadgeInput) => dragons(d).filter((x) => x.stage === 'grown').length;
 const eggs = (d: BadgeInput) => dragons(d).filter((x) => x.stage !== 'none').length;
+const topRank = (d: BadgeInput) => Math.max(0, ...dragons(d).map(rankIndex));
+const elders = (d: BadgeInput) => dragons(d).filter((x) => rankIndex(x) > 0).length;
+const placesOpen = (d: BadgeInput) => {
+  const known = knownCount(d.progress);
+  const m = mastered(d.progress);
+  return PLACES.filter((p) => unlocked(p, known, m)).length;
+};
 const topLevel = (d: BadgeInput) => Math.max(1, ...dragons(d).filter((x) => x.stage !== 'none').map((x) => x.level));
 
 export const BADGE_GROUPS: BadgeGroup[] = [
@@ -103,6 +112,9 @@ export const BADGE_GROUPS: BadgeGroup[] = [
   { id: 'hatched', section: 'Dragons', name: 'Dragons hatched', icon: '🐣', value: hatched },
   { id: 'grown', section: 'Dragons', name: 'Dragons fully grown', icon: '🐲', value: grown },
   { id: 'level', section: 'Dragons', name: 'Dragon level', icon: '⭐', value: topLevel },
+  { id: 'rank', section: 'Dragons', name: 'Dragon ranks', icon: '🌟', value: topRank },
+  { id: 'elders', section: 'Dragons', name: 'Elder dragons', icon: '🌟', value: elders },
+  { id: 'places', section: 'Learning', name: 'World tour', icon: '🌍', value: placesOpen },
 ];
 
 // Sections of the badge case, in order, with their icons.
@@ -181,7 +193,7 @@ export const BADGES: Badge[] = [
   ...counts('corners', 'top corners', [[10, 'Top Bins'], [50, 'Sharpshooter'], [200, 'Sniper']], (g) => `Hit ${g} top-corner shots.`),
   ...counts('saves', 'saves', [[10, 'Safe Hands'], [50, 'Brick Wall'], [100, 'Super Keeper'], [250, 'Golden Glove'], [500, 'Fortress'], [1000, 'Thousand-Save Wall']], (g) => `Make ${g} saves.`),
   ...counts('wins', 'wins', [[1, 'First Win'], [10, 'Winning Streak'], [50, 'Champion Team']], (g) => (g === '1' ? 'Win a penalty match.' : `Win ${g} penalty matches.`)),
-  ...counts('trophies', 'trophies', [[1, 'League Champion'], [3, 'Triple Crown'], [10, 'Dynasty']], (g) => (g === '1' ? 'Win the league.' : `Win the league ${g} times.`)),
+  ...counts('trophies', 'trophies', [[1, 'League Champion'], [3, 'Triple Crown'], [10, 'Dynasty'], [25, 'Hall of Fame']], (g) => (g === '1' ? 'Win the league.' : `Win the league ${g} times.`)),
   ...counts('monsters', 'monsters', [[1, 'Peekaboo'], [10, 'Monster Spotter'], [50, 'Monster Tracker'], [100, 'Monster Hunter'], [250, 'Fearless']], (g) => (g === '1' ? 'Find the Tickle Monster.' : `Find the Tickle Monster ${g} times.`)),
   ...counts('tickles', 'tickle attacks', [[1, 'Ticklish'], [25, 'Giggle Proof']], (g) => (g === '1' ? 'Survive a tickle attack.' : `Survive ${g} tickle attacks.`)),
   ...counts('races', 'races', [[1, 'Takeoff'], [10, 'Frequent Flier'], [50, 'Sky Veteran'], [100, 'Cloud Commander']], (g) => (g === '1' ? 'Fly your first Sky Race.' : `Fly ${g} Sky Races.`)),
@@ -202,8 +214,22 @@ export const BADGES: Badge[] = [
   ...counts('powers', 'power moves', [[10, 'Powered Up'], [100, 'Supercharged'], [500, 'Unlimited Power']], (g) => `Use ${g} power moves.`),
   ...counts('eggs', 'eggs', [[2, 'Egg Finder'], [6, 'Nest Builder'], [12, 'Full Nest']], (g) => (g === '12' ? 'Find every dragon egg.' : `Find ${g} dragon eggs.`)),
   ...counts('hatched', 'dragons', [[1, 'It Hatched!'], [4, 'Dragon Family'], [12, 'Dragon Keeper']], (g) => (g === '1' ? 'Hatch a dragon.' : `Hatch ${g} dragons.`)),
-  ...counts('grown', 'dragons', [[1, 'All Grown Up'], [3, 'Dragon Rider'], [12, 'Dragon Lord']], (g) => (g === '1' ? 'Grow a dragon all the way up.' : `Grow ${g} dragons all the way up.`)),
-  ...counts('level', 'level', [[10, 'Level 10'], [20, 'Level 20'], [30, 'Level 30']], (g) => `Get a dragon to level ${g}.`),
+  ...counts('grown', 'dragons', [[1, 'All Grown Up'], [3, 'Dragon Rider'], [6, 'Dragon Tamer'], [12, 'Dragon Lord']], (g) => (g === '1' ? 'Grow a dragon all the way up.' : `Grow ${g} dragons all the way up.`)),
+  ...counts('level', 'level', [[10, 'Level 10'], [20, 'Level 20'], [30, 'Level 30'], [40, 'Level 40'], [50, 'Level 50']], (g) => `Get a dragon to level ${g}.`),
+  // One badge for each rank a grown dragon can reach, using the rank's own icon.
+  ...RANKS.map((r, i): Badge => ({
+    id: `rank-${i + 1}`,
+    group: 'rank',
+    name: `${r.name} Dragon`,
+    icon: r.icon,
+    text: `Get a dragon to level ${r.level} to make it ${r.name === 'Elder' ? 'an' : 'a'} ${r.name} dragon.`,
+    goal: i + 1,
+    tier: (['silver', 'gold', 'diamond'] as Tier[])[i],
+  })),
+  ...counts('elders', 'dragons', [[3, 'Council of Elders'], [12, 'Elder Hatchery']], (g) => `Make ${g} dragons Elders (level 20).`),
+  ...counts('places', 'places', [[4, 'Explorer'], [8, 'Globetrotter'], [PLACES.length, 'Over the Moon']], (g) =>
+    g === String(PLACES.length) ? 'Unlock every stop on the world tour, all the way to the Moon.' : `Unlock ${g} places on the world tour.`,
+  ),
 ];
 
 export const badgeById = (id: string) => BADGES.find((b) => b.id === id);

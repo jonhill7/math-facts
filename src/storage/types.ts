@@ -2,8 +2,8 @@ import { Progress } from '../engine/scheduler';
 import { emptyStreak, Streak } from '../engine/streak';
 import { emptyLeague, League } from '../engine/league';
 import { emptyQuests, QuestState } from '../engine/quests';
-import { emptyShop, ShopState } from '../engine/shop';
-import { EGG_ORDER, Hoard } from '../engine/dragons';
+import { emptyShop, ShopState, splitHats } from '../engine/shop';
+import { allDragons, EGG_ORDER, Hoard, migrateHoard } from '../engine/dragons';
 import { CourseId, courseOfTable, emptyRace, migrateGhosts, RaceState } from '../engine/race';
 import { Earned } from '../engine/badges';
 
@@ -40,7 +40,13 @@ export interface SaveData {
   place: string; // where on the world tour the kid is playing
   race: RaceState; // Sky Race: the ghost, rivals beaten and best pace
   badges: Earned; // when each badge was earned; badges are never taken away
+  progression?: number; // which pace of levels and eggs this save uses (see PROGRESSION)
 }
+
+// Version 2 made dragon levels and new eggs take longer, and gave each dragon
+// its own hats. Older saves are moved over once, keeping every level, egg and
+// hat they already had.
+export const PROGRESSION = 2;
 
 export interface Settings {
   muted: boolean;
@@ -69,7 +75,7 @@ export const emptyStats = (): Stats => ({
   lastPlayed: 0,
 });
 
-export const emptySave = (name: string): SaveData => ({ name, progress: {}, stats: emptyStats(), settings: defaultSettings(), streak: emptyStreak(), dragonNames: {}, hoard: {}, league: emptyLeague(), quests: emptyQuests(), shop: emptyShop(), place: 'meadow', race: emptyRace(), badges: {} });
+export const emptySave = (name: string): SaveData => ({ name, progress: {}, stats: emptyStats(), settings: defaultSettings(), streak: emptyStreak(), dragonNames: {}, hoard: {}, league: emptyLeague(), quests: emptyQuests(), shop: emptyShop(), place: 'meadow', race: emptyRace(), badges: {}, progression: PROGRESSION });
 
 // Older saves picked one times table ("just the 7s"). Those now pick the
 // course that table belongs to.
@@ -83,6 +89,14 @@ function settingsFrom(base: Settings, raw: (Partial<Settings> & { focusTable?: n
 export function normalizeSave(name: string, raw: Partial<SaveData> | undefined): SaveData {
   const base = emptySave(name);
   if (!raw) return base;
+  // Saves from before dragons had their own experience: the chosen dragon
+  // keeps every snack eaten so far, so nobody's dragon shrinks.
+  const hoard = raw.hoard ?? (raw.stats?.snacks ? { [String(raw.companion ?? EGG_ORDER[0])]: raw.stats.snacks } : {});
+  const old = (raw.progression ?? 1) < PROGRESSION;
+  const snacks = raw.stats?.snacks ?? 0;
+  const newHoard = old ? migrateHoard(hoard, snacks) : hoard;
+  const shop = { ...base.shop, ...raw.shop };
+  const found = allDragons(newHoard, snacks).filter((d) => d.stage !== 'none').map((d) => d.species.id);
   return {
     ...base,
     ...raw,
@@ -92,15 +106,14 @@ export function normalizeSave(name: string, raw: Partial<SaveData> | undefined):
     settings: settingsFrom(base.settings, raw.settings),
     streak: { ...base.streak, ...raw.streak },
     dragonNames: raw.dragonNames ?? {},
-    // Saves from before dragons had their own experience: the chosen dragon
-    // keeps every snack eaten so far, so nobody's dragon shrinks.
-    hoard: raw.hoard ?? (raw.stats?.snacks ? { [String(raw.companion ?? EGG_ORDER[0])]: raw.stats.snacks } : {}),
+    hoard: newHoard,
     league: { ...base.league, ...raw.league },
     quests: { ...base.quests, ...raw.quests },
-    shop: { ...base.shop, ...raw.shop },
+    shop: old ? splitHats(shop, found, found.includes(raw.companion ?? 0) ? raw.companion! : found[0]) : shop,
     place: raw.place ?? base.place,
     race: { ...base.race, ...raw.race, ghosts: migrateGhosts(raw.race?.ghosts) },
     badges: raw.badges ?? {},
+    progression: PROGRESSION,
   };
 }
 

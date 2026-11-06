@@ -1,4 +1,4 @@
-// The soccer league: eight rival teams in a ladder, weakest first.
+// The soccer league: twelve rival teams in a ladder, weakest first.
 // Beat a team to move up. Beat the top team to win the trophy and start a new season.
 
 export const LEAGUE = [
@@ -10,7 +10,14 @@ export const LEAGUE = [
   'Rocket Raccoons',
   'Volcano Vultures',
   'Thunder Toads',
+  'Comet Cobras',
+  'Hurricane Hippos',
+  'Lightning Llamas',
+  'Supernova Sharks',
 ];
+
+// How far up the ladder a level is, from 0 (the first team) to 1 (the top team).
+const climb = (level: number) => Math.min(level, LEAGUE.length - 1) / (LEAGUE.length - 1);
 
 export interface League {
   level: number; // index into LEAGUE of the team you play next
@@ -29,10 +36,11 @@ export function afterMatch(league: League, won: boolean): League {
 
 // Better teams have better keepers: a right but slow shot may be saved.
 // Fast answers always score.
-export const slowSaveChance = (level: number) => Math.min(level, LEAGUE.length - 1) * 0.06;
+// The top team saves 42% of slow shots.
+export const slowSaveChance = (level: number) => Math.round(climb(level) * 42) / 100;
 
 // Better teams shoot sooner, so the keeper has less time to answer. The clock
 // starts from the fact's speed goal (see speed.ts), so hard facts get longer
 // and there's always time left after the goal for a plain (not diving) save.
-export const shotClockMs = (goalMs: number, level: number) =>
-  Math.max(goalMs + 600, goalMs + 2000 - Math.min(level, LEAGUE.length - 1) * 200);
+// The top team leaves 0.6 seconds after the goal, the first team 2 seconds.
+export const shotClockMs = (goalMs: number, level: number) => goalMs + 2000 - Math.round(climb(level) * 1400);

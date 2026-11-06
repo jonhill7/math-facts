@@ -348,12 +348,12 @@ export function Dragon({ dragon, size = 1, hat, eyes }: { dragon: DragonState; s
   const look = LOOKS[species.id] ?? LOOKS[7];
   return (
     <svg
-      className={`dragon dragon-${stage}`}
+      className={`dragon dragon-${stage}${dragon.rank ? ` dragon-rank-${dragon.rank.id}` : ''}`}
       viewBox="0 0 100 100"
       width={`${size}em`}
       height={`${size}em`}
       role="img"
-      aria-label={stage === 'none' ? 'Undiscovered dragon' : `${species.name}, ${stage}`}
+      aria-label={stage === 'none' ? 'Undiscovered dragon' : `${species.name}, ${dragon.rank ? dragon.rank.name.toLowerCase() : stage}`}
     >
       {stage === 'none' && <Mystery />}
       {stage === 'egg' && <Egg c={c} look={look} />}

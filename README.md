@@ -4,11 +4,13 @@ A math facts practice game for phones and computers. Kids practice
 multiplication and division up to 12 × 12 for about 5 minutes a day, and
 grow a hatchery of dragons as they learn:
 
-- **Dragon hatchery** 🐉: every times table has its own dragon, like the
-  Ember Drake for the 7s. Its egg appears when the kid starts that table,
-  hatches when half the table's facts are known well, and is fully grown
-  when every fact is mastered. Right answers in any game are snacks for the
-  kid's companion dragon (fast answers are triple snacks), which levels up.
+- **Dragon hatchery** 🐉: there are 12 dragons to find, like the Ember
+  Drake. The kid starts with one egg and finds a new one every so often, with
+  a slightly longer wait each time (all 12 take about 3,000 snacks). An egg
+  hatches at level 3 and is fully grown at level 10, then keeps going: Elder
+  at level 20, Ancient at 30 and Legendary at 40, each with its own glow.
+  Right answers in any game are snacks for the kid's companion dragon
+  (fast answers are triple snacks), which levels up.
   Every dragon found lives in an animated meadow where they wander, nap and
   play together. Tap one to say hi, or tap the grass to throw it a ball.
   Snacks buy things for the meadow in the shop, and each one changes what
@@ -16,6 +18,9 @@ grow a hatchery of dragons as they learn:
   naps, a campfire that keeps them up at night, a trampoline, and a party
   drum. Tap a thing to send your companion to it (to the drum, and everyone
   dances). On phones the meadow is wider than the screen: swipe sideways.
+  Hats belong to one dragon: each dragon buys and wears its own, and they
+  all show in the meadow. Gloves, ball trails and lantern colors are the
+  kid's gear and work for every dragon.
 
 The practice happens inside two games:
 
@@ -40,6 +45,11 @@ Other things kids and parents can do:
 - Earn a **speed title**, from Egg Wobbler to Comet Wing, based on how
   fast they usually answer compared with each fact's fair time. The top two
   titles also need 10 Hard facts answered.
+- Win the **soccer league**: beat 12 teams in a row for a trophy, then a
+  new season starts.
+- Fly the **world tour** 🌍: knowing more facts unlocks 8 places, and
+  mastering facts unlocks 4 far places, ending with the Moon for mastering
+  every fact.
 - Collect **badges**, a permanent list of accomplishments: speed titles
   reached, longest streaks, facts and tables mastered, perfect games, goals,
   saves, monsters found, rivals and ghosts beaten in Sky Race, dragons

@@ -17,7 +17,7 @@ import { placeById } from './engine/places';
 import { bumpQuest, Quest, QUEST_REWARD, QuestKey, questsFor, today } from './engine/quests';
 import { recordAnswer } from './engine/scheduler';
 import { speedGoalMs } from './engine/speed';
-import { BALL_GLOW, balance, BEAM_RGB, GLOVE_FILTER, itemById } from './engine/shop';
+import { BALL_GLOW, balance, BEAM_RGB, GLOVE_FILTER, hatOf } from './engine/shop';
 import { practiced, streakStatus } from './engine/streak';
 import { LanternHunt } from './modes/LanternHunt';
 import { MatchScore, PenaltyKicks, SoccerProps, StatKey } from './modes/PenaltyKicks';
@@ -222,7 +222,8 @@ export default function App() {
 
   const companion = data ? companionOf(data) : undefined;
   const ability = activeAbility(companion);
-  const hat = data ? itemById(data.shop.equipped.hat)?.icon : undefined;
+  const hat = data && companion ? hatOf(data.shop, companion.species.id) : undefined;
+  const hatFor = (id: number) => (data ? hatOf(data.shop, id) : undefined);
   const place = placeById(data?.place);
   const companionName = companion && data ? (data.dragonNames[String(companion.species.id)] || companion.species.name) : 'Your dragon';
 
@@ -257,7 +258,7 @@ export default function App() {
           snacksEarned={data.stats.snacks}
           companion={companionOf(data)}
           names={data.dragonNames}
-          hat={hat}
+          hatFor={hatFor}
           placed={data.shop.placed}
           onShop={() => setScreen({ name: 'shop' })}
           onPick={(id) => update((d) => ({ ...d, companion: id }), true)}
@@ -271,6 +272,7 @@ export default function App() {
           snacks={data.stats.snacks}
           trophies={data.league.trophies}
           companion={companion}
+          companionName={companionName}
           onChange={(shop) => update((d) => ({ ...d, shop }), true)}
           onBack={() => setScreen({ name: 'home' })}
         />
@@ -278,6 +280,7 @@ export default function App() {
       {screen.name === 'world' && data && (
         <WorldTour
           known={knownCount(data.progress)}
+          mastered={masteredCount(data.progress)}
           current={data.place}
           companion={companion}
           hat={hat}
@@ -807,7 +810,13 @@ function Done({ screen, names, onAgain, onHome }: DoneProps) {
           <Dragon dragon={d} size={4} />
           <span>
             <strong>
-              {d.stage === 'egg' ? `New egg: ${d.species.name}!` : d.stage === 'hatchling' ? `${d.species.name} hatched!` : `${dragonName(d, names)} grew!`}
+              {d.stage === 'egg'
+                ? `New egg: ${d.species.name}!`
+                : d.stage === 'hatchling'
+                  ? `${d.species.name} hatched!`
+                  : d.rank // grown at level 10, so a dragon with a rank grew a rank
+                    ? `${d.rank.icon} ${dragonName(d, names)} is now ${d.rank.name === 'Elder' ? 'an' : 'a'} ${d.rank.name} dragon!`
+                    : `${dragonName(d, names)} grew!`}
             </strong>
             <small>
               {d.stage === 'hatchling' ? `${ABILITY_INFO[activeAbility(d)!].icon} New power: ${ABILITY_INFO[activeAbility(d)!].text}` : d.species.power}

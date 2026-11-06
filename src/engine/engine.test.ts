@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { allDragons, companionFor, EGG_ORDER, eggsFound, feed, grewBetween, levelFor, nextEggIn, SNACKS_PER_EGG, SPECIES, stageForLevel, tableFactIds } from './dragons';
+import { allDragons, companionFor, EGG_ORDER, eggsFound, feed, grewBetween, levelFor, migrateHoard, nextEggIn, rankFor, snacksForEgg, snacksForLevel, SPECIES, stageForLevel, tableFactIds } from './dragons';
 import { emptyStreak, practiced, streakStatus } from './streak';
 import { ALL_FACTS, factById } from './facts';
 import { hintFor } from './hints';
@@ -121,10 +121,18 @@ describe('dragons', () => {
 
   it('starts with one egg and finds more as snacks are earned', () => {
     expect(eggsFound(0)).toBe(1);
-    expect(eggsFound(SNACKS_PER_EGG - 1)).toBe(1);
-    expect(eggsFound(SNACKS_PER_EGG)).toBe(2);
+    expect(eggsFound(149)).toBe(1);
+    expect(eggsFound(150)).toBe(2);
     expect(eggsFound(100000)).toBe(SPECIES.length);
-    expect(nextEggIn(SNACKS_PER_EGG + 10)).toBe(SNACKS_PER_EGG - 10);
+    expect(nextEggIn(160)).toBe(165); // the third egg is 175 after the second, at 325
+    expect(nextEggIn(100000)).toBeNull();
+  });
+
+  it('waits a little longer for each new egg', () => {
+    expect([1, 2, 3, 4].map(snacksForEgg)).toEqual([0, 150, 325, 525]);
+    expect(snacksForEgg(SPECIES.length)).toBe(3025);
+    expect(eggsFound(3024)).toBe(SPECIES.length - 1);
+    expect(eggsFound(3025)).toBe(SPECIES.length);
     const found = allDragons({}, 0).filter((d) => d.stage !== 'none');
     expect(found.map((d) => d.species.id)).toEqual([EGG_ORDER[0]]);
   });
@@ -132,24 +140,57 @@ describe('dragons', () => {
   it('grows the companion by its own experience, not by times table', () => {
     const id = EGG_ORDER[0];
     expect(companionFor({}, 0).stage).toBe('egg');
-    expect(stageForLevel(levelFor(30).level)).toBe('hatchling'); // level 3
-    expect(stageForLevel(levelFor(150).level)).toBe('young'); // level 6
-    expect(stageForLevel(levelFor(450).level)).toBe('grown'); // level 10
-    const hoard = feed({}, id, 30);
-    expect(companionFor(hoard, 30).stage).toBe('hatchling');
-    expect(grewBetween(allDragons({}, 0), allDragons(hoard, 30)).map((d) => d.species.id)).toEqual([id]);
+    expect(stageForLevel(levelFor(36).level)).toBe('hatchling'); // level 3
+    expect(stageForLevel(levelFor(180).level)).toBe('young'); // level 6
+    expect(stageForLevel(levelFor(540).level)).toBe('grown'); // level 10
+    const hoard = feed({}, id, 36);
+    expect(companionFor(hoard, 36).stage).toBe('hatchling');
+    expect(grewBetween(allDragons({}, 0), allDragons(hoard, 36)).map((d) => d.species.id)).toEqual([id]);
   });
 
   it('lets the kid pick any egg they have found, and only those', () => {
     const second = EGG_ORDER[1];
-    expect(companionFor({}, SNACKS_PER_EGG, second).species.id).toBe(second);
+    expect(companionFor({}, 150, second).species.id).toBe(second);
     expect(companionFor({}, 0, second).species.id).toBe(EGG_ORDER[0]);
   });
 
   it('needs more snacks for each level', () => {
-    expect(levelFor(0)).toEqual({ level: 1, into: 0, needed: 10 });
-    expect(levelFor(10)).toEqual({ level: 2, into: 0, needed: 20 });
-    expect(levelFor(35)).toEqual({ level: 3, into: 5, needed: 30 });
+    expect(levelFor(0)).toEqual({ level: 1, into: 0, needed: 12 });
+    expect(levelFor(12)).toEqual({ level: 2, into: 0, needed: 24 });
+    expect(levelFor(41)).toEqual({ level: 3, into: 5, needed: 36 });
+    expect(snacksForLevel(10)).toBe(540);
+  });
+
+  it('gives grown dragons ranks as they keep leveling', () => {
+    expect(rankFor(19)).toBeUndefined();
+    expect(rankFor(20)?.name).toBe('Elder');
+    expect(rankFor(35)?.name).toBe('Ancient');
+    expect(rankFor(40)?.name).toBe('Legendary');
+    const id = EGG_ORDER[0];
+    const before = allDragons(feed({}, id, snacksForLevel(20) - 1), 0);
+    const after = allDragons(feed({}, id, snacksForLevel(20)), 0);
+    expect(before[0].rank).toBeUndefined();
+    expect(after[0].rank?.name).toBe('Elder');
+    expect(grewBetween(before, after).map((d) => d.species.id)).toEqual([id]);
+  });
+
+  it('moves old saves to the longer levels without losing a level or an egg', () => {
+    // Old scale: 10, 20, 30... so 450 was level 10 and 4350 was level 30.
+    const old = { '7': 455, '2': 0, '8': 4350 };
+    const moved = migrateHoard(old, 1000); // 1000 snacks found 7 eggs on the old pace
+    expect(levelFor(moved['7']).level).toBe(10);
+    expect(levelFor(moved['8']).level).toBe(30);
+    expect(levelFor(moved['2']).level).toBe(1);
+    // Halfway through a level stays about halfway through it.
+    const mid = levelFor(migrateHoard({ '7': 450 + 50 }, 0)['7']);
+    expect(mid.level).toBe(10);
+    expect(mid.into / mid.needed).toBeCloseTo(0.5, 1);
+    // Every egg found on the old pace is still found, though the new pace would only give 6.
+    expect(eggsFound(1000)).toBe(6);
+    const found = allDragons(moved, 1000).filter((d) => d.stage !== 'none').map((d) => d.species.id);
+    expect(found).toEqual(EGG_ORDER.slice(0, 7));
+    // The next egg is the 8th, which the new pace gives at 1,575 snacks.
+    expect(nextEggIn(1000, found.length)).toBe(575);
   });
 });
 

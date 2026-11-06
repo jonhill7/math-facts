@@ -1,9 +1,10 @@
 import { DragonState } from '../engine/dragons';
-import { Place, PLACES, unlocked } from '../engine/places';
+import { Place, placeGoal, PLACES, unlocked } from '../engine/places';
 import { Dragon } from './Dragon';
 
 interface Props {
   known: number; // facts known well
+  mastered: number; // facts mastered
   current: string;
   companion?: DragonState;
   hat?: string;
@@ -12,17 +13,17 @@ interface Props {
 }
 
 // The world tour: a route of places. Knowing more facts lets your dragon fly further.
-export function WorldTour({ known, current, companion, hat, onPick, onBack }: Props) {
+export function WorldTour({ known, mastered, current, companion, hat, onPick, onBack }: Props) {
   return (
     <div className="world">
       <button type="button" className="link-button" onClick={onBack}>
         ← Back
       </button>
       <h2>Dragon world tour</h2>
-      <p className="muted">Learn more facts to fly further. Your games take on the look of the place you pick. You know {known} facts well.</p>
+      <p className="muted">Learn more facts to fly further. Your games take on the look of the place you pick. You know {known} facts well and have mastered {mastered}.</p>
       <ol className="route">
         {PLACES.map((p) => {
-          const open = unlocked(p, known);
+          const open = unlocked(p, known, mastered);
           const here = p.id === current;
           return (
             <li key={p.id}>
@@ -38,7 +39,7 @@ export function WorldTour({ known, current, companion, hat, onPick, onBack }: Pr
                 </span>
                 <span className="place-text">
                   <strong>{p.name}</strong>
-                  <small>{open ? p.fact : `Know ${p.need} facts to fly here (${Math.max(0, p.need - known)} to go).`}</small>
+                  <small>{open ? p.fact : placeGoal(p, known, mastered)}</small>
                 </span>
                 {here && companion && companion.stage !== 'none' && (
                   <span className="place-dragon">
