@@ -19,6 +19,10 @@ interface Props extends StageProps {
   onFlaps: (flaps: Flap[]) => void;
 }
 
+// Where the track starts and where the finish line is, in % of the sky's width.
+const START = 8;
+const FINISH = 88;
+
 export function SkyRace({ last, turn, kind, finish, opponentTimes, fastMs, racer, opponent, opponentName, onFlaps }: Props) {
   const [flaps, setFlaps] = useState<Flap[]>([]);
   const [stars, setStars] = useState(0); // flaps faster than the fair time
@@ -66,7 +70,8 @@ export function SkyRace({ last, turn, kind, finish, opponentTimes, fastMs, racer
   const elapsed = kidMs + (frozen.current ? 0 : Date.now() - shownAt.current);
   const them = opponent ? flapsBy(opponentTimes, elapsed) : 0;
   const finished = flaps.length >= finish;
-  const pos = (n: number) => `${6 + (Math.min(n, finish) / finish) * 80}%`;
+  // Racers start at START and their middle sits on the finish line at FINISH.
+  const pos = (n: number) => `${START + (Math.min(n, finish) / finish) * (FINISH - START)}%`;
   const lead = flaps.length - them;
 
   return (
@@ -84,7 +89,7 @@ export function SkyRace({ last, turn, kind, finish, opponentTimes, fastMs, racer
       <span className="sky-cloud sky-cloud-2" aria-hidden="true">
         ☁️
       </span>
-      <div className="sky-finish" aria-hidden="true" />
+      <div className="sky-finish" style={{ left: `${FINISH}%` }} aria-hidden="true" />
       {opponent && (
         <div className={`sky-lane sky-lane-them ${kind === 'ghost' ? 'sky-lane-ghost' : ''}`} aria-hidden="true">
           <div className="sky-racer" style={{ left: pos(them) }}>
