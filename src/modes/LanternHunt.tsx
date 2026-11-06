@@ -6,6 +6,7 @@ import { Confetti } from '../components/Confetti';
 import { DEFAULT_BEAM_RGB } from '../engine/shop';
 import type { Ability } from '../engine/abilities';
 import { seconds } from '../engine/speed';
+import { nightVisionClue } from '../engine/lantern';
 
 const ALL_SPOTS = ['🛏️', '🛋️', '🚪', '🧺', '🪴', '📦', '🧥', '🪑', '🛁', '🧸', '🗄️', '🎹', '🧳', '🖼️', '🪟', '🛒'];
 const ATTIC_SPOTS = ['🕯️', '📚', '🪆', '🧶', '🎻', '🪞', '⏰', '🎲', '🧳', '📦', '🪑', '🖼️', '🧸', '🛏️', '🗄️', '🧥', '🪟', '🎹', '🧺', '🪴', '🚪', '🛋️', '🛁', '🛒', '🎩'];
@@ -131,11 +132,11 @@ export function LanternHunt({ last, waiting, resume, onStat, monstersFoundTotal,
     // React only to new answers.
   }, [last?.id]);
 
-  // Night Vision: each new hunt starts with one hot clue next to the monster.
+  // Night Vision: each new hunt starts with one free warm or cold clue (never hot).
   useEffect(() => {
     if (ability !== 'nightVision') return;
-    const near = spots.map((_, i) => i).filter((i) => distance(i, monster) === 1);
-    setMarks({ [near[Math.floor(Math.random() * near.length)]]: 'hot' });
+    const { spot, clue } = nightVisionClue(size, monster);
+    setMarks({ [spot]: clue });
   }, [hunt]);
 
   const clueFor = (spot: number): Mark => {

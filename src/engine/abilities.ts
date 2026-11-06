@@ -7,7 +7,7 @@ export type Ability =
   | 'feast' // every right answer is worth 1 extra snack
   | 'lucky' // quest rewards are doubled
   | 'spiky' // league keepers never save your slow shots
-  | 'nightVision' // Lantern Hunt: each new hunt starts with one hot clue
+  | 'nightVision' // Lantern Hunt: each new hunt starts with one warm or cold clue
   | 'headStart' // each game starts with the power meter nearly full
   | 'blaze' // power moves are even bigger
   | 'frost' // more time in Penalty Saves, and the Tickle Monster is slower
@@ -21,7 +21,7 @@ export const ABILITY_INFO: Record<Ability, { name: string; icon: string; text: s
   feast: { name: 'Royal Feast', icon: '🍖', text: 'Every right answer is worth 1 extra snack.' },
   lucky: { name: 'Lucky Twins', icon: '🍀', text: 'Daily quests give double snacks.' },
   spiky: { name: 'Spiky Shot', icon: '🌵', text: 'League keepers can never save your slow shots.' },
-  nightVision: { name: 'Night Vision', icon: '🌟', text: 'In Lantern Hunt, every new hunt starts with one hot clue.' },
+  nightVision: { name: 'Night Vision', icon: '🌟', text: 'In Lantern Hunt, every new hunt starts with a free warm or cold clue.' },
   headStart: { name: 'Head Start', icon: '🚀', text: 'Every game starts with your power meter almost full.' },
   blaze: { name: 'Blaze', icon: '🔥', text: 'Power moves are bigger: 3-goal shots, triple saves, and a huge super lantern.' },
   frost: { name: 'Frost Breath', icon: '❄️', text: '2 extra seconds in Penalty Saves, and the Tickle Monster needs 4 steps to reach you.' },
