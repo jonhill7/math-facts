@@ -55,7 +55,7 @@ export const COURSES: { id: CourseId; name: string; icon: string; tables: string
   { id: 'easy', name: 'Easy', icon: '🌱', tables: '1s, 2s, 5s, 10s and 11s' },
   { id: 'medium', name: 'Medium', icon: '🌤️', tables: '3s, 4s and 9s' },
   { id: 'hard', name: 'Hard', icon: '⛰️', tables: '6s, 7s, 8s and 12s' },
-  { id: 'mixed', name: 'Mixed', icon: '🌈', tables: 'every fact' },
+  { id: 'mixed', name: 'Mixed', icon: '🎲', tables: 'every fact' },
 ];
 
 export function courseOf(fact: Fact): Exclude<CourseId, 'mixed'> {
