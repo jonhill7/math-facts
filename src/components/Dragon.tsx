@@ -345,7 +345,9 @@ const HAT_AT: Record<string, { x: number; y: number }> = { hatchling: { x: 50, y
 export function Dragon({ dragon, size = 1, hat, eyes }: { dragon: DragonState; size?: number; hat?: string; eyes?: Eyes }) {
   const { stage, species } = dragon;
   const c = colorsFor(species.hue, species.sat);
-  const look = LOOKS[species.id] ?? LOOKS[7];
+  const base = LOOKS[species.id] ?? LOOKS[7];
+  // Dozen Crown takes its crown off to wear a hat, so the hat sits on its head.
+  const look = hat && base.horns === 'crown' ? { ...base, horns: 'nubs' as const } : base;
   return (
     <svg
       className={`dragon dragon-${stage}${dragon.rank ? ` dragon-rank-${dragon.rank.id}` : ''}`}
@@ -365,7 +367,7 @@ export function Dragon({ dragon, size = 1, hat, eyes }: { dragon: DragonState; s
         </g>
       )}
       {stage === 'grown' && <Grown c={c} look={look} sparkle eyes={eyes} />}
-      {hat && HAT_AT[stage] && look.horns !== 'crown' && (
+      {hat && HAT_AT[stage] && (
         <text x={HAT_AT[stage].x} y={HAT_AT[stage].y} fontSize="24" textAnchor="middle">
           {hat}
         </text>

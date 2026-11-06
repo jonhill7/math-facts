@@ -1,6 +1,6 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, onAuthStateChanged, signInWithPopup, signOut, User } from 'firebase/auth';
-import { doc, getDoc, getFirestore, setDoc } from 'firebase/firestore';
+import { doc, getDoc, initializeFirestore, setDoc } from 'firebase/firestore';
 import { normalizeSave, ProgressStore, SaveData } from './types';
 
 // Firebase settings come from environment variables at build time (see .env.example).
@@ -15,7 +15,9 @@ export const cloudEnabled = Boolean(config.apiKey && config.projectId);
 
 const app = cloudEnabled ? initializeApp(config) : undefined;
 const auth = app ? getAuth(app) : undefined;
-const db = app ? getFirestore(app) : undefined;
+// Fields left undefined (gear taken off, say) are skipped. Without this,
+// Firestore refuses the whole save.
+const db = app ? initializeFirestore(app, { ignoreUndefinedProperties: true }) : undefined;
 
 export type { User };
 

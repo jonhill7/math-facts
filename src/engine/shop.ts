@@ -121,7 +121,10 @@ export function toggleEquip(shop: ShopState, item: Item, dragon = 0): ShopState 
     else worn[String(dragon)] = item.id;
     return { ...shop, worn };
   }
-  return { ...shop, equipped: { ...shop.equipped, [item.slot]: on ? undefined : item.id } };
+  const equipped = { ...shop.equipped };
+  if (on) delete equipped[item.slot];
+  else equipped[item.slot] = item.id;
+  return { ...shop, equipped };
 }
 
 // Saves from before hats were per dragon shared one set of hats. Every dragon
@@ -132,7 +135,8 @@ export function splitHats(shop: ShopState, found: number[], companion: number): 
   if (old.length) for (const id of found) hats[String(id)] = [...new Set([...(hats[String(id)] ?? []), ...old])];
   const worn = { ...shop.worn };
   if (shop.equipped.hat) worn[String(companion)] = shop.equipped.hat;
-  return { ...shop, owned: shop.owned.filter((id) => !old.includes(id)), equipped: { ...shop.equipped, hat: undefined }, hats, worn };
+  const { hat: _old, ...equipped } = shop.equipped;
+  return { ...shop, owned: shop.owned.filter((id) => !old.includes(id)), equipped, hats, worn };
 }
 
 // How the gear looks in the games.
