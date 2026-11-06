@@ -7,24 +7,11 @@
 // Rivals and ghosts fly at a pace, so they slow down on hard facts too.
 
 import { Fact } from './facts';
-import { DEFAULT_FAST_MS, Progress } from './scheduler';
+import { Progress } from './scheduler';
+import { speedGoalMs, TIER } from './speed';
 
-// How hard a times table is to recall, from 0 (patterns like × 1, × 2, × 10)
-// to 3 (the facts kids find hardest).
-const TIER: Record<number, number> = { 1: 0, 2: 0, 10: 0, 5: 1, 11: 1, 3: 2, 4: 2, 9: 2, 6: 3, 7: 3, 8: 3, 12: 3 };
-
-// A fair time in ms for a fact at the standard 3 second speed goal. The easier
-// factor counts most, because kids use it as the strategy: 2 × 7 is a double.
-// No fair time goes over the speed goal (the fluency standard, about 3 seconds
-// as in XtraMath and Reflex), so beating it always means meeting the standard.
-export function fairTimeMs(fact: Fact, fastMs = DEFAULT_FAST_MS): number {
-  const lo = Math.min(TIER[fact.a], TIER[fact.b]);
-  const hi = Math.max(TIER[fact.a], TIER[fact.b]);
-  const square = fact.a === fact.b ? -200 : 0; // doubles like 6 × 6 are easier to remember
-  const division = fact.op === 'div' ? 600 : 0;
-  const ms = Math.min(DEFAULT_FAST_MS, 1400 + lo * 350 + hi * 250 + square + division);
-  return Math.round((ms * fastMs) / DEFAULT_FAST_MS);
-}
+// Fair times are the shared per-fact speed goals (see speed.ts).
+export const fairTimeMs = speedGoalMs;
 
 // Rival dragons, slowest first. Beat one to unlock the next.
 // pace = how many fair times they take per fact (1 = exactly the fair time).

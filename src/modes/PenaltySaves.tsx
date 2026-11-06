@@ -3,6 +3,7 @@ import { StageProps } from '../components/PracticeSession';
 import { sounds } from '../sound';
 import { Confetti } from '../components/Confetti';
 import type { SoccerProps } from './PenaltyKicks';
+import type { Fact } from '../engine/facts';
 
 type Result = 'dive' | 'save' | 'goal' | 'late' | 'blocked';
 
@@ -18,15 +19,17 @@ interface Shot {
 // save). Answer wrong, or too slowly, and the rivals score. A power move is a
 // super save that counts twice.
 interface Props extends StageProps, SoccerProps {
-  timeLimitMs: number;
+  clockFor: (fact: Fact) => number; // the shot clock for a fact, from its speed goal
 }
 
-export function PenaltySaves({ last, turn, onStat, onScore, rival, timeLimitMs, shield, shieldName, gloveStyle, ballStyle, powerSize }: Props) {
+export function PenaltySaves({ last, turn, fact, onStat, onScore, rival, clockFor, shield, shieldName, gloveStyle, ballStyle, powerSize }: Props) {
   const [shot, setShot] = useState<Shot | null>(null);
   const [score, setScore] = useState({ saves: 0, rival: 0 });
   const timer = useRef<number | undefined>(undefined);
   const decided = useRef(-1); // the turn whose shot has already been taken
   const shieldUsed = useRef(false);
+  // The clock for the question on screen. Harder facts get a longer run-up.
+  const timeLimitMs = fact ? clockFor(fact) : 5000;
 
   useEffect(() => onScore({ us: score.saves, them: score.rival }), [score]);
 

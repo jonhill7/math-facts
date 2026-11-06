@@ -44,7 +44,7 @@ export function SkyRace({ last, turn, kind, finish, opponentTimes, fastMs, racer
       const next = [...flaps, flap];
       setFlaps(next);
       onFlaps(next);
-      const quick = last.ms <= fair;
+      const quick = last.fast; // beat the fact's speed goal, as in every game
       if (quick) setStars((s) => s + 1);
       setMessage({ id: last.id, text: next.length >= finish ? 'FINISH!' : quick ? 'Super flap! ⭐' : 'Flap!', kind: quick ? 'great' : 'good' });
       if (next.length >= finish) window.setTimeout(sounds.found, 200);

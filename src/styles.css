@@ -671,6 +671,91 @@ h2 {
   }
 }
 
+/* Lantern Hunt: the moment an answer beats (or misses) the speed goal. */
+.lantern-speed {
+  position: absolute;
+  left: 50%;
+  top: 38%;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 18px;
+  border-radius: 999px;
+  white-space: nowrap;
+  text-align: center;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+}
+
+.lantern-speed-fast {
+  background: linear-gradient(180deg, #fde047, #f59e0b);
+  color: #422006;
+  box-shadow: 0 0 28px 8px rgba(253, 224, 71, 0.55);
+  animation: speed-burst 1.8s ease-out forwards;
+}
+
+.lantern-speed-fast strong {
+  font-size: 1.35rem;
+  font-weight: 900;
+}
+
+.lantern-speed-fast span {
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.lantern-speed-slow {
+  background: rgba(15, 23, 42, 0.85);
+  color: #cbd5e1;
+  font-size: 0.9rem;
+  font-weight: 700;
+  animation: speed-fade 1.6s ease-out forwards;
+}
+
+@keyframes speed-burst {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.4);
+  }
+  12% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.15);
+  }
+  22%,
+  75% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -60%) scale(0.95);
+  }
+}
+
+@keyframes speed-fade {
+  0%,
+  70% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+/* A fast answer floods the house with light for a moment. */
+.rooms-flash .spot:not(:disabled) {
+  animation: room-flash 0.7s ease-out;
+}
+
+@keyframes room-flash {
+  0% {
+    box-shadow: 0 0 30px 8px rgba(253, 224, 71, 0.95);
+    background: #3b3413;
+  }
+}
+
 @keyframes wiggle {
   0%,
   100% {
