@@ -132,3 +132,16 @@ describe('speed title', () => {
     expect(speedTitle(at(1, easyIds), ALL_FACTS)?.next).toBe('Storm Rider');
   });
 });
+
+describe('course setting', () => {
+  it('moves old "just one table" saves to that table\'s course', async () => {
+    const { normalizeSave } = await import('../storage/types');
+    const old = (focusTable: number) => normalizeSave('Kid', { settings: { muted: false, length: 20, fastMs: 3000, focusTable } as never });
+    expect(old(0).settings.course).toBe('mixed');
+    expect(old(2).settings.course).toBe('easy');
+    expect(old(9).settings.course).toBe('medium');
+    expect(old(7).settings.course).toBe('hard');
+    expect('focusTable' in old(7).settings).toBe(false);
+    expect(normalizeSave('Kid', undefined).settings.course).toBe('mixed');
+  });
+});
