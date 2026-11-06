@@ -27,7 +27,7 @@ export const ABILITY_INFO: Record<Ability, { name: string; icon: string; text: s
   frost: { name: 'Frost Breath', icon: '❄️', text: '2 extra seconds in Penalty Saves, and the Tickle Monster needs 4 steps to reach you.' },
   gust: { name: 'Gust', icon: '🌪️', text: "In Lantern Hunt, the Tickle Monster can't sneak away when you miss." },
   bossBreaker: { name: 'Boss Breaker', icon: '🏔️', text: 'Boss rounds forgive one miss and give double snacks.' },
-  secondLook: { name: 'Second Look', icon: '🪞', text: 'In Lantern Hunt, every right answer gives a clue, not just fast ones.' },
+  secondLook: { name: 'Second Look', icon: '👀', text: 'In Lantern Hunt, every right answer gives a clue, not just fast ones.' },
 };
 
 // Species id -> its power.

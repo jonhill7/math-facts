@@ -178,7 +178,7 @@ export function finishRace(race: RaceState, kind: RaceKind, course: CourseId, le
 // A title is earned once the kid's pace is at or under its `pace`.
 export const SPEED_TITLES = [
   { name: 'Egg Wobbler', icon: '🥚', pace: Infinity },
-  { name: 'Nest Hopper', icon: '🪺', pace: 1.7 },
+  { name: 'Nest Hopper', icon: '🐣', pace: 1.7 },
   { name: 'Cloud Glider', icon: '☁️', pace: 1.35 },
   { name: 'Sky Dasher', icon: '💨', pace: 1.1 },
   { name: 'Storm Rider', icon: '⛈️', pace: 0.9 },

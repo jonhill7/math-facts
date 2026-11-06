@@ -10,17 +10,17 @@ import { Dragon, Eyes } from './Dragon';
 
 // What each kind of dragon does when you tap it.
 const REACTION: Record<number, string> = {
-  1: '🪨', // Pebble Wyrm
+  1: '🥌', // Pebble Wyrm
   2: '💕', // Twin-Tail
   3: '🌿', // Thornback
-  4: '🪶', // Quadwing
+  4: '🍃', // Quadwing
   5: '⭐', // Starfin
   6: '🔷', // Hexscale
   7: '🔥', // Ember Drake
   8: '❄️', // Octofrost
   9: '💨', // Ninefold Gale
   10: '🏔️', // Tenpeak Titan
-  11: '🪞', // Mirror Drake
+  11: '🔮', // Mirror Drake
   12: '💎', // Dozen Crown
 };
 
@@ -52,7 +52,7 @@ function bubbleFor(c: Critter): string | null {
     case 'fetch':
       return '🎉';
     case 'munch':
-      return '🫐';
+      return '🍓';
     case 'splash':
       return c.id === 8 ? '❄️' : '💦'; // Octofrost freezes the splashes
     case 'warm':
@@ -72,15 +72,15 @@ function ThingArt({ id, active, iced, night }: { id: string; active: boolean; ic
     case 'meadow-berries':
       return (
         <span className="thing-bush">
-          <span>🫐</span>
+          <span>🍒</span>
           <span>🍓</span>
-          <span>🫐</span>
+          <span>🍒</span>
         </span>
       );
     case 'meadow-pond':
       return (
         <span className={`thing-pond ${iced ? 'thing-pond-ice' : ''} ${active ? 'thing-pond-splash' : ''}`}>
-          <span>🪷</span>
+          <span>🌸</span>
         </span>
       );
     case 'meadow-cloud':
@@ -90,7 +90,7 @@ function ThingArt({ id, active, iced, night }: { id: string; active: boolean; ic
         <span className={`thing-fire ${night ? 'thing-fire-night' : ''}`}>
           <span className="thing-fire-glow" />
           <span className="thing-fire-flame">🔥</span>
-          <span className="thing-fire-logs">🪵</span>
+          <span className="thing-fire-logs" />
         </span>
       );
     case 'meadow-trampoline':
@@ -246,7 +246,7 @@ export function Meadow({ dragons, names, companionId, hatFor, placed = [], onSho
               <span className="meadow-hill meadow-hill-front" />
               <span className="meadow-grass" />
               <span className="meadow-tree">🌳</span>
-              <span className="meadow-rock">🪨</span>
+              <span className="meadow-rock" />
               <span className="meadow-flower meadow-flower-1">🌼</span>
               <span className="meadow-flower meadow-flower-2">🌷</span>
               <span className="meadow-flower meadow-flower-3">🌼</span>
