@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { handleKeypadKey } from './keypadKeys';
 
 interface Props {
   value: string;
@@ -12,12 +13,7 @@ const KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'back', '0', 'go'];
 // A big on-screen number pad for phones. The physical keyboard works too.
 export function Keypad({ value, onChange, onSubmit, disabled }: Props) {
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (disabled) return;
-      if (/^[0-9]$/.test(e.key)) onChange((value + e.key).slice(0, 3));
-      else if (e.key === 'Backspace') onChange(value.slice(0, -1));
-      else if (e.key === 'Enter' && value) onSubmit();
-    };
+    const onKey = (e: KeyboardEvent) => handleKeypadKey(e, { value, onChange, onSubmit, disabled });
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [value, onChange, onSubmit, disabled]);
@@ -38,6 +34,9 @@ export function Keypad({ value, onChange, onSubmit, disabled }: Props) {
           type="button"
           className={`key key-${key}`}
           disabled={disabled || (key === 'go' && !value)}
+          // Don't let a mouse click leave keyboard focus on the button, so a
+          // later Enter or Space from the keyboard can't press it again.
+          onMouseDown={(e) => e.preventDefault()}
           onClick={() => press(key)}
           aria-label={key === 'back' ? 'Delete' : key === 'go' ? 'Enter answer' : key}
         >
