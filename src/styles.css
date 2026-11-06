@@ -2317,3 +2317,124 @@ h1 {
   margin-top: -6px;
   color: var(--muted);
 }
+
+/* Wide screens: use the room. Phones keep the single column above. */
+@media (min-width: 900px) {
+  .app {
+    max-width: 1160px;
+    padding: 24px 32px calc(24px + env(safe-area-inset-bottom));
+  }
+
+  /* Home: who you are on the left, the games on the right. */
+  .home {
+    display: grid;
+    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+    column-gap: 24px;
+    align-items: start;
+  }
+
+  .home > .home-top,
+  .home > .muted,
+  .home > .home-buttons,
+  .home > .stat-tiles {
+    grid-column: 1 / -1;
+  }
+
+  .home-profile > :first-child {
+    margin-top: 18px;
+  }
+
+  .home .modes {
+    margin-top: 18px;
+  }
+
+  .home-buttons-4 {
+    grid-template-columns: repeat(5, 1fr);
+  }
+
+  .home-buttons-4 .home-badges {
+    grid-column: auto;
+  }
+
+  .stat-tiles {
+    grid-template-columns: repeat(8, 1fr);
+  }
+
+  /* Fact map: multiplication and division side by side. */
+  .map {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    column-gap: 32px;
+    align-items: start;
+  }
+
+  .map > :not(.grid-wrap) {
+    grid-column: 1 / -1;
+  }
+
+  .map > .link-button {
+    justify-self: start;
+  }
+
+  .app-world,
+  .app-done {
+    max-width: 820px;
+  }
+
+  /* In a game: a big stage on the left, the question and keypad on the right. */
+  .session {
+    display: grid;
+    grid-template-columns: minmax(0, 3fr) minmax(300px, 2fr);
+    grid-template-rows: auto auto auto auto auto 1fr;
+    grid-template-areas:
+      'top top'
+      'boss boss'
+      'stage question'
+      'stage hint'
+      'stage keypad'
+      'stage .';
+    column-gap: 28px;
+    row-gap: 0;
+  }
+
+  .session-top {
+    grid-area: top;
+    margin-bottom: 14px;
+  }
+
+  .boss-bar {
+    grid-area: boss;
+    margin-bottom: 14px;
+  }
+
+  .session > .stage {
+    grid-area: stage;
+  }
+
+  .session > .question {
+    grid-area: question;
+    margin-bottom: 14px;
+  }
+
+  .session > .hint {
+    grid-area: hint;
+    margin-bottom: 14px;
+  }
+
+  .session > .keypad {
+    grid-area: keypad;
+  }
+
+  .key {
+    padding: clamp(10px, 2.4dvh, 20px) 0;
+  }
+
+  .pitch,
+  .sky {
+    height: clamp(260px, 56dvh, 460px);
+  }
+
+  .spot {
+    height: clamp(60px, 12dvh, 110px);
+  }
+}
