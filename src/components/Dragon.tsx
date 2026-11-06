@@ -1,3 +1,4 @@
+import { useId } from 'react';
 import { DragonState } from '../engine/dragons';
 
 // Original dragon drawings in five stages: undiscovered, egg, hatchling, young
@@ -9,10 +10,14 @@ interface Colors {
   dark: string;
   belly: string;
   wing: string;
+  shine: string; // soft light from the top left, laid over round shapes
+  shadow: string; // the soft shadow on the ground
 }
 
-function colorsFor(hue: number, sat = 70): Colors {
+function colorsFor(hue: number, sat = 70, id = ''): Colors {
   return {
+    shine: `url(#${id}-shine)`,
+    shadow: `url(#${id}-shadow)`,
     body: `hsl(${hue} ${sat}% 55%)`,
     dark: `hsl(${hue} ${Math.min(sat, 60)}% 30%)`,
     belly: `hsl(${(hue + 45) % 360} 85% 82%)`,
@@ -92,14 +97,16 @@ function PatternMarks({ pattern, at, color, size = 1 }: { pattern: Pattern; at: 
 function Egg({ c, look }: { c: Colors; look: Look }) {
   return (
     <g>
-      <ellipse cx="50" cy="94" rx="24" ry="4" fill="rgba(0,0,0,0.15)" />
+      <ellipse cx="50" cy="94" rx="26" ry="5" fill={c.shadow} />
       <path d="M50 14 C30 14 22 44 22 62 C22 80 34 92 50 92 C66 92 78 80 78 62 C78 44 70 14 50 14 Z" fill={c.belly} stroke={c.dark} strokeWidth="3" />
       {look.pattern === 'none' ? (
         <path d="M24 58 L33 50 L42 58 L50 50 L58 58 L67 50 L76 58" fill="none" stroke={c.body} strokeWidth="5" strokeLinejoin="round" />
       ) : (
         <PatternMarks pattern={look.pattern} color={c.body} size={1.3} at={[[38, 36], [60, 30], [50, 54], [34, 66], [66, 62], [44, 80], [60, 80]]} />
       )}
-      <ellipse cx="38" cy="28" rx="4" ry="7" fill="rgba(255,255,255,0.6)" transform="rotate(-20 38 28)" />
+      <path d="M50 15.5 C31 15.5 23.5 44 23.5 62 C23.5 79 35 90.5 50 90.5 C65 90.5 76.5 79 76.5 62 C76.5 44 69 15.5 50 15.5 Z" fill={c.shine} />
+      <ellipse cx="38" cy="30" rx="4.5" ry="8" fill="rgba(255,255,255,0.7)" transform="rotate(-20 38 30)" />
+      <circle cx="44" cy="20" r="1.8" fill="rgba(255,255,255,0.7)" />
     </g>
   );
 }
@@ -175,13 +182,16 @@ function Face({ c, look, x, y, r, eyes = 'open' }: { c: Colors; look: Look; x: n
     <g>
       <HornShapes c={c} horns={look.horns} x={x} y={y} r={r} />
       <circle cx={x} cy={y} r={r} fill={c.body} stroke={c.dark} strokeWidth="2.5" />
+      <circle cx={x} cy={y} r={r - 1.2} fill={c.shine} />
       <ellipse cx={x + r * 0.75} cy={y + r * 0.35} rx={r * 0.6} ry={r * 0.45} fill={c.body} stroke={c.dark} strokeWidth="2.5" />
+      <ellipse cx={x + r * 0.7} cy={y + r * 0.22} rx={r * 0.32} ry={r * 0.14} fill="#fff" opacity="0.25" />
       <circle cx={x + r * 1.05} cy={y + r * 0.2} r={r * 0.07} fill={c.dark} />
       {eyes === 'open' ? (
         <g>
           <circle cx={x + r * 0.15} cy={y - r * 0.15} r={r * 0.32} fill="#fff" stroke={c.dark} strokeWidth="1.5" />
-          <circle cx={x + r * 0.22} cy={y - r * 0.12} r={r * 0.17} fill="#1f2937" />
-          <circle cx={x + r * 0.28} cy={y - r * 0.2} r={r * 0.06} fill="#fff" />
+          <circle cx={x + r * 0.22} cy={y - r * 0.12} r={r * 0.19} fill="#111827" />
+          <circle cx={x + r * 0.29} cy={y - r * 0.21} r={r * 0.075} fill="#fff" />
+          <circle cx={x + r * 0.15} cy={y - r * 0.03} r={r * 0.035} fill="#fff" opacity="0.8" />
         </g>
       ) : (
         <path
@@ -215,7 +225,12 @@ function WingShape({ c, wings }: { c: Colors; wings: Wings }) {
   const bat = 'M42 54 C30 30 18 28 10 30 C18 36 18 40 16 44 C22 44 24 48 22 52 C28 52 32 56 34 60 Z';
   switch (wings) {
     case 'bat':
-      return <path d={bat} fill={c.wing} stroke={c.dark} strokeWidth="2.5" strokeLinejoin="round" />;
+      return (
+        <g stroke={c.dark} strokeLinejoin="round">
+          <path d={bat} fill={c.wing} strokeWidth="2.5" />
+          <path d="M40 52 L16 44 M38 56 L22 52" fill="none" strokeWidth="1.4" strokeLinecap="round" opacity="0.5" />
+        </g>
+      );
     case 'four':
       return (
         <g stroke={c.dark} strokeWidth="2.5" strokeLinejoin="round">
@@ -300,13 +315,20 @@ function BackShape({ c, back }: { c: Colors; back: Back }) {
 function Hatchling({ c, look, eyes }: { c: Colors; look: Look; eyes?: Eyes }) {
   return (
     <g>
-      <ellipse cx="50" cy="94" rx="26" ry="4" fill="rgba(0,0,0,0.15)" />
+      <ellipse cx="50" cy="94" rx="28" ry="5" fill={c.shadow} />
       {look.wings !== 'none' && <path d="M30 60 l-10 -6 l4 12 Z" fill={c.wing} stroke={c.dark} strokeWidth="2" strokeLinejoin="round" />}
       <ellipse cx="46" cy="66" rx="20" ry="18" fill={c.body} stroke={c.dark} strokeWidth="2.5" />
+      <ellipse cx="46" cy="66" rx="18.8" ry="16.8" fill={c.shine} />
       <ellipse cx="50" cy="70" rx="11" ry="10" fill={c.belly} />
       <PatternMarks pattern={look.pattern} color={c.dark} size={0.7} at={[[32, 60], [30, 70], [62, 58]]} />
       <Face c={c} look={look} x={52} y={40} r={17} eyes={eyes} />
       <path d="M22 76 L28 68 L34 76 L41 67 L48 76 L55 67 L62 76 L69 68 L76 76 L76 84 C76 92 64 94 50 94 C36 94 22 92 22 84 Z" fill="#fffbeb" stroke="#d6c7a1" strokeWidth="2.5" strokeLinejoin="round" />
+      <path d="M26 86 q24 6 48 0" fill="none" stroke="#efe3c2" strokeWidth="2" strokeLinecap="round" />
+      <g fill="#e7d9b0">
+        <circle cx="34" cy="83" r="1.6" />
+        <circle cx="58" cy="88" r="1.4" />
+        <circle cx="68" cy="82" r="1.2" />
+      </g>
     </g>
   );
 }
@@ -315,18 +337,21 @@ function Grown({ c, look, sparkle, eyes }: { c: Colors; look: Look; sparkle: boo
   const rx = look.big ? 25 : 22;
   return (
     <g>
-      <ellipse cx="48" cy="94" rx="32" ry="4" fill="rgba(0,0,0,0.15)" />
+      <ellipse cx="48" cy="94" rx="34" ry="5" fill={c.shadow} />
       <TailShape c={c} tail={look.tail} />
       <WingShape c={c} wings={look.wings} />
       <BackShape c={c} back={look.back} />
       {/* body */}
       <ellipse cx="46" cy="68" rx={rx} ry="19" fill={c.body} stroke={c.dark} strokeWidth="2.5" />
+      <ellipse cx="46" cy="68" rx={rx - 1.2} ry="17.8" fill={c.shine} />
       <PatternMarks pattern={look.pattern} color={c.dark} size={0.8} at={[[32, 62], [40, 56], [30, 74], [38, 82]]} />
       <ellipse cx="52" cy="72" rx="12" ry="12" fill={c.belly} />
       <path d="M46 66 h12 M45 72 h14 M47 78 h10" stroke={c.body} strokeWidth="1.5" opacity="0.6" />
       {/* legs */}
       <rect x="32" y="80" width="10" height="12" rx="5" fill={c.body} stroke={c.dark} strokeWidth="2.5" />
       <rect x="54" y="80" width="10" height="12" rx="5" fill={c.body} stroke={c.dark} strokeWidth="2.5" />
+      {/* little claws */}
+      <path d="M34.5 92 v-2.5 M37 92 v-2.5 M39.5 92 v-2.5 M56.5 92 v-2.5 M59 92 v-2.5 M61.5 92 v-2.5" stroke={c.belly} strokeWidth="1.6" strokeLinecap="round" />
       <Face c={c} look={look} x={66} y={38} r={15} eyes={eyes} />
       {sparkle && (
         <g fill="#fde047">
@@ -344,7 +369,9 @@ const HAT_AT: Record<string, { x: number; y: number }> = { hatchling: { x: 50, y
 
 export function Dragon({ dragon, size = 1, hat, eyes }: { dragon: DragonState; size?: number; hat?: string; eyes?: Eyes }) {
   const { stage, species } = dragon;
-  const c = colorsFor(species.hue, species.sat);
+  // Each drawing gets its own ids for its light and shadow gradients.
+  const id = `dr${useId().replace(/[^a-zA-Z0-9]/g, '')}`;
+  const c = colorsFor(species.hue, species.sat, id);
   const base = LOOKS[species.id] ?? LOOKS[7];
   // Dozen Crown takes its crown off to wear a hat, so the hat sits on its head.
   const look = hat && base.horns === 'crown' ? { ...base, horns: 'nubs' as const } : base;
@@ -357,6 +384,18 @@ export function Dragon({ dragon, size = 1, hat, eyes }: { dragon: DragonState; s
       role="img"
       aria-label={stage === 'none' ? 'Undiscovered dragon' : `${species.name}, ${dragon.rank ? dragon.rank.name.toLowerCase() : stage}`}
     >
+      <defs>
+        <radialGradient id={`${id}-shine`} cx="0.36" cy="0.28" r="0.8">
+          <stop offset="0" stopColor="#fff" stopOpacity="0.5" />
+          <stop offset="0.4" stopColor="#fff" stopOpacity="0" />
+          <stop offset="0.75" stopColor="#000" stopOpacity="0" />
+          <stop offset="1" stopColor="#000" stopOpacity="0.2" />
+        </radialGradient>
+        <radialGradient id={`${id}-shadow`}>
+          <stop offset="0" stopColor="#000" stopOpacity="0.28" />
+          <stop offset="1" stopColor="#000" stopOpacity="0" />
+        </radialGradient>
+      </defs>
       {stage === 'none' && <Mystery />}
       {stage === 'egg' && <Egg c={c} look={look} />}
       {stage === 'hatchling' && <Hatchling c={c} look={look} eyes={eyes} />}
