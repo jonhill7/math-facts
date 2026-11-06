@@ -79,10 +79,10 @@ const eggs = (d: BadgeInput) => dragons(d).filter((x) => x.stage !== 'none').len
 const topLevel = (d: BadgeInput) => Math.max(1, ...dragons(d).filter((x) => x.stage !== 'none').map((x) => x.level));
 
 export const BADGE_GROUPS: BadgeGroup[] = [
-  { id: 'speed', section: 'Speed', name: 'Speed', icon: '⚡', value: speedLevel },
+  { id: 'speed', section: 'Speed', name: 'Speed titles', icon: '⚡', value: speedLevel },
   { id: 'quick', section: 'Speed', name: 'Quick draw', icon: '💨', value: (d) => d.stats.bestFastGame },
-  { id: 'streak', section: 'Streaks and practice', name: 'Streaks', icon: '🔥', value: (d) => Math.max(d.stats.bestStreak, d.streak.count) },
-  { id: 'games', section: 'Streaks and practice', name: 'Practice', icon: '📅', value: (d) => d.stats.sessions },
+  { id: 'streak', section: 'Streaks and practice', name: 'Daily streaks', icon: '🔥', value: (d) => Math.max(d.stats.bestStreak, d.streak.count) },
+  { id: 'games', section: 'Streaks and practice', name: 'Games played', icon: '📅', value: (d) => d.stats.sessions },
   { id: 'facts', section: 'Learning', name: 'Facts mastered', icon: '🧠', value: (d) => mastered(d.progress) },
   { id: 'tables', section: 'Learning', name: 'Times tables', icon: '✖️', value: (d) => tablesMastered(d.progress) },
   { id: 'perfect', section: 'Learning', name: 'Perfect games', icon: '💯', value: (d) => d.stats.perfectGames },
@@ -168,7 +168,7 @@ export const BADGES: Badge[] = [
     [250, 'Unstoppable', 'Play 250 games.'],
     [500, 'Legend', 'Play 500 games.'],
   ]),
-  ...counts('facts', 'facts', [[1, 'First Fact'], [25, 'Fact Finder'], [50, 'Fact Collector'], [100, 'Fact Hoarder'], [200, 'Fact Wizard']], (g) => `Master ${g} facts.`),
+  ...counts('facts', 'facts', [[1, 'First Fact'], [25, 'Fact Finder'], [50, 'Fact Collector'], [100, 'Fact Hoarder'], [200, 'Fact Wizard']], (g) => (g === '1' ? 'Master your first fact.' : `Master ${g} facts.`)),
   ...ladder('facts', 'facts', [[ALL_FACTS.length, 'Math Master', `Master all ${ALL_FACTS.length} facts.`]]).map((b) => ({ ...b, icon: '🎓', tier: 'diamond' as Tier })),
   ...ladder('tables', 'tables', [
     [1, 'Table Tamer', 'Master every fact in one times table.'],

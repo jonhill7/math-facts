@@ -7,6 +7,12 @@ interface Props {
 
 const when = (t: number) => new Date(t).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
 
+// "Penalty Kicks: goals" is already under the Penalty Kicks heading, so the row just says "Goals".
+const rowName = (name: string) => {
+  const short = name.includes(': ') ? name.slice(name.indexOf(': ') + 2) : name;
+  return short[0].toUpperCase() + short.slice(1);
+};
+
 // The badge case: every badge, earned ones in color with the day they were
 // earned, the rest grayed out with how close the kid is.
 export function Badges({ data, onBack }: Props) {
@@ -27,19 +33,32 @@ export function Badges({ data, onBack }: Props) {
         </p>
       )}
       {BADGE_SECTIONS.map((sec) => {
-        const groups = BADGE_GROUPS.filter((g) => g.section === sec.name).map((g) => g.id);
-        const list = BADGES.filter((b) => groups.includes(b.group));
+        const groups = BADGE_GROUPS.filter((g) => g.section === sec.name);
+        const list = BADGES.filter((b) => groups.some((g) => g.id === b.group));
         const got = list.filter((b) => b.id in data.badges).length;
         return (
           <section key={sec.name} className="badge-group">
             <h3>
               <span aria-hidden="true">{sec.icon}</span> {sec.name} <small>{got} of {list.length}</small>
             </h3>
-            <div className="badge-grid">
-              {list.map((b) => (
-                <BadgeCard key={b.id} badge={b} at={data.badges[b.id]} progress={badgeProgress(b, data)} />
-              ))}
-            </div>
+            {/* One row per ladder, easiest badge first, so each row reads as a path to climb. */}
+            {groups.map((g) => {
+              const ladder = BADGES.filter((b) => b.group === g.id).sort((a, b) => a.goal - b.goal);
+              if (!ladder.length) return null;
+              const gotHere = ladder.filter((b) => b.id in data.badges).length;
+              return (
+                <div key={g.id} className="badge-ladder">
+                  <h4>
+                    <span aria-hidden="true">{g.icon}</span> {rowName(g.name)} <small>{gotHere} of {ladder.length}</small>
+                  </h4>
+                  <div className="badge-grid">
+                    {ladder.map((b) => (
+                      <BadgeCard key={b.id} badge={b} at={data.badges[b.id]} progress={badgeProgress(b, data)} />
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
           </section>
         );
       })}

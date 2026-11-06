@@ -2316,6 +2316,22 @@ h1 {
   margin-left: 4px;
 }
 
+.badge-ladder {
+  margin-bottom: 12px;
+}
+
+.badge-ladder h4 {
+  margin: 0 0 6px;
+  font-size: 0.95rem;
+}
+
+.badge-ladder h4 small {
+  color: var(--muted);
+  font-weight: normal;
+  font-size: 0.75rem;
+  margin-left: 4px;
+}
+
 .badge-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
