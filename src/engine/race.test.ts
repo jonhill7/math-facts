@@ -9,10 +9,16 @@ describe('fair times', () => {
   it('gives hard facts more time than easy ones', () => {
     expect(fairTimeMs(f('mul:1:1'))).toBeLessThan(fairTimeMs(f('mul:2:7')));
     expect(fairTimeMs(f('mul:2:7'))).toBeLessThan(fairTimeMs(f('mul:6:8')));
-    expect(fairTimeMs(f('mul:7:8'))).toBeLessThan(3500);
   });
   it('gives division a little longer than multiplication', () => {
-    expect(fairTimeMs(f('div:7:8'))).toBeGreaterThan(fairTimeMs(f('mul:7:8')));
+    expect(fairTimeMs(f('div:2:7'))).toBeGreaterThan(fairTimeMs(f('mul:2:7')));
+  });
+  it('never gives more time than the speed goal', () => {
+    for (const fact of ALL_FACTS) {
+      expect(fairTimeMs(fact)).toBeLessThanOrEqual(3000);
+      expect(fairTimeMs(fact, 2000)).toBeLessThanOrEqual(2000);
+    }
+    expect(fairTimeMs(f('mul:7:8'))).toBe(3000);
   });
   it('scales with the speed goal', () => {
     expect(fairTimeMs(f('mul:6:8'), 6000)).toBe(2 * fairTimeMs(f('mul:6:8'), 3000));
