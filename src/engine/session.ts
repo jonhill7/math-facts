@@ -60,7 +60,11 @@ export function buildSession(progress: Progress, now: number, opts: SessionOptio
     const step = candidates.length / count;
     fresh = Array.from({ length: count }, (_, i) => candidates[Math.floor(i * step)]);
   } else {
-    const newCount = learningCount >= maxLearning ? 0 : Math.min(maxNew, length - reviews.length);
+    // Known facts skip box 1, so when little is still being learned there's
+    // room for more new facts: a kid who already knows them moves through fast,
+    // and one who doesn't fills box 1 and the new facts slow down again.
+    const room = Math.max(maxNew, maxLearning - learningCount);
+    const newCount = learningCount >= maxLearning ? 0 : Math.min(room, length - reviews.length);
     fresh = candidates.slice(0, Math.max(0, newCount));
   }
 
@@ -72,28 +76,45 @@ export function buildSession(progress: Progress, now: number, opts: SessionOptio
       .sort((x, y) => progress[x.id].box - progress[y.id].box || progress[x.id].lastSeen - progress[y.id].lastSeen);
     picked = [...picked, ...extra.slice(0, length - picked.length)];
   }
-  if (focus && picked.length > 0 && picked.length < length) {
-    // Focus practice on a mostly new table: go round the same few facts
-    // again rather than piling on more new ones. Repeats help new facts stick.
-    const rounds: Fact[] = [];
-    while (rounds.length < length) {
-      let round = shuffle(picked, random);
-      if (rounds.length && round.length > 1 && round[0] === rounds[rounds.length - 1]) round = [...round.slice(1), round[0]];
-      rounds.push(...round);
-    }
-    return rounds.slice(0, length);
-  }
-  if (picked.length < length) {
-    const more = candidates.filter((f) => !picked.includes(f));
-    picked = [...picked, ...more.slice(0, length - picked.length)];
+  if (picked.length > 0 && picked.length < length) {
+    // Not enough known facts to fill the game (a new course, or a table that's
+    // mostly new): go round the same few facts again rather than piling on more
+    // new ones than the limit. Repeats help new facts stick, and they don't
+    // count twice toward mastered (facts move up at most once a day).
+    return inRounds(picked, length, random);
   }
 
   // Mix everything so new facts are spread among known ones.
   return shuffle(picked.slice(0, length), random);
 }
 
+// The same few facts, shuffled round after round until there are enough,
+// never the same fact twice in a row.
+export function inRounds(facts: Fact[], length: number, random: () => number = Math.random): Fact[] {
+  if (facts.length === 0) return [];
+  const rounds: Fact[] = [];
+  while (rounds.length < length) {
+    let round = shuffle(facts, random);
+    if (rounds.length && round.length > 1 && round[0] === rounds[rounds.length - 1]) round = [...round.slice(1), round[0]];
+    rounds.push(...round);
+  }
+  return rounds.slice(0, length);
+}
+
 // After a miss, the same fact comes back a few questions later.
 export const RETRY_GAP = 3;
+
+// So a hard day doesn't make the game drag on: each fact comes back at most
+// twice, and a game gets at most 5 extra questions. Facts still missed are back
+// in box 1, so they're first in line next time.
+export const MAX_RETRIES_PER_FACT = 2;
+export const MAX_RETRIES = 5;
+
+// Whether a missed fact should come back this game, given the questions
+// already added back (one entry per retry).
+export function canRetry(retried: string[], fact: Fact): boolean {
+  return retried.length < MAX_RETRIES && retried.filter((id) => id === fact.id).length < MAX_RETRIES_PER_FACT;
+}
 
 export function requeueMiss(queue: Fact[], index: number): Fact[] {
   const fact = queue[index];

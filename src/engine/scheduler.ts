@@ -4,8 +4,21 @@
 //   box 1 = still learning, practiced every session
 //   box 5 = mastered, checked again in 3 weeks
 // A correct AND fast answer moves the fact up a box and waits longer before
-// asking again. A wrong answer sends it back to box 1. A correct but slow
-// answer keeps it where it is.
+// asking again. A correct but slow answer still counts: it moves a fact out of
+// box 1 ("can solve it"), but only fast answers move it further ("can recall it").
+//
+// Moving up takes evidence from different days: a fact moves up at most once a
+// day, and not on a day it was missed, so repeating it in one sitting can't
+// rush it to mastered. (Box 1 to box 2 is the exception: that only means "check
+// again tomorrow".)
+//
+// A miss sends a fact back to box 1. One slip on a fact that was Strong or
+// Mastered sends it to box 2 instead, a short review rather than starting over.
+// A fact answered fast the very first time (it was already known) jumps to
+// box 3, and if it's fast again at its next check a few days later it goes
+// straight to mastered.
+// An answer given after asking for help is practice, not proof: it never moves
+// a fact up.
 
 export const DAY_MS = 24 * 60 * 60 * 1000;
 export const MASTERED_BOX = 5;
@@ -23,6 +36,7 @@ export interface FactState {
   correct: number;
   avgMs: number; // average time for correct answers
   lastSeen: number;
+  stepDay?: number; // start of the day the fact last changed box
 }
 
 export type Progress = Record<string, FactState>;
@@ -44,27 +58,44 @@ export function recordAnswer(
   ms: number,
   now: number,
   fastMs = DEFAULT_FAST_MS,
+  helped = false,
 ): FactState {
   const isNew = prev === undefined;
+  const today = startOfDay(now);
+  const steppedToday = prev?.stepDay === today;
   const seen = (prev?.seen ?? 0) + 1;
   const correctCount = (prev?.correct ?? 0) + (correct ? 1 : 0);
-  const avgMs = correct
-    ? prev && prev.correct > 0
+  const timed = correct && !helped; // help time isn't recall time
+  const avgMs = timed
+    ? prev && prev.correct > 0 && prev.avgMs > 0
       ? Math.round((prev.avgMs * prev.correct + ms) / correctCount)
       : ms
     : prev?.avgMs ?? 0;
 
+  const was = prev?.box ?? 1;
   let box: number;
   if (!correct) {
-    box = 1;
-  } else if (ms <= fastMs) {
+    box = was >= 4 ? 2 : 1;
+  } else if (isNew) {
     // A brand-new fact answered fast is probably already known: skip ahead.
-    box = isNew ? 3 : Math.min(MASTERED_BOX, prev.box + 1);
+    box = !helped && ms <= fastMs ? 3 : 1;
+  } else if (helped) {
+    box = was;
+  } else if (was === 1) {
+    box = 2; // right, fast or slow: it can be solved, so check it again tomorrow
+  } else if (ms <= fastMs && !steppedToday && was === 3 && prev.seen === 1) {
+    // Fast the first time and fast again on a later day: a fact the kid
+    // already knew. It goes straight to mastered rather than climbing.
+    box = MASTERED_BOX;
+  } else if (ms <= fastMs && !steppedToday) {
+    box = Math.min(MASTERED_BOX, was + 1);
   } else {
-    box = prev?.box ?? 1;
+    box = was;
   }
 
-  return { box, due: dueAfter(box, now), seen, correct: correctCount, avgMs, lastSeen: now };
+  const moved = isNew || box !== was;
+  const stepDay = moved ? today : prev?.stepDay;
+  return { box, due: dueAfter(box, now), seen, correct: correctCount, avgMs, lastSeen: now, ...(stepDay !== undefined && { stepDay }) };
 }
 
 export function isDue(state: FactState, now: number): boolean {

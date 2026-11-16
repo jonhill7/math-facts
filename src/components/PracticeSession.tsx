@@ -1,10 +1,10 @@
-import { ReactNode, useCallback, useRef, useState } from 'react';
+import { ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 import { Fact } from '../engine/facts';
-import { hintFor } from '../engine/hints';
+import { factFamily, hintFor } from '../engine/hints';
 import { SNACKS_FAST, SNACKS_RIGHT } from '../engine/dragons';
-import { DEFAULT_FAST_MS, Progress } from '../engine/scheduler';
+import { DEFAULT_FAST_MS, Progress, startOfDay } from '../engine/scheduler';
 import { speedGoalMs } from '../engine/speed';
-import { buildSession, requeueMiss, SessionOptions } from '../engine/session';
+import { buildSession, canRetry, requeueMiss, SessionOptions } from '../engine/session';
 import { sounds } from '../sound';
 import { Keypad } from './Keypad';
 import { DotPicture } from './DotPicture';
@@ -18,6 +18,7 @@ export interface AnswerEvent {
   goalMs: number; // this fact's speed goal (the same in every game)
   power: boolean; // this answer filled the power meter: the game does a power move
   boss: boolean; // asked during the boss round
+  helped: boolean; // the kid asked for help first (or said "I don't know yet")
 }
 
 export interface StageProps {
@@ -36,13 +37,18 @@ export interface SessionSummary {
   inTime: number; // right answers given before the time limit (games with a shot clock)
   powers: number; // power moves used
   boss: 'none' | 'beaten' | 'lost';
+  firstTries: number; // answers that weren't a retry of a miss
+  firstTryRight: number;
+  retriesRight: number; // misses fixed later in the game
+  remembered: Fact[]; // facts from earlier days answered right first try, ones missed before first
+  revisit: Fact[]; // facts missed this game: they come back next time
 }
 
 export const BOSS_BONUS = 20; // snacks for beating a boss
 
 interface Props {
   progress: Progress;
-  onAnswer: (fact: Fact, correct: boolean, ms: number) => void;
+  onAnswer: (fact: Fact, correct: boolean, ms: number, helped: boolean) => void;
   onFinish: (summary: SessionSummary) => void;
   onQuit: () => void;
   stage: (props: StageProps) => ReactNode;
@@ -61,11 +67,13 @@ interface Props {
   keepsCharge?: (correct: boolean) => boolean; // Tailwind II and III: answers that don't empty the meter
   boss?: { name: string; icon: string; facts: Fact[]; forgive: number; bonus: number }; // a boss round at the end, from trouble facts
   decor?: string; // a picture of the place on the world tour
+  alwaysRetry?: boolean; // Sky Race: every miss comes back, since the finish line needs every flap
 }
 
 // What the companion says after each answer.
 function buddyLine(last: AnswerEvent, timeLimitMs?: number): string {
   if (last.power) return 'POWER UP!';
+  if (last.helped) return last.correct ? 'You worked it out!' : "Let's learn this one!";
   if (last.correct && timeLimitMs !== undefined && last.ms > timeLimitMs) return 'Got it! Quicker next time!';
   if (last.correct && last.fast) return 'Yum! Triple snack!';
   if (last.correct) return 'Nice one!';
@@ -97,6 +105,7 @@ export function PracticeSession({
   startCharge = 0,
   chargeAfterPower = 0,
   keepsCharge,
+  alwaysRetry,
 }: Props) {
   // The boss round's facts go at the end of the game.
   const [queue, setQueue] = useState<Fact[]>(() => {
@@ -109,11 +118,28 @@ export function PracticeSession({
   const [input, setInput] = useState('');
   const [last, setLast] = useState<AnswerEvent | null>(null);
   const [charge, setCharge] = useState(startCharge); // fast answers in a row toward the next power move
+  const [helped, setHelped] = useState(false); // help is showing for the question on screen
   // Refs, not state: next() can run from a timer set before the last answer re-rendered.
   const bossHits = useRef(0);
   const bossMisses = useRef(0);
   const shownAt = useRef(Date.now());
-  const summary = useRef<SessionSummary>({ answered: 0, correct: 0, fast: 0, snacks: 0, inTime: 0, powers: 0, boss: 'none' });
+  const summary = useRef<SessionSummary>({ answered: 0, correct: 0, fast: 0, snacks: 0, inTime: 0, powers: 0, boss: 'none', firstTries: 0, firstTryRight: 0, retriesRight: 0, remembered: [], revisit: [] });
+  const retried = useRef<string[]>([]); // one entry per miss added back to the game
+  const retryPending = useRef<Record<string, number>>({}); // retries of each fact still to come
+
+  // Time with the app hidden (another tab, the screen off) isn't thinking time.
+  useEffect(() => {
+    let hiddenAt = 0;
+    const onVisibility = () => {
+      if (document.hidden) hiddenAt = Date.now();
+      else if (hiddenAt) {
+        shownAt.current += Date.now() - hiddenAt;
+        hiddenAt = 0;
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => document.removeEventListener('visibilitychange', onVisibility);
+  }, []);
 
   const fact = queue[index];
   const inBoss = index >= bossStart;
@@ -128,12 +154,13 @@ export function PracticeSession({
     }
     setIndex(index + 1);
     setPhase('ask');
+    setHelped(false);
     shownAt.current = Date.now();
   }, [index, queue.length, onFinish, boss]);
 
-  const submit = useCallback(() => {
+  const submit = useCallback((dontKnow = false) => {
     if (!fact) return;
-    const value = Number(input);
+    const value = dontKnow ? NaN : Number(input);
     if (phase === 'fix') {
       // After a miss the kid types the right answer once before moving on.
       if (value === fact.answer) next();
@@ -144,7 +171,8 @@ export function PracticeSession({
     const ms = Date.now() - shownAt.current;
     const correct = value === fact.answer;
     const goalMs = speedGoalMs(fact, fastMs);
-    const fast = correct && ms <= goalMs;
+    // An answer after help still counts as right, but it isn't a speed bonus.
+    const fast = correct && !helped && ms <= goalMs;
     const timeLimitMs = timeLimitFor?.(fact);
     // Fast answers in a row charge the power meter. Anything else empties it
     // (unless a Tailwind keeps it).
@@ -157,12 +185,28 @@ export function PracticeSession({
     if (power) summary.current.powers++;
     if (correct && timeLimitMs !== undefined && ms <= timeLimitMs) summary.current.inTime++;
     if (correct) summary.current.snacks += (fast ? SNACKS_FAST : SNACKS_RIGHT) + snackBonus(fast);
+    // First tries and retries, and what the kid remembered from earlier days.
+    const s = summary.current;
+    const isRetry = (retryPending.current[fact.id] ?? 0) > 0;
+    if (isRetry) {
+      retryPending.current[fact.id]--;
+      if (correct) s.retriesRight++;
+    } else {
+      s.firstTries++;
+      if (correct) s.firstTryRight++;
+      const before = progress[fact.id];
+      if (correct && !helped && before && before.lastSeen < startOfDay(Date.now()) && !s.remembered.includes(fact)) {
+        const missedBefore = before.seen > before.correct;
+        s.remembered = missedBefore ? [fact, ...s.remembered] : [...s.remembered, fact];
+      }
+    }
+    if (!correct && !s.revisit.includes(fact)) s.revisit = [...s.revisit, fact];
     if (inBoss) {
       if (correct) bossHits.current++;
       else bossMisses.current++;
     }
-    onAnswer(fact, correct, ms);
-    setLast({ id: (last?.id ?? 0) + 1, fact, correct, fast, ms, goalMs, power, boss: inBoss });
+    onAnswer(fact, correct, ms, helped || dontKnow);
+    setLast({ id: (last?.id ?? 0) + 1, fact, correct, fast, ms, goalMs, power, boss: inBoss, helped: helped || dontKnow });
     if (correct) {
       if (power) sounds.power();
       else if (!holdAfterCorrect && timeLimitMs === undefined) sounds.kick();
@@ -170,11 +214,14 @@ export function PracticeSession({
       setPhase(holdAfterCorrect ? 'hold' : 'pause');
       if (!holdAfterCorrect) setTimeout(next, pauseMs);
     } else {
-      sounds.wrong();
+      if (!dontKnow) sounds.wrong(); // "I don't know yet" is a fine answer: no buzzer
       setPhase('fix');
       setInput('');
-      // A missed fact comes back a little later, but never into the boss round.
-      if (!inBoss) {
+      // A missed fact comes back a little later, but never into the boss round,
+      // and only a few times a game so a hard day doesn't drag on.
+      if (!inBoss && (alwaysRetry || canRetry(retried.current, fact))) {
+        retried.current = [...retried.current, fact.id];
+        retryPending.current[fact.id] = (retryPending.current[fact.id] ?? 0) + 1;
         const requeued = requeueMiss(queue, index);
         const at = requeued.indexOf(fact, index + 1);
         if (at >= bossStart) {
@@ -185,7 +232,7 @@ export function PracticeSession({
         setQueue(requeued);
       }
     }
-  }, [fact, input, phase, next, onAnswer, last, holdAfterCorrect, queue, index, fastMs, timeLimitFor, pauseMs, charge, chargeNeeded, snackBonus, inBoss, bossStart, chargeAfterPower, keepsCharge]);
+  }, [fact, input, phase, next, onAnswer, last, holdAfterCorrect, queue, index, fastMs, timeLimitFor, pauseMs, charge, chargeNeeded, snackBonus, inBoss, bossStart, chargeAfterPower, keepsCharge, helped, alwaysRetry, progress]);
 
   if (!fact) return null;
   const progressPct = Math.round((index / queue.length) * 100);
@@ -230,10 +277,11 @@ export function PracticeSession({
 
       <div className="stage">
         {stage({ last, waiting: phase === 'hold', resume: next, turn: index, fact })}
-        {phase === 'fix' && (
-          // After a miss the picture hint covers the game, right where the kid is looking.
+        {(phase === 'fix' || (phase === 'ask' && helped)) && (
+          // After a miss (or when the kid asks for help) the picture hint covers
+          // the game, right where the kid is looking.
           <div className="stage-hint">
-            <DotPicture fact={fact} />
+            <DotPicture fact={fact} hideAnswer={phase === 'ask'} />
           </div>
         )}
         {decor && (
@@ -259,7 +307,30 @@ export function PracticeSession({
       <div className={`question ${phase === 'fix' ? 'question-fix' : ''}`}>
         <span className="question-text">{fact.text} =</span>
         <span className="answer-box">{input || (phase === 'pause' ? fact.answer : '?')}</span>
+        {phase === 'ask' && !helped && (
+          <button type="button" className="help-button" onMouseDown={(e) => e.preventDefault()} onClick={() => setHelped(true)}>
+            💡 Help
+          </button>
+        )}
+        {(phase === 'pause' || phase === 'hold') && last?.correct && (
+          // Every right answer gets a tick. A fast one says it earned the speed bonus.
+          <span key={last.id} className={`verdict ${last.fast ? 'verdict-fast' : ''}`} role="status">
+            {last.fast ? '⚡ Fast!' : '✓ Right!'}
+          </span>
+        )}
       </div>
+
+      {phase === 'ask' && helped && (
+        <div className="hint hint-help" role="status">
+          <span>{hintFor(fact, true)}</span>
+          <span className="hint-ask">
+            Work it out, then type your answer.{' '}
+            <button type="button" className="link-button" onMouseDown={(e) => e.preventDefault()} onClick={() => submit(true)}>
+              I don't know yet
+            </button>
+          </span>
+        </div>
+      )}
 
       {phase === 'fix' && (
         <div className="hint" role="status">
@@ -267,11 +338,12 @@ export function PracticeSession({
             {fact.text} = {fact.answer}
           </strong>
           <span>{hintFor(fact)}</span>
+          <span className="hint-family">Same family: {factFamily(fact).join(' · ')}</span>
           <span className="hint-ask">Type {fact.answer} to keep going.</span>
         </div>
       )}
 
-      <Keypad value={input} onChange={setInput} onSubmit={submit} disabled={phase === 'pause' || phase === 'hold'} />
+      <Keypad value={input} onChange={setInput} onSubmit={() => submit()} disabled={phase === 'pause' || phase === 'hold'} />
     </div>
   );
 }

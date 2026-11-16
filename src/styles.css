@@ -4414,3 +4414,215 @@ h2 {
     animation: none !important;
   }
 }
+
+/* ---- Learning help and progress (app review pass) ---- */
+
+/* Help before answering: a small button beside the answer. */
+.question {
+  flex-wrap: wrap;
+}
+
+.help-button {
+  padding: 6px 12px;
+  border: 2px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.hint-help {
+  border-left-color: var(--primary);
+}
+
+.hint-help .link-button {
+  padding: 0;
+  font-size: inherit;
+  text-decoration: underline;
+}
+
+.hint-family {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+/* Every right answer gets a tick; a fast one shows the speed bonus. */
+.verdict {
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: var(--good);
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 800;
+  animation: verdict-in 0.25s ease-out both;
+}
+
+.verdict-fast {
+  background: var(--accent);
+  color: var(--accent-text);
+}
+
+@keyframes verdict-in {
+  from {
+    transform: scale(0.6);
+    opacity: 0;
+  }
+}
+
+/* Where progress is saved, under the greeting. */
+.save-status {
+  margin: -4px 0 8px;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.save-failed {
+  color: var(--bad);
+  font-weight: 700;
+}
+
+/* The facts picker above the games: it applies to all of them. */
+.practice-picker {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  margin-bottom: 12px;
+}
+
+.practice-label {
+  font-weight: 700;
+}
+
+.practice-picker .course-line {
+  flex-basis: 100%;
+  color: var(--muted);
+}
+
+.practice-picker .course-pill {
+  border-color: var(--border);
+  background: var(--surface);
+  color: var(--text);
+}
+
+.practice-picker .course-pill-on {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: var(--primary-text);
+}
+
+/* Fact map: every square is a button that opens its fact. */
+button.cell {
+  display: grid;
+  place-items: center;
+  min-width: 0;
+  padding: 0;
+  border: none;
+  font-size: 0.6rem;
+  color: #14532d;
+  cursor: pointer;
+}
+
+button.cell.box-5 {
+  color: #fff;
+}
+
+.cell-selected {
+  outline: 3px solid var(--primary);
+  outline-offset: 1px;
+  position: relative;
+  z-index: 1;
+}
+
+.grid-tip {
+  margin: -4px 0 6px;
+  font-size: 0.8rem;
+}
+
+.fact-card {
+  margin: 12px 0;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: var(--surface);
+  border: 2px solid var(--border);
+  border-left-width: 6px;
+}
+
+.fact-card p {
+  margin: 6px 0;
+}
+
+.fact-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.fact-card-eq {
+  font-size: 1.6rem;
+}
+
+.box-edge-0 { border-left-color: var(--box-0); }
+.box-edge-1 { border-left-color: var(--box-1); }
+.box-edge-2 { border-left-color: var(--box-2); }
+.box-edge-3 { border-left-color: var(--box-3); }
+.box-edge-4 { border-left-color: var(--box-4); }
+.box-edge-5 { border-left-color: var(--box-5); }
+
+.trouble li {
+  padding: 0;
+}
+
+.trouble-fact {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 12px;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.trouble-selected {
+  outline: 3px solid var(--primary);
+}
+
+.practice-trouble {
+  margin-top: 12px;
+}
+
+/* Results: what the kid remembered and what's coming back. */
+.learned {
+  text-align: left;
+  margin: 8px auto;
+  max-width: 560px;
+}
+
+.learned p {
+  margin: 8px 0;
+}
+
+.fact-chips {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+
+.fact-chip {
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: var(--surface);
+  border: 2px solid var(--border);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
