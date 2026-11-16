@@ -23,7 +23,7 @@ import { LanternHunt } from './modes/LanternHunt';
 import { MatchScore, PenaltyKicks, SoccerProps, StatKey } from './modes/PenaltyKicks';
 import { PenaltySaves } from './modes/PenaltySaves';
 import { SkyRace } from './modes/SkyRace';
-import { COURSES, courseOf, finishRace, Flap, ghostFlaps, ghostKey, nextRival, RaceKind, RaceResult, rivalFlaps, RIVALS, speedTitle } from './engine/race';
+import { COURSES, courseOf, courseToTry, finishRace, Flap, ghostFlaps, ghostKey, nextRival, RaceKind, RaceResult, rivalFlaps, RIVALS, speedTitle } from './engine/race';
 import { buildSession, inRounds, SessionOptions } from './engine/session';
 import { cloudEnabled, cloudStore, signInWithGoogle, signOutUser, User, watchUser } from './storage/firebase';
 import { listGuests, localStore } from './storage/localStore';
@@ -532,6 +532,8 @@ function Home({ data, onPlay, onMap, onHatchery, onShop, onWorld, onBadges, onSw
   const title = speedTitle(data.progress, ALL_FACTS);
   const rival = RIVALS[nextRival(data.race)];
   const course = COURSES.find((c) => c.id === data.settings.course) ?? COURSES[COURSES.length - 1];
+  const tryNextId = courseToTry(course.id, data.progress, ALL_FACTS);
+  const tryNext = COURSES.find((c) => c.id === tryNextId);
   const hasGhost = !!data.race.ghosts[ghostKey(course.id, data.settings.length)]?.length;
   return (
     <div className="home">
@@ -648,6 +650,12 @@ function Home({ data, onPlay, onMap, onHatchery, onShop, onWorld, onBadges, onSw
             ))}
           </span>
           <small className="course-line">{course.id === 'mixed' ? 'Every fact, mixed together (recommended).' : `The ${course.tables}.`}</small>
+          {tryNext && (
+            // Every fact in this course has come up, so it has no new ones left.
+            <button type="button" className="course-nudge" onClick={() => onSettings({ course: tryNext.id })}>
+              🎉 You've met every {course.name} fact! Try {tryNext.icon} {tryNext.name} for new ones.
+            </button>
+          )}
         </div>
         <div className="modes">
           <div className="mode-card soccer soccer-pair">

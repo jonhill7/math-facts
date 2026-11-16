@@ -4626,3 +4626,17 @@ button.cell.box-5 {
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
+
+/* The nudge to a harder course once the chosen one has no new facts left. */
+.course-nudge {
+  flex-basis: 100%;
+  padding: 10px 14px;
+  border: 2px solid var(--good);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
