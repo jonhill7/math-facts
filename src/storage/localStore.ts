@@ -31,11 +31,9 @@ export function localStore(name: string): ProgressStore {
       return emptySave(name);
     },
     async save(data) {
-      try {
-        localStorage.setItem(key, JSON.stringify(data));
-      } catch {
-        // Storage full or blocked: keep playing without saving.
-      }
+      // Storage full or blocked (some private windows): the error goes up so
+      // the app can say progress isn't saving, and the kid keeps playing.
+      localStorage.setItem(key, JSON.stringify(data));
     },
   };
 }

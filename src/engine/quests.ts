@@ -1,6 +1,6 @@
 // Three small daily goals for each kid. They change every day.
 
-export type QuestKey = 'saves' | 'topCorners' | 'monstersFound' | 'fast' | 'powers' | 'matchesWon' | 'games' | 'right';
+export type QuestKey = 'saves' | 'topCorners' | 'monstersFound' | 'fast' | 'powers' | 'matchesWon' | 'games' | 'right' | 'comeback';
 
 export interface Quest {
   id: string;
@@ -18,6 +18,7 @@ export const QUEST_POOL: Quest[] = [
   { id: 'win1', key: 'matchesWon', target: 1, text: 'Win a soccer match' },
   { id: 'games2', key: 'games', target: 2, text: 'Play 2 games' },
   { id: 'right30', key: 'right', target: 30, text: 'Get 30 answers right' },
+  { id: 'comeback3', key: 'comeback', target: 3, text: 'Remember 3 facts you missed on an earlier day' },
 ];
 
 export const QUEST_REWARD = 15; // snacks per finished quest

@@ -2,9 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { allDragons, companionFor, EGG_ORDER, eggsFound, feed, grewBetween, levelFor, migrateHoard, nextEggIn, rankFor, snacksForEgg, snacksForLevel, SPECIES, stageForLevel, tableFactIds } from './dragons';
 import { emptyStreak, practiced, streakStatus } from './streak';
 import { ALL_FACTS, factById } from './facts';
-import { hintFor } from './hints';
+import { factFamily, hintFor } from './hints';
 import { DAY_MS, recordAnswer, startOfDay, Progress, troubleFacts } from './scheduler';
-import { buildSession, newFactCandidates, requeueMiss, RETRY_GAP } from './session';
+import { buildSession, canRetry, MAX_RETRIES, newFactCandidates, requeueMiss, RETRY_GAP } from './session';
 
 const NOW = new Date('2026-11-03T18:00:00').getTime();
 const seeded = () => {
@@ -39,9 +39,46 @@ describe('scheduler', () => {
   });
 
   it('sends a missed fact back to box 1, due right away', () => {
-    const s = recordAnswer({ box: 4, due: NOW, seen: 5, correct: 5, avgMs: 2000, lastSeen: 0 }, false, 2000, NOW);
+    const s = recordAnswer({ box: 3, due: NOW, seen: 5, correct: 5, avgMs: 2000, lastSeen: 0 }, false, 2000, NOW);
     expect(s.box).toBe(1);
     expect(s.due).toBe(NOW);
+  });
+
+  it('gives a Strong or Mastered fact a short review after one slip, not a restart', () => {
+    const s = recordAnswer({ box: 5, due: NOW, seen: 9, correct: 9, avgMs: 2000, lastSeen: 0 }, false, 2000, NOW);
+    expect(s.box).toBe(2);
+    expect(s.due).toBe(startOfDay(NOW) + DAY_MS);
+  });
+
+  it('counts a slow right answer as progress out of box 1, but no further', () => {
+    const learning = { box: 1, due: NOW, seen: 2, correct: 0, avgMs: 0, lastSeen: NOW - DAY_MS };
+    expect(recordAnswer(learning, true, 8000, NOW).box).toBe(2);
+    expect(recordAnswer({ ...learning, box: 2 }, true, 8000, NOW).box).toBe(2);
+  });
+
+  it('moves a fact up at most once a day', () => {
+    let s = recordAnswer({ box: 2, due: NOW, seen: 3, correct: 2, avgMs: 2000, lastSeen: NOW - DAY_MS }, true, 1500, NOW);
+    expect(s.box).toBe(3);
+    s = recordAnswer(s, true, 1500, NOW + 60_000);
+    expect(s.box).toBe(3);
+    s = recordAnswer(s, true, 1500, NOW + DAY_MS);
+    expect(s.box).toBe(4);
+  });
+
+  it("doesn't move a fact up the day it was missed", () => {
+    let s = recordAnswer({ box: 2, due: NOW, seen: 3, correct: 2, avgMs: 2000, lastSeen: NOW - DAY_MS }, false, 2000, NOW);
+    expect(s.box).toBe(1);
+    s = recordAnswer(s, true, 1500, NOW + 60_000);
+    expect(s.box).toBe(2); // can solve it: check tomorrow
+    s = recordAnswer(s, true, 1500, NOW + 120_000);
+    expect(s.box).toBe(2);
+  });
+
+  it('never moves a fact up for an answer given with help', () => {
+    const s = recordAnswer({ box: 1, due: NOW, seen: 2, correct: 0, avgMs: 0, lastSeen: NOW - DAY_MS }, true, 1500, NOW, 3000, true);
+    expect(s.box).toBe(1);
+    expect(s.correct).toBe(1);
+    expect(recordAnswer(undefined, true, 1500, NOW, 3000, true).box).toBe(1);
   });
 
   it('never goes past the mastered box', () => {
@@ -59,13 +96,22 @@ describe('sessions', () => {
     expect(session.some((f) => f.a === 12 || f.b === 12)).toBe(true);
   });
 
-  it('fills a session with extra practice when little is due', () => {
+  it('fills a short session with repeats, not more new facts than the limit', () => {
     const progress: Progress = {
       'mul:2:3': { box: 1, due: NOW + DAY_MS, seen: 1, correct: 0, avgMs: 0, lastSeen: NOW },
     };
     const session = buildSession(progress, NOW, { random: seeded() });
     expect(session).toHaveLength(20);
-    expect(new Set(session.map((f) => f.id)).size).toBe(20);
+    expect(new Set(session.filter((f) => !progress[f.id]).map((f) => f.id)).size).toBe(3);
+    for (let i = 1; i < session.length; i++) expect(session[i]).not.toBe(session[i - 1]);
+  });
+
+  it('adds no new facts while too many are still being learned', () => {
+    const progress: Progress = {};
+    for (const f of ALL_FACTS.slice(0, 10)) progress[f.id] = { box: 1, due: NOW + DAY_MS, seen: 1, correct: 0, avgMs: 0, lastSeen: NOW };
+    const session = buildSession(progress, NOW, { random: seeded() });
+    expect(session).toHaveLength(20);
+    expect(session.every((f) => progress[f.id])).toBe(true);
   });
 
   it('puts due reviews first and adds only a few new facts', () => {
@@ -97,11 +143,34 @@ describe('sessions', () => {
     expect(next).toHaveLength(11);
     expect(next[2 + 1 + RETRY_GAP]).toBe(queue[2]);
   });
+
+  it('caps how many misses come back in one game', () => {
+    const [a, b] = ALL_FACTS;
+    expect(canRetry([a.id, a.id], a)).toBe(false);
+    expect(canRetry([a.id, a.id], b)).toBe(true);
+    expect(canRetry(Array(MAX_RETRIES).fill('x'), b)).toBe(false);
+  });
 });
 
 describe('hints', () => {
   it('uses the easier factor for multiplication', () => {
     expect(hintFor(factById('mul:7:9'))).toContain('70 − 7 = 63');
+  });
+
+  it('says minus one group for the 9s, not minus one', () => {
+    expect(hintFor(factById('mul:9:7'))).toContain('minus one 7');
+  });
+
+  it('can leave the last step for the kid', () => {
+    expect(hintFor(factById('mul:7:9'), true)).toContain('70 − 7 = ?');
+    expect(hintFor(factById('mul:7:9'), true)).not.toContain('63');
+    expect(hintFor(factById('mul:5:8'), true)).not.toContain('40');
+    expect(hintFor(factById('div:6:7'), true)).not.toMatch(/\b7\b/);
+  });
+
+  it('lists a fact family', () => {
+    expect(factFamily(factById('mul:7:8'))).toEqual(['7 × 8 = 56', '8 × 7 = 56', '56 ÷ 7 = 8', '56 ÷ 8 = 7']);
+    expect(factFamily(factById('mul:6:6'))).toEqual(['6 × 6 = 36', '36 ÷ 6 = 6']);
   });
 
   it('turns division into a multiplication question', () => {
