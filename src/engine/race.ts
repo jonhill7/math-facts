@@ -61,6 +61,19 @@ export function courseOfTable(table: number): Exclude<CourseId, 'mixed'> {
 
 export const courseFacts = (course: CourseId, facts: Fact[]): Fact[] => (course === 'mixed' ? facts : facts.filter((f) => courseOf(f) === course));
 
+// When every fact in the chosen course has been seen, there are no new facts
+// left in it: the course to suggest for new ones (the next harder course that
+// still has unseen facts, else Mixed). Undefined while the course still has
+// new facts, or when nothing anywhere is new.
+export function courseToTry(course: CourseId, progress: Record<string, unknown>, facts: Fact[]): CourseId | undefined {
+  if (course === 'mixed') return undefined;
+  const unseen = (c: CourseId) => courseFacts(c, facts).some((f) => !progress[f.id]);
+  if (unseen(course)) return undefined;
+  const order: CourseId[] = ['easy', 'medium', 'hard'];
+  const next = order.slice(order.indexOf(course) + 1).find(unseen);
+  return next ?? (unseen('mixed') ? 'mixed' : undefined);
+}
+
 export interface RaceState {
   ghosts: Record<string, number[]>; // ms for each flap of the last race, by course and length (see ghostKey)
   rivalsBeaten: number; // how far up the rival ladder they've got

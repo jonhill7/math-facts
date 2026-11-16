@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { ALL_FACTS, factById } from './facts';
-import { courseFacts, courseOf, emptyRace, fairTimeMs, finishRace, flapsBy, ghostFlaps, ghostKey, medalFor, migrateGhosts, nextRival, raceBonus, racePace, rivalFlaps, RIVALS, speedTitle } from './race';
+import { courseFacts, courseOf, courseToTry, emptyRace, fairTimeMs, finishRace, flapsBy, ghostFlaps, ghostKey, medalFor, migrateGhosts, nextRival, raceBonus, racePace, rivalFlaps, RIVALS, speedTitle } from './race';
 import { Progress } from './scheduler';
 import { buildSession } from './session';
 
@@ -169,5 +169,22 @@ describe('course setting', () => {
     expect(old(7).settings.course).toBe('hard');
     expect('focusTable' in old(7).settings).toBe(false);
     expect(normalizeSave('Kid', undefined).settings.course).toBe('mixed');
+  });
+});
+
+describe('course nudge', () => {
+  const seenAll = (course: 'easy' | 'medium' | 'hard') => Object.fromEntries(ALL_FACTS.filter((f) => courseOf(f) === course).map((f) => [f.id, {}]));
+  it('says nothing while the course still has new facts', () => {
+    expect(courseToTry('easy', {}, ALL_FACTS)).toBeUndefined();
+    expect(courseToTry('mixed', {}, ALL_FACTS)).toBeUndefined();
+  });
+  it('suggests the next harder course once every fact has come up', () => {
+    expect(courseToTry('easy', seenAll('easy'), ALL_FACTS)).toBe('medium');
+    expect(courseToTry('easy', { ...seenAll('easy'), ...seenAll('medium') }, ALL_FACTS)).toBe('hard');
+    expect(courseToTry('hard', seenAll('hard'), ALL_FACTS)).toBe('mixed');
+  });
+  it('says nothing when every fact anywhere has come up', () => {
+    const all = Object.fromEntries(ALL_FACTS.map((f) => [f.id, {}]));
+    expect(courseToTry('easy', all, ALL_FACTS)).toBeUndefined();
   });
 });
