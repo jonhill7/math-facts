@@ -4,6 +4,8 @@ on:
   pull_request:
   push:
     branches: [main]
+  # Run it by hand from the Actions tab if a merge's deploy ever doesn't start.
+  workflow_dispatch:
 
 # One deploy at a time: when several PRs merge close together, later deploys
 # wait their turn instead of failing with "in progress deployment".
@@ -33,13 +35,13 @@ jobs:
           VITE_FIREBASE_AUTH_DOMAIN: ${{ vars.VITE_FIREBASE_AUTH_DOMAIN }}
           VITE_FIREBASE_PROJECT_ID: ${{ vars.VITE_FIREBASE_PROJECT_ID }}
           VITE_FIREBASE_APP_ID: ${{ vars.VITE_FIREBASE_APP_ID }}
-      - if: github.event_name == 'push'
+      - if: github.event_name != 'pull_request'
         uses: actions/upload-pages-artifact@v3
         with:
           path: dist
 
   deploy:
-    if: github.event_name == 'push'
+    if: github.event_name != 'pull_request'
     needs: test
     runs-on: ubuntu-latest
     environment:
