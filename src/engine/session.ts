@@ -60,7 +60,11 @@ export function buildSession(progress: Progress, now: number, opts: SessionOptio
     const step = candidates.length / count;
     fresh = Array.from({ length: count }, (_, i) => candidates[Math.floor(i * step)]);
   } else {
-    const newCount = learningCount >= maxLearning ? 0 : Math.min(maxNew, length - reviews.length);
+    // Known facts skip box 1, so when little is still being learned there's
+    // room for more new facts: a kid who already knows them moves through fast,
+    // and one who doesn't fills box 1 and the new facts slow down again.
+    const room = Math.max(maxNew, maxLearning - learningCount);
+    const newCount = learningCount >= maxLearning ? 0 : Math.min(room, length - reviews.length);
     fresh = candidates.slice(0, Math.max(0, newCount));
   }
 

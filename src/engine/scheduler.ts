@@ -14,6 +14,9 @@
 //
 // A miss sends a fact back to box 1. One slip on a fact that was Strong or
 // Mastered sends it to box 2 instead, a short review rather than starting over.
+// A fact answered fast the very first time (it was already known) jumps to
+// box 3, and if it's fast again at its next check a few days later it goes
+// straight to mastered.
 // An answer given after asking for help is practice, not proof: it never moves
 // a fact up.
 
@@ -80,6 +83,10 @@ export function recordAnswer(
     box = was;
   } else if (was === 1) {
     box = 2; // right, fast or slow: it can be solved, so check it again tomorrow
+  } else if (ms <= fastMs && !steppedToday && was === 3 && prev.seen === 1) {
+    // Fast the first time and fast again on a later day: a fact the kid
+    // already knew. It goes straight to mastered rather than climbing.
+    box = MASTERED_BOX;
   } else if (ms <= fastMs && !steppedToday) {
     box = Math.min(MASTERED_BOX, was + 1);
   } else {

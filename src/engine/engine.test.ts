@@ -74,6 +74,18 @@ describe('scheduler', () => {
     expect(s.box).toBe(2);
   });
 
+  it('masters an already-known fact at its first check on a later day', () => {
+    let s = recordAnswer(undefined, true, 1500, NOW);
+    expect(s.box).toBe(3);
+    s = recordAnswer(s, true, 1500, NOW + 3 * DAY_MS);
+    expect(s.box).toBe(5);
+  });
+
+  it('climbs one box at a time for a fact that took practice', () => {
+    const s = recordAnswer({ box: 3, due: NOW, seen: 4, correct: 3, avgMs: 2000, lastSeen: NOW - 3 * DAY_MS }, true, 1500, NOW);
+    expect(s.box).toBe(4);
+  });
+
   it('never moves a fact up for an answer given with help', () => {
     const s = recordAnswer({ box: 1, due: NOW, seen: 2, correct: 0, avgMs: 0, lastSeen: NOW - DAY_MS }, true, 1500, NOW, 3000, true);
     expect(s.box).toBe(1);
@@ -102,7 +114,7 @@ describe('sessions', () => {
     };
     const session = buildSession(progress, NOW, { random: seeded() });
     expect(session).toHaveLength(20);
-    expect(new Set(session.filter((f) => !progress[f.id]).map((f) => f.id)).size).toBe(3);
+    expect(new Set(session.filter((f) => !progress[f.id]).map((f) => f.id)).size).toBe(7); // 1 in box 1 leaves room for 7
     for (let i = 1; i < session.length; i++) expect(session[i]).not.toBe(session[i - 1]);
   });
 
@@ -126,7 +138,8 @@ describe('sessions', () => {
     const session = buildSession(progress, NOW, { random: seeded() });
     const ids = session.map((f) => f.id);
     for (const id of reviewIds) expect(ids).toContain(id);
-    expect(session.filter((f) => !progress[f.id])).toHaveLength(3);
+    // Nothing in box 1, so there's room for up to 8 new facts.
+    expect(session.filter((f) => !progress[f.id])).toHaveLength(8);
   });
 
   it('unlocks division only after the multiplication fact is learned', () => {
@@ -312,14 +325,14 @@ describe('focus practice', () => {
     expect(session.every((f) => (f.op === 'mul' ? f.a === 7 || f.b === 7 : f.a === 7))).toBe(true);
   });
 
-  it('adds up to 6 new facts when the kid already knows some of the table', () => {
+  it('adds up to 8 new facts when the kid already knows some of the table', () => {
     const progress: Progress = {
       'mul:7:1': { box: 4, due: NOW + 5 * DAY_MS, seen: 3, correct: 3, avgMs: 1500, lastSeen: NOW - DAY_MS },
     };
     const session = buildSession(progress, NOW, { focusTable: 7, random: seeded() });
     expect(session).toHaveLength(20);
     const newIds = new Set(session.filter((f) => !progress[f.id]).map((f) => f.id));
-    expect(newIds.size).toBe(6); // the same 6 new facts come round several times
+    expect(newIds.size).toBe(8); // the same 8 new facts come round several times
     for (let i = 1; i < session.length; i++) expect(session[i]).not.toBe(session[i - 1]);
   });
 });
